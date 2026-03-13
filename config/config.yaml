@@ -1,0 +1,52 @@
+# MEG Hot-Reloadable Configuration
+# All values here are behavioral/tuning parameters.
+# Connection strings and secrets come from environment variables (.env), NOT this file.
+# Changes to this file take effect within ~1 second without restart.
+
+whale_qualification:
+  min_win_rate: 0.55              # Minimum historical win rate to qualify as a whale
+  min_closed_positions: 50        # Minimum number of resolved positions
+  min_total_volume_usdc: 100000   # Minimum lifetime volume in USDC
+  min_profitable_months: 3        # Minimum profitable months in trailing 6
+  exclude_archetypes:             # These archetypes are never followed
+    - ARBITRAGE
+    - MANIPULATOR
+
+signal:
+  composite_score_threshold: 0.45 # Minimum composite score to pass to agent_core
+  ttl_seconds: 7200               # 2 hours — signals older than this are never executed
+  min_whales_for_consensus: 2     # Minimum independent whale agreements for consensus bonus
+
+risk:
+  max_position_pct: 0.05          # Max single position as fraction of portfolio
+  max_daily_loss_usdc: 500        # Hard daily loss limit in USDC
+  max_open_positions: 10          # Maximum concurrent open positions
+  max_market_exposure_pct: 0.20   # Max exposure to a single market
+  paper_trading: true             # Override with PAPER_TRADING env var
+
+kelly:
+  fraction: 0.25                  # Use 1/4 Kelly for position sizing (conservative)
+  max_bet_usdc: 1000              # Hard cap per trade regardless of Kelly output
+
+entry:
+  max_entry_distance_pct: 0.05    # Max price drift from whale entry before skipping
+  max_spread_pct: 0.03            # Max bid-ask spread to allow entry
+
+pre_filter:
+  min_market_liquidity_usdc: 50000  # Gate 1: minimum market liquidity
+  max_spread_pct: 0.05              # Gate 1: maximum spread at time of whale trade
+  min_unique_participants: 20       # Gate 1: minimum distinct traders in market
+
+signal_decay:
+  half_life_seconds: 3600          # Signal strength halves every hour
+  min_score_after_decay: 0.20      # Drop signal entirely if score falls below this
+
+reputation:
+  decay_on_loss: 0.05              # Score penalty per losing trade
+  boost_on_win: 0.03               # Score boost per winning trade
+  min_score: 0.10                  # Floor — never drop a whale below this
+  max_score: 1.00                  # Ceiling
+
+logging:
+  level: INFO                      # DEBUG / INFO / WARNING / ERROR
+  format: json                     # json or console
