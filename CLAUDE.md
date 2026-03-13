@@ -181,7 +181,7 @@ Do NOT skip ahead. Paper trading mode must work before any live execution is wri
 
 ## gstack Skills
 
-gstack is installed in this repo. Use these slash commands:
+gstack is installed in this repo (`.claude/skills/gstack`). Use these slash commands:
 
 | Command | When to use |
 |---|---|
@@ -189,8 +189,10 @@ gstack is installed in this repo. Use these slash commands:
 | `/plan-eng-review` | After `/plan-ceo-review`, before writing code. Locks in architecture, data flow, edge cases, and test plan for the specific module. |
 | `/review` | After completing any module or significant chunk of code. Full staff-engineer-level code review for correctness, security, and maintainability. |
 | `/ship` | When ready to commit a completed, reviewed module. Handles the full PR/commit workflow. |
-| `/browse` | For all web browsing tasks (Polymarket docs, Polygon RPC docs, py-clob-client docs). Never use browser MCP tools directly. |
+| `/browse` | For ALL web browsing tasks (Polymarket docs, Polygon RPC docs, py-clob-client docs, any external URL). |
 | `/retro` | Weekly — analyze commit velocity, hotspot files, shipping streaks, what to improve. |
+
+**Web browsing rule:** Always use `/browse` for web browsing. NEVER use `mcp__claude-in-chrome__*` tools directly.
 
 **If gstack skills aren't working:** run `cd .claude/skills/gstack && ./setup`
 
