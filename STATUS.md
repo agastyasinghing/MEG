@@ -1,12 +1,12 @@
 # MEG — Session Status
 > Update this file at the end of every Claude Code session. Read it at the start of every session.
-> Last updated: 2026-03-12
+> Last updated: 2026-03-13
 
 ---
 
 ## Current Phase
-- [~] Repo scaffolding — **PLANNED, READY TO BUILD**
-- [ ] DB schema
+- [x] Repo scaffolding — **COMPLETE** (merged: feat/repo-scaffold, v0.1.0.0)
+- [~] DB schema — **NEXT**
 - [ ] Data Layer
 - [ ] Pre-Filter Gates
 - [ ] Signal Engine
@@ -16,20 +16,27 @@
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** Repo scaffolding
+**Active phase:** DB schema
 
 ---
 
 ## What Was Just Completed
 
-- `/plan-ceo-review` — full CEO-mode review of scaffold plan; 3 foundational decisions made
-- `/plan-eng-review` — full eng review; 10 issues resolved, plan locked, 0 critical gaps
+- Full repo scaffold built, reviewed, and merged (v0.1.0.0)
+  - `meg/` package + `pyproject.toml`, all 5 layer stub trees, `meg/core/` kernel
+  - `meg/core/events.py`: full Pydantic schemas + `RedisKeys`
+  - `meg/core/config_loader.py`: `MegConfig` model + `ConfigLoader` stub (watchdog hot-reload)
+  - `docker-compose.yml` with profiles, `config/config.yaml` full schema, `requirements.txt`
+  - `tests/conftest.py`, `.gitignore`, `.env.example`, `TODOS.md`, `VERSION`, `CHANGELOG.md`
+- `/plan-ceo-review`, `/plan-eng-review` (14 decisions locked)
+- `/review` (3 informational issues found and fixed)
+- `/ship` (PR created, merged)
 
 ---
 
 ## In Progress
 
-- Nothing yet — plan complete, implementation not started
+- Nothing — DB schema phase not started
 
 ---
 
@@ -41,9 +48,9 @@
 
 ## Next 3 Tasks
 
-1. **Build the full scaffold** — create all folders, REAL files, STUB files, and MARKER `__init__.py` files exactly per the locked plan (see Decisions Log below)
-2. **Run `/review`** on the scaffold — staff-engineer-level review before committing
-3. **Run `/ship`** — commit and push the scaffold as the first real code commit
+1. **Run `/plan-ceo-review` on DB schema** — 5 tables: `wallets`, `trades`, `wallet_scores`, `whale_trap_events`, `signal_outcomes`. Confirm schema, index strategy, and Alembic setup before writing any SQL.
+2. **Run `/plan-eng-review` on DB schema** — lock column types, constraints, FK relationships, async SQLAlchemy pattern, and migration workflow.
+3. **Build `meg/db/models.py` + Alembic init + first migration** — implement the full schema, run `/review`, `/ship`.
 
 ---
 
@@ -94,9 +101,10 @@
 
 ## Notes for Next Session
 
-- Planning is complete — go straight to building the scaffold (Task 1 above)
-- All decisions are locked in the Decisions Log — do not re-litigate
-- REAL files to write: `pyproject.toml`, `requirements.txt`, `requirements-dev.txt`, `docker-compose.yml`, `.env.example`, `config/config.yaml`, `tests/conftest.py`, `.gitignore`, `.python-version`, `meg/core/events.py` (full schemas), `meg/core/redis_client.py` (stubs), `meg/core/logger.py` (stub), `meg/core/config_loader.py` (stub)
-- STUB files: all layer modules (`polygon_feed.py`, etc.) — docstring + typed sigs + `raise NotImplementedError`
-- MARKER files: `__init__.py` in every package directory
-- After scaffold is built: run `/review` before `/ship`
+- Scaffold is merged and on main — pull main before starting DB schema work
+- DB schema phase: run `/plan-ceo-review` first, then `/plan-eng-review`, then build
+- `meg/db/models.py` is currently a stub with `raise NotImplementedError` — replace it entirely
+- Alembic has NOT been initialized yet — run `alembic init meg/db/migrations` as first step
+- 5 tables to design: `wallets`, `trades`, `wallet_scores`, `whale_trap_events`, `signal_outcomes`
+- Use async SQLAlchemy (`asyncpg` driver) — `asyncpg` is already pinned in `requirements.txt`
+- Check `MEG_PRD_v3_final.md` for any column-level detail on these tables before designing schema
