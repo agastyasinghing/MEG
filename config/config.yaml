@@ -36,6 +36,11 @@ pre_filter:
   min_market_liquidity_usdc: 50000  # Gate 1: minimum market liquidity
   max_spread_pct: 0.05              # Gate 1: maximum spread at time of whale trade
   min_unique_participants: 20       # Gate 1: minimum distinct traders in market
+  min_days_to_resolution: 3        # Gate 1: skip check if days_to_resolution is None
+  arb_detection_window_hours: 24   # Gate 2: YES+NO same-market behavioral arb window
+  ladder_window_hours: 6           # Gate 3: SIGNAL_LADDER same-direction trade window
+  ladder_min_trades: 2             # Gate 3: prior trades required to qualify as SIGNAL_LADDER
+  min_signal_size_pct: 0.02        # Gate 3: min size as fraction of wallet capital for SIGNAL
 
 signal_decay:
   half_life_seconds: 3600          # Signal strength halves every hour

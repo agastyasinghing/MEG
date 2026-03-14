@@ -188,6 +188,133 @@ resolution oracle. Candidate field names: `resolution_source`, `resolver`,
 
 ---
 
+## [P1] OPUS SESSION: Implement intent_classifier.py classify() and build_qualified_trade()
+
+**What:** Implement the two NotImplementedError stubs in `meg/pre_filter/intent_classifier.py`:
+`classify(trade, redis, config, session)` and `build_qualified_trade(trade, intent, redis)`.
+
+**Why:** Gate 3 is the final pre-filter gate. Without it, the pipeline raises
+NotImplementedError on every event and nothing reaches the signal engine. This is
+the last blocker before pre_filter → signal_engine is end-to-end runnable.
+
+**Pros:** Completes Phase 4. Enables signal engine work to begin.
+
+**Cons:** Must be done with Opus + ultrathink — the classification logic directly
+determines what reaches execution. Getting SIGNAL vs HEDGE/REBALANCE wrong means
+either signal starvation (false HEDGE positives) or noise injection (REBALANCE
+trades reaching the signal engine with real sizing).
+
+**Context:** The test spec is fully written at `tests/pre_filter/test_intent_classifier.py`.
+Read that file first — it defines the exact expected behaviour for all 14 test cases
+(SIGNAL, SIGNAL_LADDER, HEDGE, REBALANCE, boundary conditions, edge cases).
+
+Key implementation constraints:
+- No import of meg.data_layer.wallet_registry (layer coupling violation)
+- Read wallet data from Redis directly: wallet:{addr}:data (JSON blob),
+  wallet:{addr}:score, wallet:{addr}:archetype
+- Query Trade table via sqlalchemy (session param) for behavioral signals
+- session=None: skip Trade queries, return SIGNAL conservatively
+- build_qualified_trade returns None on any cache miss (never emit whale_score=0.0)
+- The compound index ix_trades_wallet_market_time already exists for efficient queries
+
+Config params available in config.pre_filter:
+  ladder_window_hours: 6, ladder_min_trades: 2, min_signal_size_pct: 0.02,
+  arb_detection_window_hours: 24
+
+**Depends on / blocked by:** Nothing — test spec is ready. Start immediately
+after any Opus context window is available.
+
+**Effort:** M (Opus session ~1–2 hours with ultrathink)
+**Priority:** P1
+
+---
+
+## [P3] Gate 1: Redis pipeline optimization
+
+**What:** Batch Gate 1's 5 Redis reads (last_updated_ms, liquidity, spread, participants,
+days_to_resolution) into a single `redis.pipeline()` call instead of 5 serial awaits.
+
+**Why:** Each serial read is a separate TCP round trip to Redis. At high event frequency
+a 5x latency reduction per trade event could matter.
+
+**Pros:** Reduces Gate 1 latency from ~5 * RTT to ~1 * RTT. No logic changes.
+
+**Cons:** Slightly less readable — individual helper functions `_get_market_liquidity()`,
+`_get_market_spread()` etc. become wrappers around a batched result rather than standalone
+Redis calls. Requires restructuring `check()` to call pipeline internally.
+
+**Context:** At v1 whale trade frequency (10s–100s/day), this is completely unmeasurable.
+Profile first. If gate latency ever exceeds 50ms, this is the first optimization to make.
+Implementation is in `meg/pre_filter/market_quality.py` — `check()` would batch all reads
+via `redis.pipeline()`, then call individual helpers with the pre-fetched values.
+
+**Effort:** S
+**Priority:** P3
+**Blocked by:** Gate 1 must be stable and tested before refactoring
+
+---
+
+## [P2] Behavioral state Redis cache for Gates 2/3
+
+**What:** Maintain a Redis sorted set per wallet+market of recent trade outcomes
+(`wallet:{addr}:{market_id}:recent_sides`, score=timestamp_ms, member=outcome+size).
+Gate 2's `_has_simultaneous_both_sides()` and Gate 3's ladder/hedge detection would
+read from Redis instead of querying the Trade table.
+
+**Why:** Currently Gates 2 and 3 query the Trade table (authoritative but involves
+a DB round trip). If whale trade frequency increases, these DB queries could become
+a latency bottleneck. Redis O(log N) sorted set queries are ~1ms.
+
+**Pros:** Eliminates Trade table round trips from the hot path. Sub-millisecond
+behavioral lookups.
+
+**Cons:** Only captures trades that passed Gate 1 (unqualified trades never reach
+Gate 2, so the Redis set won't know about YES-side trades on thin markets). This is
+a correctness tradeoff: a whale who bought YES on a low-quality market and then sells
+NO on a qualified one would look like a SIGNAL, not a HEDGE. For v1, Trade table
+is authoritative.
+
+**Context:** Pipeline would write to the sorted set after each qualified trade
+(post-Gate 3). Gates read from the set instead of the Trade table. Requires:
+(1) new `RedisKeys.wallet_market_sides(addr, market_id)` key, (2) pipeline write
+after emit, (3) gate read fallback to Trade table on cache miss.
+
+**Effort:** M
+**Priority:** P2
+**Blocked by:** Gate 2/3 must be stable in production first; requires v1 load data to justify
+
+---
+
+## [P2] Pre-filter rejection analytics / dashboard metrics
+
+**What:** Expose gate rejection rates as queryable metrics — how many trades are
+filtered per gate per day, which markets/wallets are most frequently rejected, and
+which gate is the tightest bottleneck.
+
+**Why:** Without rejection analytics, there's no way to know if `min_market_liquidity_usdc`
+is too aggressive, if a specific whale is being incorrectly labeled as an arb, or if
+Gate 3's HEDGE/REBALANCE classification is swallowing valid signals. These are the
+tuning knobs — you can't tune without measurement.
+
+**Pros:** Enables threshold tuning with data. Surfaces misconfigured whales.
+Provides operator visibility without requiring log aggregator setup.
+
+**Cons:** Adds either (a) a dedicated `pre_filter_rejections` table (new migration),
+(b) a metrics sink (e.g. statsd/CloudWatch), or (c) a structured log aggregation query.
+Option (c) is available today via structlog + CloudWatch Insights — no code needed.
+
+**Context:** Currently all rejections log via structlog with `filter_reason`, `gate_id`,
+`market_id`, `wallet_address`, and `tx_hash`. This is sufficient for querying in any
+log aggregator. The dashboard (Phase 9) could expose these metrics via a `/pre_filter/stats`
+endpoint that aggregates structlog output or a lightweight `pre_filter_events` table.
+Start with log aggregator approach — only build a DB table if the dashboard needs it.
+
+**Effort:** S (log aggregator) or M (DB table + dashboard endpoint)
+**Priority:** P2
+**Blocked by:** Dashboard phase (Phase 9); structlog provides this today without a dashboard
+
+---
+
 ## [P2] pip-audit: dependency vulnerability scanning in CI
 
 **What:** Add `pip-audit -r requirements.txt` as a required CI check on every PR.

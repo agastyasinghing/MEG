@@ -13,15 +13,16 @@ maintains market state in Redis. Watches the meg:active_markets set (written
 by polygon_feed on new whale trades) and polls each market every ~5 seconds.
 
 Market state Redis layout (per market):
-  market:{id}:mid_price          ← float string
-  market:{id}:bid                ← float string
-  market:{id}:ask                ← float string
-  market:{id}:liquidity          ← float string (USDC depth)
-  market:{id}:volume_24h         ← float string
-  market:{id}:participants       ← int string
-  market:{id}:spread             ← float string
-  market:{id}:last_updated_ms    ← int string (epoch ms)
-  market:{id}:price_history      ← sorted set: score=timestamp_ms, member=mid_price
+  market:{id}:mid_price            ← float string
+  market:{id}:bid                  ← float string
+  market:{id}:ask                  ← float string
+  market:{id}:liquidity            ← float string (USDC depth)
+  market:{id}:volume_24h           ← float string
+  market:{id}:participants         ← int string
+  market:{id}:spread               ← float string
+  market:{id}:last_updated_ms      ← int string (epoch ms)
+  market:{id}:days_to_resolution   ← int string | "" (empty = None/unknown)
+  market:{id}:price_history        ← sorted set: score=timestamp_ms, member=mid_price
 """
 from __future__ import annotations
 
@@ -218,6 +219,11 @@ class CLOBMarketFeed:
             pipe.set(RedisKeys.market_volume_24h(mid), str(state.volume_24h_usdc))
             pipe.set(RedisKeys.market_participants(mid), str(state.participants))
             pipe.set(RedisKeys.market_last_updated_ms(mid), str(now_ms))
+            # days_to_resolution: "" (empty string) when None — Gate 1 skips check on empty
+            pipe.set(
+                RedisKeys.market_days_to_resolution(mid),
+                str(state.days_to_resolution) if state.days_to_resolution is not None else "",
+            )
 
             # Price history sorted set: score=timestamp_ms, member=mid_price@timestamp
             # Member includes timestamp to allow duplicate prices at different times

@@ -76,6 +76,19 @@ async def init_db(database_url: str) -> None:
     logger.info("db_engine_initialized", url=_redact_url(database_url))
 
 
+def get_engine() -> AsyncEngine:
+    """
+    Return the module-level engine. Raises RuntimeError if init_db() has not
+    been called. Use this instead of importing _engine directly.
+    """
+    if _engine is None:
+        raise RuntimeError(
+            "Database engine not initialized. "
+            "Call await init_db(database_url) before using get_engine()."
+        )
+    return _engine
+
+
 async def close_db() -> None:
     """
     Dispose the engine and close all pooled connections.

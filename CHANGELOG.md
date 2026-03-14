@@ -3,6 +3,55 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.4.0] - 2026-03-14
+
+### Added
+- `meg/pre_filter/market_quality.py` — Gate 1 full implementation: UNCHARACTERIZED vs
+  BELOW_THRESHOLD state machine, negative cache (`quality_failed` EX 3600s), 5 threshold
+  checks (liquidity, spread, participants, days_to_resolution, stale-data guard). Helper
+  functions `_get_last_updated_ms`, `_get_market_liquidity`, `_get_market_spread`,
+  `_get_participants`, `_get_days_to_resolution`.
+- `meg/pre_filter/arbitrage_exclusion.py` — Gate 2 full implementation: ARBITRAGE archetype
+  short-circuit (O(1) Redis read) + Trade table behavioral detection (YES+NO same-market
+  within `arb_detection_window_hours`). Session injection for testability; Redis/DB errors
+  fail open (conservative). Adds `session: AsyncSession | None` parameter.
+- `meg/pre_filter/pipeline.py` — New: full pipeline orchestration. Subscribes to
+  `raw_whale_trades`, runs Gate 1→2→3 in order, per-gate try/except (fail closed on error),
+  re-raises `NotImplementedError` (unimplemented gate must be fixed), publishes
+  `QualifiedWhaleTrade` to `qualified_whale_trades`. Structlog-only rejection logging.
+- `meg/core/events.py` — `RedisKeys.market_days_to_resolution(market_id)` and
+  `RedisKeys.wallet_data(address)` static key methods.
+- `meg/db/session.py` — `get_engine()` public accessor; eliminates need to import private
+  `_engine` from outside the module.
+- `config/config.yaml` — 5 new `pre_filter` params: `min_days_to_resolution: 3`,
+  `arb_detection_window_hours: 24`, `ladder_window_hours: 6`, `ladder_min_trades: 2`,
+  `min_signal_size_pct: 0.02`.
+- `meg/core/config_loader.py` — 4 new `PreFilterConfig` fields matching config.yaml additions;
+  `min_days_to_resolution` default updated 1→3.
+- `meg/data_layer/clob_client.py` — `_write_state()` now writes `market:{id}:days_to_resolution`
+  (int string or `""` for None) on every poll cycle.
+- `meg/pre_filter/intent_classifier.py` — Updated signatures (`session: AsyncSession | None`
+  on `classify()`; `QualifiedWhaleTrade | None` return on `build_qualified_trade()`); full
+  docstrings with intent definitions; OPUS marker. Stubs remain `NotImplementedError`.
+- `tests/pre_filter/conftest.py` — DB fixtures (`db_engine`, `db_session` via pytest-postgresql)
+  + factory helpers (`make_raw_trade`, `set_wallet_redis_data`, `set_market_redis_data`,
+  `insert_trade_record`) shared across all pre-filter test modules.
+- `tests/pre_filter/test_market_quality.py` — 15 tests covering all Gate 1 branches (cache
+  hit, UNCHARACTERIZED no-cache, liquidity/spread/participants/days_to_resolution thresholds,
+  negative days, None skip, all-pass, multi-failure single write, helper unit tests).
+- `tests/pre_filter/test_arbitrage_exclusion.py` — 12 tests covering all Gate 2 branches
+  (archetype short-circuit, absent archetype, YES+NO behavioral, single-side, outside-window,
+  INFORMATION/MANIPULATOR pass, session=None, Redis error fallthrough).
+- `tests/pre_filter/test_intent_classifier.py` — 14 test SPECS (full arrange/act/assert,
+  stubs raise `NotImplementedError`). Opus implements against these in a future session.
+- `tests/pre_filter/test_pipeline.py` — 10 orchestration tests (mocked gates): Gate 1/2/3
+  short-circuit, HEDGE/REBALANCE filter, SIGNAL/SIGNAL_LADDER full pass, schema validation,
+  wallet-data-unavailable discard, gate exception fails closed.
+- `requirements-dev.txt` — `pytest-mock==3.14.0` (required by pipeline mock tests).
+- `TODOS.md` — 4 new deferred items: Opus intent_classifier session (P1), Gate 1 Redis
+  pipeline optimization (P3), behavioral state Redis cache for Gates 2/3 (P2), pre-filter
+  rejection analytics (P2).
+
 ## [0.1.3.0] - 2026-03-14
 
 ### Added
