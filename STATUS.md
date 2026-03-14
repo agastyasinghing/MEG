@@ -1,6 +1,6 @@
 # MEG — Session Status
 > Update this file at the end of every Claude Code session. Read it at the start of every session.
-> Last updated: 2026-03-13
+> Last updated: 2026-03-14
 
 ---
 
@@ -8,7 +8,7 @@
 - [x] Repo scaffolding — **COMPLETE** (merged: feat/repo-scaffold, v0.1.0.0)
 - [x] DB schema — **COMPLETE** (merged: v0.1.1.0)
 - [~] Data Layer — **BUILT, needs /review + /ship**
-- [ ] Pre-Filter Gates
+- [~] Pre-Filter Gates — **IN PLANNING** (`/plan-eng-review` in progress, 2026-03-14)
 - [ ] Signal Engine
 - [ ] Agent Core
 - [ ] Execution Layer
@@ -16,11 +16,26 @@
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** Data Layer
+**Active phase:** Pre-Filter Gates (planning)
 
 ---
 
 ## What Was Just Completed
+
+**Pre-Filter Gates phase (2026-03-14) — IN PROGRESS (Gate 3 classify() pending Opus):**
+- `meg/core/events.py` — Added `market_days_to_resolution` to `RedisKeys`
+- `meg/core/config_loader.py` — Added 4 fields to `PreFilterConfig`: `arb_detection_window_hours`, `ladder_window_hours`, `ladder_min_trades`, `min_signal_size_pct`; updated `min_days_to_resolution` default to 3
+- `config/config.yaml` — Added all 5 new `pre_filter` params
+- `meg/data_layer/clob_client.py` — Added `days_to_resolution` write to `_write_state()` pipeline
+- `meg/pre_filter/market_quality.py` — Full Gate 1 implementation: UNCHARACTERIZED/BELOW_THRESHOLD state machine, negative cache, 5 threshold checks
+- `meg/pre_filter/arbitrage_exclusion.py` — Full Gate 2 implementation: archetype short-circuit + Trade table behavioral detection
+- `meg/pre_filter/intent_classifier.py` — Updated signatures, fixed docstrings; `classify()` and `build_qualified_trade()` remain `NotImplementedError` (Opus required)
+- `meg/pre_filter/pipeline.py` — New: full pipeline orchestration, per-gate try/except, structlog-only filter logging
+- `tests/pre_filter/conftest.py` — New: `db_engine`, `db_session`, `make_raw_trade`, `set_wallet_redis_data`, `set_market_redis_data`, `insert_trade_record`
+- `tests/pre_filter/test_market_quality.py` — 14 tests (all Gate 1 branches)
+- `tests/pre_filter/test_arbitrage_exclusion.py` — 11 tests (all Gate 2 branches)
+- `tests/pre_filter/test_intent_classifier.py` — 14 test SPECS (stubs; Opus implements against these)
+- `tests/pre_filter/test_pipeline.py` — 10 tests (orchestration, mocked gates)
 
 **Data Layer phase (2026-03-13):**
 - `meg/db/models.py` — Added 7 Wallet columns (total_volume_usdc, total_trades,
@@ -55,7 +70,10 @@
 
 ## In Progress
 
-- Data Layer built — ready for `/review` then `/ship`
+- Pre-Filter Gates (2026-03-14): Gates 1 and 2 complete + pipeline + all tests.
+  **Blocked on Opus session for intent_classifier.classify() + build_qualified_trade()**
+  See TODOS.md: "OPUS SESSION: Implement intent_classifier.py"
+- Data Layer built — still needs `/review` then `/ship` (prerequisite for pre-filter ship)
 
 ---
 
@@ -70,9 +88,9 @@
 
 ## Next 3 Tasks
 
-1. **Run `/review` on Data Layer** — paranoid staff engineer review before shipping.
-2. **Run `/ship`** — sync main, test, push, PR for data layer phase.
-3. **Start Pre-Filter Gates** — `market_quality.py`, `arbitrage_exclusion.py`, `intent_classifier.py`.
+1. **Opus session: implement `intent_classifier.classify()` + `build_qualified_trade()`** — read `tests/pre_filter/test_intent_classifier.py` first, implement against tests, use ultrathink.
+2. **Run `/review` on Data Layer + Pre-Filter Gates** — paranoid review before shipping.
+3. **Run `/ship`** — sync main, test, push, PRs for data layer and pre-filter phases.
 
 ---
 
@@ -80,6 +98,13 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-14 | pipeline._process_event() wraps each gate call in try/except; gate errors → log ERROR + fail closed (skip trade) | Gates stay clean; pipeline owns resilience; consistent with 'feed never crashes' rule |
+| 2026-03-14 | Add 4 new fields to PreFilterConfig + config.yaml: arb_detection_window_hours=24, ladder_window_hours=6, ladder_min_trades=2, min_signal_size_pct=0.02 | One config pass; consistent with full-schema-at-scaffold decision from 2026-03-12 |
+| 2026-03-14 | Gate 2/3 behavioral detection queries Trade table directly (24h window for arb, 6h for ladder) | Authoritative over all trades; Redis set would miss trades filtered by Gate 1; whale trade frequency at v1 is low enough for DB queries |
+| 2026-03-14 | Add market_days_to_resolution to RedisKeys + CLOBMarketFeed; add min_days_to_resolution: 3 to config.yaml | Check is valuable even at v1; small touch to shipped module worth enabling the resolution-time quality check |
+| 2026-03-14 | Gate 1 stale data: distinguish UNCHARACTERIZED (no cache) from BELOW_THRESHOLD (cache 1hr) | Missing last_updated_ms = uncharacterized market; retry on next trade. Present but failing = real rejection; cache for 1hr |
+| 2026-03-14 | Pre-filter gate rejections logged via structlog only (not signal_outcomes) | signal_outcomes is written by signal_engine; pre-filter events are raw trades not signals yet; non-nullable score columns can't be filled at gate level |
+| 2026-03-14 | Pre-filter gates must NOT import meg.data_layer.wallet_registry | Layer coupling violation — gates read wallet data directly from Redis keys (wallet:{addr}:archetype, :score, :data) |
 | 2026-03-13 | polygon_feed uses gas heuristics until ABI decode ready | CLOB ABI decoding requires receipt parsing; scaffold is correct, values are placeholders |
 | 2026-03-13 | CLOBMarketFeed uses httpx for REST polling | py-clob-client is for order placement; httpx for read-only REST is lighter |
 | 2026-03-13 | Web3RPCConnection uses block polling (not eth_subscribe) | More reliable across provider restarts; websocket subscription is a later upgrade |
