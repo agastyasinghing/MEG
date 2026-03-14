@@ -167,13 +167,18 @@ class MarketState(BaseModel):
     Current market state as cached by CLOBMarketFeed in Redis.
 
     Serialized as JSON and stored per-market key. Consumed by:
-      - pre_filter.market_quality (liquidity, spread, participants)
+      - pre_filter.market_quality (liquidity, spread, participants, days_to_resolution)
       - signal_engine.contrarian_detector (bid/ask, volume)
       - signal_engine.saturation_monitor (volume, participants)
       - execution.slippage_guard (bid, ask, spread)
 
     price_history is NOT in this model — it lives in a separate Redis sorted
     set (key: RedisKeys.market_price_history) scored by timestamp_ms.
+
+    days_to_resolution: calendar days until market end_date. None for indefinite
+    markets or when end_date cannot be parsed from the CLOB API response.
+    Gate 1 checks: days_to_resolution >= config.pre_filter.min_days_to_resolution.
+    If None, the check is skipped (conservative — allows trade to proceed).
     """
 
     market_id: str
@@ -185,6 +190,9 @@ class MarketState(BaseModel):
     volume_24h_usdc: float  # 24-hour trading volume in USDC
     participants: int  # unique traders in this market
     last_updated_at: datetime
+    # None when market has no end date (indefinite) or date parse fails.
+    # Gate 1 skips the days_to_resolution check when None.
+    days_to_resolution: int | None = None
 
 
 # ── Redis key patterns ────────────────────────────────────────────────────────
@@ -285,3 +293,10 @@ class RedisKeys:
     @staticmethod
     def meg_config() -> str:
         return "meg:config"
+
+    # Gate 1: markets that failed quality check cached here with 1-hour TTL.
+    # CLOBMarketFeed is NOT responsible for writing this key — Gate 1 writes it
+    # on every rejection so subsequent events on the same market skip the check.
+    @staticmethod
+    def market_quality_failed(market_id: str) -> str:
+        return f"market:{market_id}:quality_failed"
