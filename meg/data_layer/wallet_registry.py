@@ -29,24 +29,27 @@ TTL: 300 seconds (5 minutes) for all wallet cache keys.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import structlog
 from redis.asyncio import Redis
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.config_loader import MegConfig
 from meg.core.events import RedisKeys
-from meg.db.models import Wallet
+from meg.db.models import Trade, Wallet
 from meg.db.session import get_session
 
 logger = structlog.get_logger(__name__)
 
 # Redis cache TTL for wallet data (seconds)
 _CACHE_TTL = 300
+
+# Lookback window for get_correlated_exposure (Gate 3 HEDGE detection)
+_CORRELATED_EXPOSURE_WINDOW_DAYS = 30
 
 # Redis key for full wallet data cache
 def _wallet_data_key(address: str) -> str:
@@ -566,3 +569,139 @@ async def get_tracked_addresses(
     async with get_session() as s:
         result = await s.execute(stmt)
         return list(result.scalars().all())
+
+
+# ── Trade history queries (used by pre_filter gates 2 and 3) ──────────────────
+#
+# These query the trades table by wallet + market + recency.
+# Called on every Gate 2/3 evaluation — see ix_trades_wallet_market_time index
+# (migration c8f2e4b1a9d3) for the compound index that keeps this O(log N).
+#
+# Session injection follows the same pattern as wallet queries above:
+# inject db_session in tests, use get_session() in production.
+
+
+def _trade_to_dict(t: Trade) -> dict[str, Any]:
+    """Serialize a Trade ORM row to a plain dict for pre-filter consumption."""
+    return {
+        "id": t.id,
+        "wallet_address": t.wallet_address,
+        "market_id": t.market_id,
+        "outcome": t.outcome,
+        "size_usdc": float(t.size_usdc),
+        "traded_at": t.traded_at.isoformat() if t.traded_at else None,
+        "market_price_at_trade": float(t.market_price_at_trade),
+        "intent": t.intent,
+    }
+
+
+async def get_recent_trades(
+    wallet_address: str,
+    market_id: str,
+    hours: float,
+    *,
+    session: AsyncSession | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Return all trades for a wallet in a given market within the last `hours`.
+    Results are ordered by traded_at ascending (oldest first) — callers that
+    check for monotonically-increasing size (SIGNAL_LADDER) need this order.
+
+    Uses ix_trades_wallet_market_time compound index.
+    """
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
+    stmt = (
+        select(Trade)
+        .where(
+            Trade.wallet_address == wallet_address,
+            Trade.market_id == market_id,
+            Trade.traded_at >= cutoff,
+        )
+        .order_by(Trade.traded_at)
+    )
+
+    if session is not None:
+        result = await session.execute(stmt)
+        return [_trade_to_dict(t) for t in result.scalars().all()]
+
+    async with get_session() as s:
+        result = await s.execute(stmt)
+        return [_trade_to_dict(t) for t in result.scalars().all()]
+
+
+async def get_recent_same_direction(
+    wallet_address: str,
+    market_id: str,
+    outcome: str,
+    hours: float,
+    *,
+    session: AsyncSession | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Return trades for a wallet in a given market, filtered to a single outcome
+    direction, within the last `hours`. Used by Gate 3 SIGNAL_LADDER detection:
+    if sizes are monotonically increasing across these trades, the whale is
+    building a ladder.
+
+    Results are ordered by traded_at ascending for monotonicity checks.
+    Uses ix_trades_wallet_market_time compound index.
+    """
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
+    stmt = (
+        select(Trade)
+        .where(
+            Trade.wallet_address == wallet_address,
+            Trade.market_id == market_id,
+            Trade.outcome == outcome,
+            Trade.traded_at >= cutoff,
+        )
+        .order_by(Trade.traded_at)
+    )
+
+    if session is not None:
+        result = await session.execute(stmt)
+        return [_trade_to_dict(t) for t in result.scalars().all()]
+
+    async with get_session() as s:
+        result = await s.execute(stmt)
+        return [_trade_to_dict(t) for t in result.scalars().all()]
+
+
+async def get_correlated_exposure(
+    wallet_address: str,
+    market_id: str,
+    *,
+    session: AsyncSession | None = None,
+) -> float:
+    """
+    Return total USDC the wallet has committed to this market in the past 30 days
+    (all directions combined). Used by Gate 3 HEDGE detection.
+
+    V1 approximation: "correlated exposure" is measured against the same market
+    only. Full correlated-market detection (e.g., hedging "Trump wins presidency"
+    against "Trump wins popular vote") requires the v2 market relationship graph.
+    See TODOS.md: resolution_source / market correlation.
+
+    The HEDGE classification fires when:
+      get_correlated_exposure() > 0 AND event.size_usdc < exposure * 0.3
+    i.e., the new trade is small relative to the wallet's existing stake in this
+    market — consistent with hedging rather than new directional conviction.
+
+    Returns 0.0 if the wallet has no prior trades in this market in the window.
+    """
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=_CORRELATED_EXPOSURE_WINDOW_DAYS)
+    stmt = select(
+        func.coalesce(func.sum(Trade.size_usdc), 0.0)
+    ).where(
+        Trade.wallet_address == wallet_address,
+        Trade.market_id == market_id,
+        Trade.traded_at >= cutoff,
+    )
+
+    if session is not None:
+        result = await session.execute(stmt)
+        return float(result.scalar_one())
+
+    async with get_session() as s:
+        result = await s.execute(stmt)
+        return float(result.scalar_one())

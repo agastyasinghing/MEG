@@ -3,6 +3,47 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.3.0] - 2026-03-14
+
+### Added
+- `meg/core/config_loader.py` — Full `ConfigLoader` implementation: `_ConfigFileHandler`
+  watchdog handler (directory-watch, resolved-path filter); `ConfigLoader.start()` initial
+  load + observer startup (raises fatal on bad YAML/schema); `get()` thread-safe read under
+  `threading.Lock`; `stop()` idempotent observer teardown; `_load_and_validate()` with
+  empty-file→defaults handling; `_on_config_changed()` hot-reload with keep-last-good on
+  any error. Thread-safety diagram in module docstring.
+- `meg/core/config_loader.py` — `PreFilterConfig.min_days_to_resolution: int = 1` — Gate 1
+  minimum calendar days until market resolution.
+- `meg/core/events.py` — `MarketState.days_to_resolution: int | None` — calendar days until
+  market end date; `None` for indefinite markets or parse failures (Gate 1 skips check
+  conservatively). `RedisKeys.market_quality_failed(market_id)` — Gate 1 rejection cache key.
+- `meg/data_layer/clob_client.py` — `_parse_days_to_resolution(market_id, raw_date)` helper:
+  parses ISO-8601 end dates with `Z` suffix, naive datetime, and three Polymarket field name
+  variants (`end_date_iso`, `end_date`, `endDate`); returns `None` on any parse failure.
+  `_fetch_market_state` now extracts and passes `days_to_resolution` to `MarketState`.
+- `meg/data_layer/wallet_registry.py` — `get_recent_trades`, `get_recent_same_direction`,
+  `get_correlated_exposure` trade history queries for pre-filter Gates 2/3. All use the new
+  `ix_trades_wallet_market_time` compound index. `_CORRELATED_EXPOSURE_WINDOW_DAYS = 30`
+  named constant for the 30-day HEDGE exposure window.
+- `meg/db/models.py` — `ix_trades_wallet_market_time` compound index on
+  `(wallet_address, market_id, traded_at DESC)` for Gate 3 hot-path queries.
+- `meg/db/migrations/versions/c8f2e4b1a9d3_add_wallet_market_trade_index.py` — Alembic
+  migration creating the compound trade index.
+- `tests/core/test_config_loader.py` — 17 tests covering `_load_and_validate`, `start`,
+  `get`, `_on_config_changed` (hot-reload, keep-last-good), `stop` (idempotent), and a
+  concurrency test (500 `get()` calls racing against background reload thread).
+- `tests/data_layer/test_clob_client.py` — 4 new tests: `_parse_days_to_resolution` valid
+  date, `None` input, invalid format, expired market; 1 test for `_fetch_market_state`
+  happy-path `days_to_resolution` extraction via mocked httpx.
+- `tests/data_layer/test_wallet_registry.py` — 10 new tests for `get_recent_trades`,
+  `get_recent_same_direction`, and `get_correlated_exposure`.
+- `TODOS.md` — `[P1] Gate 1: resolution_source field and flagged_sources config` entry with
+  full resume context; blocked on confirming Polymarket CLOB API field name.
+
+### Fixed
+- `meg/pre_filter/intent_classifier.py` — `Intent` type alias was missing `SIGNAL_LADDER`;
+  the literal union now correctly includes all four intent values.
+
 ## [0.1.2.0] - 2026-03-13
 
 ### Added

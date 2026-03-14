@@ -124,6 +124,10 @@ class CLOBMarketFeed:
 
         Uses httpx for async HTTP. Falls back to dummy values if httpx is
         not available (enables unit tests without network).
+
+        days_to_resolution is extracted from end_date_iso (or end_date / endDate)
+        in the /markets/{id} response. On parse failure or missing field, it is
+        set to None — Gate 1 skips the days check when None (conservative).
         """
         try:
             import httpx
@@ -137,7 +141,7 @@ class CLOBMarketFeed:
                 ob_resp.raise_for_status()
                 ob: dict[str, Any] = ob_resp.json()
 
-                # Fetch market metadata for volume/participants
+                # Fetch market metadata for volume/participants/end_date
                 mk_resp = await client.get(
                     f"{self._clob_host}/markets/{market_id}",
                 )
@@ -159,6 +163,13 @@ class CLOBMarketFeed:
             volume_24h = float(mk.get("volume", 0.0))
             participants = int(mk.get("unique_traders", 0))
 
+            # days_to_resolution: try common Polymarket field names in priority order.
+            # Set to None on any parse failure — Gate 1 skips the check when None.
+            days_to_resolution = _parse_days_to_resolution(
+                market_id,
+                mk.get("end_date_iso") or mk.get("end_date") or mk.get("endDate"),
+            )
+
         except ImportError:
             # httpx not available — return placeholder state for testing
             logger.debug(
@@ -172,6 +183,7 @@ class CLOBMarketFeed:
             liquidity = 0.0
             volume_24h = 0.0
             participants = 0
+            days_to_resolution = None
 
         return MarketState(
             market_id=market_id,
@@ -183,6 +195,7 @@ class CLOBMarketFeed:
             volume_24h_usdc=volume_24h,
             participants=participants,
             last_updated_at=datetime.now(tz=timezone.utc),
+            days_to_resolution=days_to_resolution,
         )
 
     async def _write_state(self, state: MarketState) -> None:
@@ -222,6 +235,41 @@ class CLOBMarketFeed:
             spread=state.spread,
             participants=state.participants,
         )
+
+
+# ── Module-level helpers ───────────────────────────────────────────────────────
+
+
+def _parse_days_to_resolution(market_id: str, raw_date: str | None) -> int | None:
+    """
+    Parse an ISO-8601 date string and return calendar days until that date.
+
+    Returns None when:
+      - raw_date is None (market has no end date — indefinite markets)
+      - raw_date cannot be parsed as ISO-8601 (unexpected API shape)
+
+    Negative values are valid — they mean the market has already passed its
+    end date (may resolve soon or already resolved). Gate 1 checks >= 1, so
+    negative/zero values correctly fail the minimum-days check.
+    """
+    if raw_date is None:
+        return None
+    try:
+        # datetime.fromisoformat handles "2026-03-15", "2026-03-15T00:00:00Z",
+        # and "2026-03-15T00:00:00+00:00". Replace Z suffix for Python < 3.11.
+        end_dt = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+        # Ensure timezone-aware comparison
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.replace(tzinfo=timezone.utc)
+        delta = end_dt - datetime.now(tz=timezone.utc)
+        return delta.days
+    except (ValueError, AttributeError, TypeError):
+        logger.debug(
+            "clob_market_feed.end_date_parse_failed",
+            market_id=market_id,
+            raw_date=raw_date,
+        )
+        return None
 
 
 # ── Execution layer stubs (implemented in execution phase) ────────────────────

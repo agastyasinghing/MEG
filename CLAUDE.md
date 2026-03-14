@@ -106,6 +106,7 @@ Paper trading must work and be validated before any live execution code is writt
 - **Tests mirror src** — `tests/signal_engine/test_lead_lag.py` mirrors `signal_engine/lead_lag_scorer.py`
 - **No layer coupling** — layers talk via Redis only, never import across layers
 - **Commit every hour** — at minimum once per completed module
+- **Senior engineer audit standard** — After every build, assume a senior engineer will audit this code for correctness, security, and PRD compliance before it ships. Build accordingly.
 
 ---
 

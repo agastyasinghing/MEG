@@ -24,7 +24,7 @@ from redis.asyncio import Redis
 from meg.core.config_loader import MegConfig
 from meg.core.events import QualifiedWhaleTrade, RawWhaleTrade
 
-Intent = Literal["SIGNAL", "HEDGE", "REBALANCE"]
+Intent = Literal["SIGNAL", "SIGNAL_LADDER", "HEDGE", "REBALANCE"]
 
 
 async def classify(
