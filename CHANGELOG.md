@@ -3,6 +3,40 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.1.0] - 2026-03-13
+
+### Added
+- `meg/db/models.py` — 6 SQLAlchemy 2.0 ORM tables: `wallets`, `trades`, `wallet_scores`,
+  `signal_outcomes`, `whale_trap_events`, `positions`. Full index strategy locked at schema
+  time (leaderboard, score history, signal log, market activity, tx dedup). VARCHAR enums
+  via `SAEnum(native_enum=False)` for zero-migration status additions. JSONB for signal
+  sub-scores and JSONB for list fields (contributing wallets, category scores).
+- `meg/db/session.py` — `init_db(url)` async engine factory + `get_session()` async context
+  manager. Explicit `RuntimeError` guard if called before `init_db()`. Auto-commit on clean
+  exit, auto-rollback on exception. One pattern works for both asyncio background tasks and
+  FastAPI route handlers.
+- `meg/db/migrations/` — Alembic initialized with async `env.py` (asyncpg driver, `DATABASE_URL`
+  from environment). Initial migration `42acac652ac5` creates all 6 tables with full indexes.
+  `alembic.ini` configured with ruff post-write hooks.
+- `tests/db/` — 18 tests: 6 pure-Python (Pydantic validation, session guard) pass now;
+  12 DB-level tests (table constraints, FK enforcement, JSONB round-trips) run with
+  `pytest-postgresql` + live PostgreSQL. `pytest-postgresql==5.0.0` added to `requirements-dev.txt`.
+- `TODOS.md` — 3 new deferred items: wallet_scores retention policy (P2), Alembic drift
+  check in CI (P1), resolved_pnl_usdc backfill job (P1).
+
+### Changed
+- `meg/core/events.py` — aligned with PRD §12 as authoritative source of truth. `SignalScores`
+  model added (7 sub-scores with `ge`/`le` Pydantic constraints). `SignalEvent` updated with
+  12 new fields (`scores`, `triggering_wallet`, `is_contrarian`, `is_ladder`, `trap_warning`,
+  etc.). `source_wallet_addresses` renamed to `contributing_wallets`. `SIGNAL_LADDER` added
+  to `Intent` literal. Shared type aliases extracted (`Outcome`, `Archetype`, `Intent`,
+  `SignalStatus`).
+
+### Fixed
+- `meg/db/models.py` — `_utcnow()` now returns timezone-aware datetime
+  (`datetime.now(tz=timezone.utc)`) instead of naive `datetime.utcnow()`, which asyncpg
+  rejects for TIMESTAMPTZ columns at runtime.
+
 ## [0.1.0.0] - 2026-03-13
 
 ### Added
