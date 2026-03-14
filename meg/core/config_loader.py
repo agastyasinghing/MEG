@@ -90,7 +90,17 @@ class PreFilterConfig(BaseModel):
     min_unique_participants: int = 20
     # Minimum calendar days until market resolution. None-valued days_to_resolution
     # on MarketState skips this check (conservative — allows trade to proceed).
-    min_days_to_resolution: int = 1
+    min_days_to_resolution: int = 3
+    # Gate 2: window for YES+NO same-market behavioral arb detection (hours).
+    arb_detection_window_hours: int = 24
+    # Gate 3: window for SIGNAL_LADDER same-direction trade detection (hours).
+    ladder_window_hours: int = 6
+    # Gate 3: minimum prior same-direction trades within ladder_window_hours
+    # to classify a trade as SIGNAL_LADDER rather than SIGNAL.
+    ladder_min_trades: int = 2
+    # Gate 3: minimum trade size as a fraction of wallet total_capital_usdc
+    # to qualify as a directional SIGNAL. Below this → REBALANCE.
+    min_signal_size_pct: float = 0.02
 
 
 class SignalDecayConfig(BaseModel):

@@ -239,6 +239,12 @@ class RedisKeys:
     def wallet_archetype(address: str) -> str:
         return f"wallet:{address}:archetype"
 
+    # Full wallet JSON blob written by wallet_registry dual-write (TTL 300s).
+    # Read by Gate 3 (intent_classifier) for total_capital_usdc and conviction data.
+    @staticmethod
+    def wallet_data(address: str) -> str:
+        return f"wallet:{address}:data"
+
     @staticmethod
     def signal_state(signal_id: str) -> str:
         return f"signal:{signal_id}:state"
@@ -300,3 +306,10 @@ class RedisKeys:
     @staticmethod
     def market_quality_failed(market_id: str) -> str:
         return f"market:{market_id}:quality_failed"
+
+    # Written by CLOBMarketFeed on every poll. Value is int string (calendar days
+    # until market end_date) or "" (empty string) when end_date is None/unparseable.
+    # Gate 1 skips the days check when the value is absent or empty (conservative).
+    @staticmethod
+    def market_days_to_resolution(market_id: str) -> str:
+        return f"market:{market_id}:days_to_resolution"
