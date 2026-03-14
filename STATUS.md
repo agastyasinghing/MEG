@@ -6,8 +6,8 @@
 
 ## Current Phase
 - [x] Repo scaffolding — **COMPLETE** (merged: feat/repo-scaffold, v0.1.0.0)
-- [~] DB schema — **BUILT, needs /review + /ship**
-- [ ] Data Layer
+- [x] DB schema — **COMPLETE** (merged: v0.1.1.0)
+- [~] Data Layer — **BUILT, needs /review + /ship**
 - [ ] Pre-Filter Gates
 - [ ] Signal Engine
 - [ ] Agent Core
@@ -16,55 +16,63 @@
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** DB schema
+**Active phase:** Data Layer
 
 ---
 
 ## What Was Just Completed
 
-- Full repo scaffold built, reviewed, and merged (v0.1.0.0)
-  - `meg/` package + `pyproject.toml`, all 5 layer stub trees, `meg/core/` kernel
-  - `meg/core/events.py`: full Pydantic schemas + `RedisKeys`
-  - `meg/core/config_loader.py`: `MegConfig` model + `ConfigLoader` stub (watchdog hot-reload)
-  - `docker-compose.yml` with profiles, `config/config.yaml` full schema, `requirements.txt`
-  - `tests/conftest.py`, `.gitignore`, `.env.example`, `TODOS.md`, `VERSION`, `CHANGELOG.md`
-- `/plan-ceo-review`, `/plan-eng-review` (14 decisions locked)
-- `/review` (3 informational issues found and fixed)
-- `/ship` (PR created, merged)
+**Data Layer phase (2026-03-13):**
+- `meg/db/models.py` — Added 7 Wallet columns (total_volume_usdc, total_trades,
+  total_capital_usdc, is_tracked, is_excluded, exclusion_reason, avg_hold_time_hours)
+  and 9 Trade columns (market_category, lead_time_hours, exit/resolution fields, pnl,
+  tx_hash_exit) + ix_trades_market_category index
+- `meg/core/events.py` — Added `MarketState` Pydantic model; 10 new `RedisKeys` methods
+  (market_bid/ask/volume_24h/participants/last_updated_ms/price_history,
+  active_markets, last_processed_block, consensus_window, meg_config)
+- `meg/core/redis_client.py` — Full implementation: create_redis_client (3-retry backoff),
+  publish, subscribe (async generator, re-raises ConnectionError), close
+- `meg/data_layer/polygon_feed.py` — Full implementation: PolygonRPCConnection ABC,
+  Web3RPCConnection (polling), PolygonFeed (reconnect backoff, gap tracking, per-tx try/except)
+- `meg/data_layer/clob_client.py` — CLOBMarketFeed: polls CLOB REST every 5s, all 8 market
+  state Redis keys, price_history sorted set with ZREMRANGEBYSCORE; stubs kept intact
+- `meg/data_layer/wallet_registry.py` — Full rewrite: dual-write, Redis-first cache (300s TTL),
+  session injection, full CRUD suite (12 functions)
+- `meg/data_layer/capital_refresh.py` — New: CapitalRefreshJob (daily USDC balance via RPC)
+- `meg/db/migrations/versions/b4e2f9a1c3d7_add_wallet_capital_and_trade_metadata.py`
+  — Alembic migration (revises 42acac652ac5) for all new wallet + trade columns
+- `tests/data_layer/test_polygon_feed.py` — 18 tests (ABC, filter, error handling, gap detection)
+- `tests/data_layer/test_clob_client.py` — 11 tests (all Redis keys, price trim, error isolation)
+- `tests/data_layer/test_wallet_registry.py` — 19 tests (CRUD, cache, dual-write, exclusion)
+- `TODOS.md` — 2 new items: gap-fill replay (P1), wallet auto-discovery (P2)
 
-**DB schema phase (2026-03-13):**
-- `meg/core/events.py` — aligned with PRD §12: `SignalScores` model added, `SignalEvent`
-  updated (+12 fields), `source_wallet_addresses` → `contributing_wallets`, `SIGNAL_LADDER` added
-- `meg/db/models.py` — 6 tables: `wallets`, `trades`, `wallet_scores`, `signal_outcomes`,
-  `whale_trap_events`, `positions`. Full index strategy, VARCHAR enums, JSONB sub-scores.
-- `meg/db/session.py` — `init_db()` + `get_session()` async context manager
-- `meg/db/migrations/env.py` — async Alembic env, DATABASE_URL from env
-- `alembic.ini` — ruff post-write hooks, URL via env var
+**DB schema phase (completed prior session, v0.1.1.0):**
+- `meg/db/models.py` — 6 tables with full index strategy, VARCHAR enums, JSONB sub-scores
+- `meg/db/session.py` — init_db() + get_session() async context manager
 - `meg/db/migrations/versions/42acac652ac5_initial_schema_six_tables.py` — initial migration
-- `tests/db/conftest.py` — pytest-postgresql fixtures
-- `tests/db/test_models.py` — 15 tests covering all tables + session + events.py alignment
-- `requirements-dev.txt` — added pytest-postgresql==5.0.0
-- `TODOS.md` — 3 new items (score retention, alembic CI check, PnL backfill job)
 
 ---
 
 ## In Progress
 
-- DB schema built — ready for `/review` then `/ship`
+- Data Layer built — ready for `/review` then `/ship`
 
 ---
 
 ## Known Broken / Blocked
 
-- None
+- `polygon_feed._filter_whale_transaction()` uses gas heuristics as size proxy;
+  full CLOB ABI decoding (exact USDC, market_id, outcome from OrderFilled event) is TODO.
+  All structural/architectural pieces are correct; values are placeholders.
+- `capital_refresh._get_usdc_balance()` requires Alchemy RPC connection (production only).
 
 ---
 
 ## Next 3 Tasks
 
-1. **Run `/review` on DB schema** — paranoid staff engineer review before shipping.
-2. **Run `/ship`** — sync main, test, push, PR for DB schema phase.
-3. **Start Data Layer** — `meg/data_layer/polygon_feed.py`, CLOB client, wallet registry CRUD.
+1. **Run `/review` on Data Layer** — paranoid staff engineer review before shipping.
+2. **Run `/ship`** — sync main, test, push, PR for data layer phase.
+3. **Start Pre-Filter Gates** — `market_quality.py`, `arbitrage_exclusion.py`, `intent_classifier.py`.
 
 ---
 
@@ -72,6 +80,17 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-13 | polygon_feed uses gas heuristics until ABI decode ready | CLOB ABI decoding requires receipt parsing; scaffold is correct, values are placeholders |
+| 2026-03-13 | CLOBMarketFeed uses httpx for REST polling | py-clob-client is for order placement; httpx for read-only REST is lighter |
+| 2026-03-13 | Web3RPCConnection uses block polling (not eth_subscribe) | More reliable across provider restarts; websocket subscription is a later upgrade |
+| 2026-03-13 | wallet_registry dual-write: DB first, then Redis | DB is authoritative; Redis failure logs warning and continues (cache can be rebuilt) |
+| 2026-03-13 | Cache TTL = 300s for wallet data | Matches signal decay TTL; fresh enough for scores, long enough for latency budget |
+| 2026-03-13 | Session injection (session: AsyncSession | None) | Tests inject rollback fixture; production uses get_session() internally |
+| 2026-03-13 | CapitalRefreshJob built now (not deferred) | conviction_ratio needs total_capital_usdc; without it sub-score defaults to 0 |
+| 2026-03-13 | ZREMRANGEBYSCORE trim on every write | O(log N + M) cost; avoids periodic cleanup job; bounded memory per market |
+| 2026-03-13 | Price history TTL = 1 hour | Matches signal_decay half_life_seconds; sufficient for contrarian/saturation detectors |
+| 2026-03-13 | active_markets Redis set (SADD by polygon_feed) | Decoupled subscription: CLOBMarketFeed polls whatever polygon_feed has observed |
+| 2026-03-13 | gap-fill replay deferred to TODO | Adds complexity; acceptable risk at v1 scale where outages are rare |
 | 2026-03-13 | 6 tables (added `positions`) | PRD §12 defines it; deferring would require mid-build migration |
 | 2026-03-13 | Soft FK on `trades.wallet_address` | Feed must never crash on unregistered wallets |
 | 2026-03-13 | JSONB `scores_json` for signal sub-scores | New signal modules add keys, not columns — zero migration cost |
