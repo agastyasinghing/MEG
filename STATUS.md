@@ -6,7 +6,7 @@
 
 ## Current Phase
 - [x] Repo scaffolding — **COMPLETE** (merged: feat/repo-scaffold, v0.1.0.0)
-- [~] DB schema — **NEXT**
+- [~] DB schema — **BUILT, needs /review + /ship**
 - [ ] Data Layer
 - [ ] Pre-Filter Gates
 - [ ] Signal Engine
@@ -32,11 +32,25 @@
 - `/review` (3 informational issues found and fixed)
 - `/ship` (PR created, merged)
 
+**DB schema phase (2026-03-13):**
+- `meg/core/events.py` — aligned with PRD §12: `SignalScores` model added, `SignalEvent`
+  updated (+12 fields), `source_wallet_addresses` → `contributing_wallets`, `SIGNAL_LADDER` added
+- `meg/db/models.py` — 6 tables: `wallets`, `trades`, `wallet_scores`, `signal_outcomes`,
+  `whale_trap_events`, `positions`. Full index strategy, VARCHAR enums, JSONB sub-scores.
+- `meg/db/session.py` — `init_db()` + `get_session()` async context manager
+- `meg/db/migrations/env.py` — async Alembic env, DATABASE_URL from env
+- `alembic.ini` — ruff post-write hooks, URL via env var
+- `meg/db/migrations/versions/42acac652ac5_initial_schema_six_tables.py` — initial migration
+- `tests/db/conftest.py` — pytest-postgresql fixtures
+- `tests/db/test_models.py` — 15 tests covering all tables + session + events.py alignment
+- `requirements-dev.txt` — added pytest-postgresql==5.0.0
+- `TODOS.md` — 3 new items (score retention, alembic CI check, PnL backfill job)
+
 ---
 
 ## In Progress
 
-- Nothing — DB schema phase not started
+- DB schema built — ready for `/review` then `/ship`
 
 ---
 
@@ -48,9 +62,9 @@
 
 ## Next 3 Tasks
 
-1. **Run `/plan-ceo-review` on DB schema** — 5 tables: `wallets`, `trades`, `wallet_scores`, `whale_trap_events`, `signal_outcomes`. Confirm schema, index strategy, and Alembic setup before writing any SQL.
-2. **Run `/plan-eng-review` on DB schema** — lock column types, constraints, FK relationships, async SQLAlchemy pattern, and migration workflow.
-3. **Build `meg/db/models.py` + Alembic init + first migration** — implement the full schema, run `/review`, `/ship`.
+1. **Run `/review` on DB schema** — paranoid staff engineer review before shipping.
+2. **Run `/ship`** — sync main, test, push, PR for DB schema phase.
+3. **Start Data Layer** — `meg/data_layer/polygon_feed.py`, CLOB client, wallet registry CRUD.
 
 ---
 
@@ -58,6 +72,14 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-13 | 6 tables (added `positions`) | PRD §12 defines it; deferring would require mid-build migration |
+| 2026-03-13 | Soft FK on `trades.wallet_address` | Feed must never crash on unregistered wallets |
+| 2026-03-13 | JSONB `scores_json` for signal sub-scores | New signal modules add keys, not columns — zero migration cost |
+| 2026-03-13 | `get_session()` async context manager in `session.py` | One pattern works in both asyncio tasks and FastAPI handlers |
+| 2026-03-13 | PRD §12 as schema authority; `events.py` updated to match | One source of truth; ORM and Redis events agree on all field names |
+| 2026-03-13 | VARCHAR enums via `SAEnum(native_enum=False)` | Adding new status values requires no `ALTER TYPE` migration |
+| 2026-03-13 | wallet_scores retention deferred to v1.5 | 730k rows/year is acceptable for v1; see TODOS.md |
+| 2026-03-13 | pytest-postgresql for DB tests (real PG, no mocking) | JSONB, FK constraints, UniqueConstraint all need a real DB to test |
 | 2026-03-12 | Package: `meg/` at root + `pyproject.toml` + `pip install -e .` | Clean import paths, no PYTHONPATH hacks, modern Python standard |
 | 2026-03-12 | Python 3.11 locked via `.python-version` + `pyproject.toml` + Dockerfile | Three sources agree, no accidental version drift |
 | 2026-03-12 | Shared kernel at `meg/core/`: redis_client, logger, events, config_loader | Single import boundary, no circular deps, fully testable |

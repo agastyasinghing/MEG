@@ -13,12 +13,35 @@ Event flow:
 
 Dependency rule: meg.core imports nothing from meg. It is the base of the
 dependency tree. All other layers import from meg.core; none import each other.
+
+Schema authority: PRD §12 is the source of truth for all field names and types.
+This file must stay in sync with meg/db/models.py — any field added here
+must have a corresponding column in the ORM model (or be intentionally excluded
+with a comment explaining why).
 """
 from __future__ import annotations
 
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+
+# ── Shared type aliases ────────────────────────────────────────────────────────
+
+Outcome = Literal["YES", "NO"]
+Archetype = Literal["INFORMATION", "MOMENTUM", "ARBITRAGE", "MANIPULATOR"]
+# SIGNAL_LADDER: whale is building a position across multiple trades (escalating conviction)
+Intent = Literal["SIGNAL", "SIGNAL_LADDER", "HEDGE", "REBALANCE"]
+SignalStatus = Literal[
+    "PENDING",
+    "APPROVED",
+    "REJECTED",
+    "FILTERED",
+    "BLOCKED",
+    "EXECUTED",
+    "EXPIRED",
+    "TRAP_DETECTED",
+]
 
 
 # ── Event schemas ─────────────────────────────────────────────────────────────
@@ -33,7 +56,7 @@ class RawWhaleTrade(BaseModel):
     event_type: Literal["raw_whale_trade"] = "raw_whale_trade"
     wallet_address: str
     market_id: str
-    outcome: Literal["YES", "NO"]
+    outcome: Outcome
     size_usdc: float
     timestamp_ms: int
     tx_hash: str
@@ -46,22 +69,40 @@ class QualifiedWhaleTrade(BaseModel):
     Emitted by pre_filter after a RawWhaleTrade passes all three gates:
       Gate 1: market quality check
       Gate 2: arbitrage whale exclusion
-      Gate 3: intent classification (must be SIGNAL)
+      Gate 3: intent classification (must be SIGNAL or SIGNAL_LADDER)
     Published to: RedisKeys.CHANNEL_QUALIFIED_WHALE_TRADES
     """
 
     event_type: Literal["qualified_whale_trade"] = "qualified_whale_trade"
     wallet_address: str
     market_id: str
-    outcome: Literal["YES", "NO"]
+    outcome: Outcome
     size_usdc: float
     timestamp_ms: int
     tx_hash: str
     block_number: int
     market_price_at_trade: float
     whale_score: float
-    archetype: Literal["INFORMATION", "MOMENTUM", "ARBITRAGE", "MANIPULATOR"]
-    intent: Literal["SIGNAL", "HEDGE", "REBALANCE"]
+    archetype: Archetype
+    intent: Intent
+
+
+class SignalScores(BaseModel):
+    """
+    Per-module sub-scores that compose into the final composite_score.
+    Stored as JSONB in signal_outcomes.scores_json — adding a new module
+    field here requires no DB migration, only a new signal_engine module.
+
+    All scores are in [0, 1] except multipliers which can exceed 1.
+    """
+
+    lead_lag: float = Field(ge=0, le=1)
+    consensus: float = Field(ge=0, le=1)
+    kelly_confidence: float = Field(ge=0, le=1)
+    divergence: float = Field(ge=0, le=1)
+    conviction_ratio: float = Field(ge=0, le=1)
+    archetype_multiplier: float = Field(ge=0, le=2)
+    ladder_multiplier: float = Field(ge=1, le=2)
 
 
 class SignalEvent(BaseModel):
@@ -71,17 +112,32 @@ class SignalEvent(BaseModel):
     are published. Sub-threshold events are still logged to signal_outcomes with
     status=FILTERED — they are the training data moat.
     Published to: RedisKeys.CHANNEL_SIGNAL_EVENTS
+
+    Field authority: PRD §12 SignalEvent. Mirrors signal_outcomes ORM columns.
     """
 
     event_type: Literal["signal"] = "signal"
     signal_id: str
     market_id: str
-    outcome: Literal["YES", "NO"]
+    outcome: Outcome
     composite_score: float
+    scores: SignalScores
     recommended_size_usdc: float
+    kelly_fraction: float
     ttl_expires_at_ms: int
-    status: Literal["PENDING", "FILTERED", "EXECUTED", "EXPIRED"]
-    source_wallet_addresses: list[str] = Field(default_factory=list)
+    status: SignalStatus = "PENDING"
+    triggering_wallet: str
+    # All wallets whose trades contributed to this signal (includes triggering_wallet)
+    contributing_wallets: list[str] = Field(default_factory=list)
+    whale_count: int = 0
+    is_contrarian: bool = False
+    is_ladder: bool = False
+    ladder_trade_count: int = 0
+    market_price_at_signal: float = 0.0
+    intent: Intent = "SIGNAL"
+    saturation_score: float = 0.0
+    saturation_size_multiplier: float = 1.0
+    trap_warning: bool = False
 
 
 class TradeProposal(BaseModel):
@@ -95,7 +151,7 @@ class TradeProposal(BaseModel):
     proposal_id: str
     signal_id: str
     market_id: str
-    outcome: Literal["YES", "NO"]
+    outcome: Outcome
     size_usdc: float
     limit_price: float
     status: Literal["PENDING_APPROVAL", "APPROVED", "REJECTED", "EXECUTED", "CANCELLED"]
