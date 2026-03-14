@@ -1,7 +1,8 @@
 """
 Tests for meg/data_layer/clob_client.py — CLOBMarketFeed.
 
-Focus: Redis state management, price history sorted set, error isolation.
+Focus: Redis state management, price history sorted set, error isolation,
+and days_to_resolution parsing in _parse_days_to_resolution.
 No real CLOB API calls — CLOBMarketFeed._fetch_market_state is patched
 to return controlled MarketState fixtures.
 """
@@ -20,6 +21,7 @@ from meg.core.events import MarketState, RedisKeys
 from meg.data_layer.clob_client import (
     CLOBMarketFeed,
     _PRICE_HISTORY_TTL_MS,
+    _parse_days_to_resolution,
 )
 
 
@@ -205,6 +207,56 @@ async def test_fetch_market_state_returns_placeholder_without_httpx(mock_redis, 
     assert 0.0 <= state.mid_price <= 1.0
 
 
+@pytest.mark.asyncio
+async def test_fetch_market_state_sets_days_to_resolution_from_end_date_iso(
+    mock_redis, config
+):
+    """
+    When the CLOB response includes end_date_iso, _fetch_market_state passes
+    it through _parse_days_to_resolution and sets days_to_resolution on the
+    returned MarketState.
+    """
+    from datetime import timedelta
+    from unittest.mock import MagicMock
+
+    feed = CLOBMarketFeed(redis=mock_redis, config=config)
+
+    future_date = datetime.now(tz=timezone.utc) + timedelta(days=7)
+    end_date_iso = future_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    ob_payload = {"best_bid": "0.55", "best_ask": "0.65", "bids": [], "asks": []}
+    mk_payload = {
+        "volume": "100000",
+        "unique_traders": "250",
+        "end_date_iso": end_date_iso,
+    }
+
+    mock_response_ob = MagicMock()
+    mock_response_ob.raise_for_status = MagicMock()
+    mock_response_ob.json.return_value = ob_payload
+
+    mock_response_mk = MagicMock()
+    mock_response_mk.raise_for_status = MagicMock()
+    mock_response_mk.json.return_value = mk_payload
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(side_effect=[mock_response_ob, mock_response_mk])
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    # httpx is imported inside _fetch_market_state — patch via sys.modules
+    import types
+    mock_httpx = types.ModuleType("httpx")
+    mock_httpx.AsyncClient = MagicMock(return_value=mock_client)
+
+    with patch.dict("sys.modules", {"httpx": mock_httpx}):
+        state = await feed._fetch_market_state("market_with_enddate")
+
+    assert isinstance(state, MarketState)
+    assert state.days_to_resolution is not None
+    assert 6 <= state.days_to_resolution <= 8
+
+
 # ── Execution stubs still raise NotImplementedError ───────────────────────────
 
 
@@ -220,3 +272,46 @@ async def test_place_order_stub_raises(config):
     from meg.data_layer.clob_client import place_order
     with pytest.raises(NotImplementedError):
         await place_order("test", "YES", "buy", 100.0, 0.5, config)
+
+
+# ── _parse_days_to_resolution ─────────────────────────────────────────────────
+
+
+def test_parse_days_to_resolution_valid_iso_date():
+    """Returns positive int for a future end_date_iso string."""
+    from datetime import datetime, timedelta, timezone
+
+    # Use a date 10 days from now to avoid flakiness at boundaries
+    future = datetime.now(tz=timezone.utc) + timedelta(days=10)
+    raw = future.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    result = _parse_days_to_resolution("market_test", raw)
+
+    # Allow ±1 day for timing skew at midnight boundaries
+    assert result is not None
+    assert 9 <= result <= 11
+
+
+def test_parse_days_to_resolution_missing_field_returns_none():
+    """Returns None when raw_date is None (market has no end date)."""
+    result = _parse_days_to_resolution("market_no_end", None)
+    assert result is None
+
+
+def test_parse_days_to_resolution_invalid_format_returns_none():
+    """Returns None when the date string cannot be parsed as ISO-8601."""
+    result = _parse_days_to_resolution("market_bad", "not-a-date")
+    assert result is None
+
+
+def test_parse_days_to_resolution_expired_market_returns_negative():
+    """Returns a negative int for a market whose end date has already passed."""
+    from datetime import datetime, timedelta, timezone
+
+    past = datetime.now(tz=timezone.utc) - timedelta(days=5)
+    raw = past.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    result = _parse_days_to_resolution("market_expired", raw)
+
+    assert result is not None
+    assert result < 0
