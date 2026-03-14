@@ -149,6 +149,45 @@ reputation_decay system. See CLAUDE.md OQ-04 for data source options.
 
 ---
 
+## [P1] Gate 1: resolution_source field and flagged_sources config
+
+**What:** Add `resolution_source: str | None` to `MarketState`, write it from
+`CLOBMarketFeed._fetch_market_state()`, add `flagged_sources: list[str]` to
+`PreFilterConfig`, and implement the Gate 1 check:
+`market.resolution_source not in config.pre_filter.flagged_sources`.
+
+**Why:** PRD §9.1 Gate 1 includes this check to reject markets with non-standard
+or unreliable resolution oracles — a documented failure mode (LinkedIn arb case,
+PRD §10 threat model: "resolution divergence"). Without it, MEG may trade markets
+that resolve off disputed or unusual data sources.
+
+**Pros:** Closes the resolution-source risk gate. Gives operators a hot-config
+list of oracle sources to blacklist (e.g. unverified admin wallets, obscure APIs).
+
+**Cons:** Cannot implement until the Polymarket CLOB REST API field name for
+resolution oracle is confirmed. Adding a field that always returns None provides
+zero value and creates dead code. Also requires deciding which sources to flag
+by default (empty list is safe — no markets blocked until configured).
+
+**Context:** `days_to_resolution` was added to `MarketState` in the pre-filter
+blocker sprint (2026-03-14, branch feat/db-schema). `resolution_source` was
+explicitly deferred because the CLOB `/markets/{id}` response field name is
+unconfirmed. To resume: (1) verify field name from Polymarket CLOB API docs
+or a live `/markets/{id}` response, (2) add `resolution_source: str | None`
+to `MarketState` in `meg/core/events.py`, (3) extract it in
+`CLOBMarketFeed._fetch_market_state()` in `meg/data_layer/clob_client.py`,
+(4) add `flagged_sources: list[str] = []` to `PreFilterConfig` in
+`meg/core/config_loader.py`, (5) add the check in Gate 1 `market_quality.check()`.
+
+**Depends on / blocked by:** Confirm Polymarket CLOB API field name for
+resolution oracle. Candidate field names: `resolution_source`, `resolver`,
+`oracle`, `resolution_criteria`. Check against live API or official docs.
+
+**Effort:** S (once field name is confirmed)
+**Priority:** P1
+
+---
+
 ## [P2] pip-audit: dependency vulnerability scanning in CI
 
 **What:** Add `pip-audit -r requirements.txt` as a required CI check on every PR.
