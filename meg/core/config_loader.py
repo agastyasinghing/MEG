@@ -4,29 +4,49 @@ Hot-reloadable YAML configuration loader for MEG.
 Uses watchdog to detect config.yaml writes. On change:
   1. Re-read the file
   2. Validate with MegConfig (Pydantic)
-  3. Atomically swap _config if valid
+  3. Atomically swap _config under threading.Lock if valid
   4. On error: log warning, keep last-good config in memory
 
   config.yaml ──► FileSystemEventHandler ──► Pydantic validation
        │                  │                        │
-    file write         detected                valid → swap _config
+    file write         detected                valid → Lock ──► swap _config
     detected         by watchdog              invalid → warn + keep last-good
 
 Design constraints:
-  - ConfigLoader.get() must be thread-safe (watchdog runs on a background thread)
+  - ConfigLoader.get() must be thread-safe: watchdog runs on a background OS
+    thread. _config is swapped under threading.Lock; get() acquires the same
+    lock. Lock contention is negligible — held for one reference assignment.
   - Race condition: config.yaml may be partially written when inotify fires.
-    _load_and_validate() must catch yaml.YAMLError and treat as transient.
+    _load_and_validate() catches yaml.YAMLError and treats as transient.
   - Never call sys.exit() from _on_config_changed() — only on startup failure.
+  - start() is async for signature compatibility; the sync work inside is fast
+    (file I/O + thread start) and does not block the event loop meaningfully.
+
+Thread-safety diagram:
+
+  asyncio event loop (main thread)          watchdog observer (background thread)
+  ────────────────────────────────          ──────────────────────────────────────
+  ConfigLoader.get()                        _ConfigFileHandler.on_modified()
+       │                                            │
+  acquire threading.Lock ◄──────────── contends ──►acquire threading.Lock
+       │                                            │
+  read self._config                           self._config = new_config
+       │                                            │
+  release lock                                release lock
 """
 from __future__ import annotations
 
-import threading  # noqa: F401 — used in implementation for _lock
+import threading
 from pathlib import Path
+from typing import Any
 
-import yaml  # noqa: F401 — used in implementation for yaml.safe_load / yaml.YAMLError
+import structlog
+import yaml
 from pydantic import BaseModel, Field
-from watchdog.events import FileSystemEventHandler  # noqa: F401 — used in implementation
-from watchdog.observers import Observer  # noqa: F401 — used in implementation
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers import Observer
+
+logger = structlog.get_logger(__name__)
 
 
 # ── Config sub-models ─────────────────────────────────────────────────────────
@@ -68,6 +88,9 @@ class PreFilterConfig(BaseModel):
     min_market_liquidity_usdc: float = 50_000.0
     max_spread_pct: float = 0.05
     min_unique_participants: int = 20
+    # Minimum calendar days until market resolution. None-valued days_to_resolution
+    # on MarketState skips this check (conservative — allows trade to proceed).
+    min_days_to_resolution: int = 1
 
 
 class SignalDecayConfig(BaseModel):
@@ -115,6 +138,28 @@ class MegConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
+# ── Watchdog event handler ─────────────────────────────────────────────────────
+
+
+class _ConfigFileHandler(FileSystemEventHandler):
+    """
+    Watchdog handler that calls ConfigLoader._on_config_changed() when the
+    tracked config file is modified. Filters all other filesystem events.
+    """
+
+    def __init__(self, loader: ConfigLoader, config_path: Path) -> None:
+        super().__init__()
+        self._loader = loader
+        # Resolve once at construction so on_modified comparisons are cheap.
+        self._resolved_path = config_path.resolve()
+
+    def on_modified(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+        if Path(event.src_path).resolve() == self._resolved_path:
+            self._loader._on_config_changed(self._resolved_path)
+
+
 # ── Config loader ─────────────────────────────────────────────────────────────
 
 
@@ -128,12 +173,15 @@ class ConfigLoader:
         cfg = loader.get()   # always returns the last-good MegConfig
         await loader.stop()
 
-    Thread safety: get() is safe to call from any thread or asyncio task.
-    The internal _lock protects _config from concurrent reads during a swap.
+    Thread safety: get() acquires _lock before reading _config.
+    _on_config_changed() acquires the same lock before swapping _config.
+    Lock contention is negligible — held for a single reference assignment.
     """
 
     def __init__(self) -> None:
-        raise NotImplementedError("ConfigLoader.__init__")
+        self._config: MegConfig | None = None
+        self._lock: threading.Lock = threading.Lock()
+        self._observer: Observer | None = None
 
     async def start(self, config_path: str | Path) -> None:
         """
@@ -141,32 +189,82 @@ class ConfigLoader:
         Raises FileNotFoundError, yaml.YAMLError, or pydantic.ValidationError
         on startup failure — all of which should be treated as fatal.
         """
-        raise NotImplementedError("ConfigLoader.start")
+        path = Path(config_path).resolve()
+
+        # Initial load — raises on any failure (fatal at startup)
+        initial_config = self._load_and_validate(path)
+
+        with self._lock:
+            self._config = initial_config
+
+        # Start watchdog observer watching the config file's parent directory.
+        # We watch the directory (not the file directly) because some editors
+        # replace files atomically, which watchdog detects as directory events.
+        handler = _ConfigFileHandler(self, path)
+        self._observer = Observer()
+        self._observer.schedule(handler, str(path.parent), recursive=False)
+        self._observer.start()
+
+        logger.info("config_loader.started", path=str(path))
 
     def get(self) -> MegConfig:
         """
         Return the current (last-good) MegConfig. Thread-safe.
         Never raises — if start() succeeded, this always returns a valid config.
+        Raises RuntimeError if called before start().
         """
-        raise NotImplementedError("ConfigLoader.get")
+        with self._lock:
+            if self._config is None:
+                raise RuntimeError(
+                    "ConfigLoader.get() called before start(). "
+                    "Call await loader.start(path) first."
+                )
+            return self._config
 
     async def stop(self) -> None:
         """Stop the watchdog observer and clean up resources."""
-        raise NotImplementedError("ConfigLoader.stop")
+        if self._observer is not None:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+        logger.info("config_loader.stopped")
 
     def _load_and_validate(self, path: Path) -> MegConfig:
         """
         Read YAML from path and return a validated MegConfig.
         Raises yaml.YAMLError on malformed YAML (e.g. partial writes).
         Raises pydantic.ValidationError on schema violations.
-        Caller is responsible for handling both.
+        Raises FileNotFoundError if path does not exist.
+        Caller is responsible for handling all three.
         """
-        raise NotImplementedError("ConfigLoader._load_and_validate")
+        with open(path) as f:
+            raw: Any = yaml.safe_load(f)
+        # safe_load returns None for an empty file — treat as empty config
+        return MegConfig(**(raw or {}))
 
     def _on_config_changed(self, path: Path) -> None:
         """
-        Called by watchdog on file-system change event.
+        Called by watchdog on file-system change event (background thread).
         Attempts reload; on any error, logs a warning and keeps _config unchanged.
         Never raises — must not crash the watchdog observer thread.
         """
-        raise NotImplementedError("ConfigLoader._on_config_changed")
+        try:
+            new_config = self._load_and_validate(path)
+            with self._lock:
+                self._config = new_config
+            logger.info("config_loader.hot_reloaded", path=str(path))
+        except yaml.YAMLError as exc:
+            # Transient — file may be mid-write. Keep last-good config.
+            logger.warning(
+                "config_loader.yaml_error_on_reload",
+                path=str(path),
+                error=str(exc),
+                note="keeping last-good config",
+            )
+        except Exception as exc:
+            logger.warning(
+                "config_loader.reload_failed",
+                path=str(path),
+                error=str(exc),
+                note="keeping last-good config",
+            )
