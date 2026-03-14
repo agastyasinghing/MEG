@@ -21,6 +21,7 @@ with a comment explaining why).
 """
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -158,6 +159,34 @@ class TradeProposal(BaseModel):
     created_at_ms: int
 
 
+# ── Market state model ────────────────────────────────────────────────────────
+
+
+class MarketState(BaseModel):
+    """
+    Current market state as cached by CLOBMarketFeed in Redis.
+
+    Serialized as JSON and stored per-market key. Consumed by:
+      - pre_filter.market_quality (liquidity, spread, participants)
+      - signal_engine.contrarian_detector (bid/ask, volume)
+      - signal_engine.saturation_monitor (volume, participants)
+      - execution.slippage_guard (bid, ask, spread)
+
+    price_history is NOT in this model — it lives in a separate Redis sorted
+    set (key: RedisKeys.market_price_history) scored by timestamp_ms.
+    """
+
+    market_id: str
+    bid: float  # best bid price (0.0–1.0)
+    ask: float  # best ask price (0.0–1.0)
+    mid_price: float  # (bid + ask) / 2
+    spread: float  # ask - bid
+    liquidity_usdc: float  # total USDC depth within 5 ticks
+    volume_24h_usdc: float  # 24-hour trading volume in USDC
+    participants: int  # unique traders in this market
+    last_updated_at: datetime
+
+
 # ── Redis key patterns ────────────────────────────────────────────────────────
 
 
@@ -209,3 +238,50 @@ class RedisKeys:
     @staticmethod
     def signal_ttl(signal_id: str) -> str:
         return f"signal:{signal_id}:ttl"
+
+    # ── Market CLOB state keys (written by CLOBMarketFeed) ────────────────────
+    @staticmethod
+    def market_bid(market_id: str) -> str:
+        return f"market:{market_id}:bid"
+
+    @staticmethod
+    def market_ask(market_id: str) -> str:
+        return f"market:{market_id}:ask"
+
+    @staticmethod
+    def market_volume_24h(market_id: str) -> str:
+        return f"market:{market_id}:volume_24h"
+
+    @staticmethod
+    def market_participants(market_id: str) -> str:
+        return f"market:{market_id}:participants"
+
+    @staticmethod
+    def market_last_updated_ms(market_id: str) -> str:
+        return f"market:{market_id}:last_updated_ms"
+
+    # Sorted set: member=mid_price_str, score=timestamp_ms (ZREMRANGEBYSCORE trims to 1h)
+    @staticmethod
+    def market_price_history(market_id: str) -> str:
+        return f"market:{market_id}:price_history"
+
+    # ── System-level keys (single instance) ───────────────────────────────────
+    # Set of all market_ids currently being traded (SADD by polygon_feed)
+    @staticmethod
+    def active_markets() -> str:
+        return "meg:active_markets"
+
+    # Last block number successfully processed by polygon_feed
+    @staticmethod
+    def last_processed_block() -> str:
+        return "meg:last_processed_block"
+
+    # Sorted set window for consensus_filter: member=wallet_address, score=timestamp_ms
+    @staticmethod
+    def consensus_window(market_id: str) -> str:
+        return f"market:{market_id}:consensus_window"
+
+    # Serialized MegConfig JSON — set by config_loader after each hot-reload
+    @staticmethod
+    def meg_config() -> str:
+        return "meg:config"
