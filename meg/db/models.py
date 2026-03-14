@@ -249,12 +249,17 @@ class Trade(Base):
 
     __table_args__ = (
         UniqueConstraint("tx_hash", name="uq_trades_tx_hash"),
-        # Whale trade history lookups
+        # Whale trade history lookups (single wallet — leaderboard, profile)
         Index("ix_trades_wallet_address", "wallet_address"),
         # Market activity view
         Index("ix_trades_market_traded_at", "market_id", traded_at.desc()),
         # Category-filtered signal analytics
         Index("ix_trades_market_category", "market_category"),
+        # Hot-path Gate 3 queries: wallet_registry.get_recent_trades() and
+        # get_recent_same_direction() both filter on (wallet_address, market_id,
+        # traded_at). Without this compound index, PG scans all trades for a wallet
+        # then filters by market_id in memory — O(trades_per_wallet) per Gate 3 call.
+        Index("ix_trades_wallet_market_time", "wallet_address", "market_id", traded_at.desc()),
     )
 
 
