@@ -28,7 +28,7 @@ async def mock_redis() -> Redis:
     Backed by an in-memory store — no real Redis required.
     Supports pub/sub, key-value ops, and TTLs.
     """
-    client = fakeredis.aioredis.FakeRedis()
+    client = fakeredis.aioredis.FakeRedis(decode_responses=True)
     yield client
     await client.aclose()
 
@@ -37,10 +37,9 @@ async def mock_redis() -> Redis:
 def test_config() -> MegConfig:
     """
     Return a MegConfig with safe defaults for unit tests.
-    Override individual fields in tests:
-        cfg = test_config
-        cfg.risk.paper_trading = True
-        cfg.signal.composite_score_threshold = 0.30
-    Stub — fill in when ConfigLoader is implemented at data_layer phase.
+    Uses Pydantic defaults — all thresholds are production values.
+    Override individual fields in tests as needed:
+        def test_something(test_config):
+            test_config.risk.paper_trading = True
     """
-    raise NotImplementedError("test_config fixture: implement at data_layer phase")
+    return MegConfig()

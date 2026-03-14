@@ -88,6 +88,67 @@ Data layer CLOB client (needs market resolution event feed)
 
 ---
 
+## [P1] Polygon RPC gap-fill replay
+
+**What:** When polygon_feed reconnects after a disconnect, replay transactions from the
+last_processed_block to the current block to recover any missed whale trades.
+
+**Why:** Currently, a disconnect (crash, RPC timeout, deploy restart) silently drops all
+blocks between `last_processed_block` and the reconnect point. At 2 blocks/second on
+Polygon, a 5-minute outage = ~600 missed blocks. A single whale trade in that window
+is a missed signal with no recovery path.
+
+**Pros:** Zero blind spots in trade history. Enables confident replay after restarts.
+Reduces false negatives in signal detection during outages.
+
+**Cons:** Requires fetching and filtering potentially hundreds of blocks on reconnect —
+adds startup latency. Risk of re-emitting duplicate events if dedup is not airtight
+(tx_hash UniqueConstraint in trades table provides this protection).
+
+**Context:** polygon_feed._check_block_gap() already detects gaps and logs a WARNING
+with gap size. The gap_fill replay should: (1) iterate block range [last+1, current],
+(2) call _process_block() for each, (3) set last_processed_block at the end of replay.
+Add a timeout (e.g. max 10 minutes of replay) to prevent stalling on very large gaps.
+Consider building this as `PolygonFeed._replay_gap(from_block, to_block)`.
+
+**Effort:** M
+**Priority:** P1
+**Blocked by:** polygon_feed must be stable in production before gap-fill adds complexity
+
+---
+
+## [P2] Wallet auto-discovery from on-chain data
+
+**What:** Automatically identify and register new whale wallet candidates from
+on-chain Polymarket CLOB transactions — without requiring manual bootstrap.
+
+**Why:** bootstrap_wallets.py seeds the registry with known whales from Dune/Bitquery,
+but new whales emerge continuously. Any wallet making large trades that is NOT in the
+registry is invisible to MEG's signal engine. Auto-discovery fills this gap by
+monitoring CLOB contract transactions and flagging wallets above a size/frequency
+threshold for evaluation.
+
+**Pros:** Self-growing registry. Captures emerging whales before competitors.
+Removes dependency on periodic manual Dune queries.
+
+**Cons:** Risk of polluting registry with noise (arbitrageurs, bots). Requires
+qualification pipeline to evaluate new candidates — can't blindly trust any wallet
+making a large trade. registry.register_if_new() is already built; this TODO is
+about the scoring/qualification trigger for new registrations.
+
+**Context:** polygon_feed._filter_whale_transaction() already calls register_if_new()
+for unknown wallets to mark them as is_tracked=True. This TODO is the next step:
+build a background job that evaluates is_tracked=True / is_qualified=False wallets
+against historical on-chain data (Dune, Bitquery — see OQ-04) and promotes them to
+is_qualified=True if they meet thresholds. Start in agent_core/ alongside the
+reputation_decay system. See CLAUDE.md OQ-04 for data source options.
+
+**Effort:** L
+**Priority:** P2
+**Blocked by:** Data layer stable + reputation decay system (signal_engine phase)
+
+---
+
 ## [P2] pip-audit: dependency vulnerability scanning in CI
 
 **What:** Add `pip-audit -r requirements.txt` as a required CI check on every PR.
