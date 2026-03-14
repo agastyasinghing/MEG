@@ -167,6 +167,24 @@ class Wallet(Base):
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # ── Tracking stats (updated incrementally by data_layer) ──────────────────
+    total_volume_usdc: Mapped[float] = mapped_column(Numeric(18, 2), nullable=False, default=0.0)
+    total_trades: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Refreshed daily by CapitalRefreshJob (Polygon RPC USDC balance query).
+    # NULL until first refresh. Required for conviction ratio calculation.
+    total_capital_usdc: Mapped[float | None] = mapped_column(Numeric(18, 2), nullable=True)
+
+    # ── Registry state ────────────────────────────────────────────────────────
+    # is_tracked: seen on-chain, not yet evaluated for qualification
+    # is_qualified: meets all qualification thresholds (set by wallet_registry.qualify())
+    # is_excluded: ARBITRAGE or MANIPULATOR — never used for signals
+    is_tracked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_excluded: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    exclusion_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # For archetype classification: avg_lead_time_hours > 4 AND avg_hold_time_hours > 24 = INFORMATION
+    avg_hold_time_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     __table_args__ = (
         # Leaderboard query: WHERE is_qualified = true ORDER BY composite_whale_score DESC
         Index("ix_wallets_qualified_score", "is_qualified", composite_whale_score.desc()),
@@ -211,12 +229,32 @@ class Trade(Base):
     )
     whale_score_at_trade: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # ── Market metadata (set by clob_client / data layer) ────────────────────
+    # e.g. "politics", "crypto", "sports" — used for category-weighted scores
+    market_category: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Hours before market resolution when trade was entered (lead-lag signal)
+    lead_time_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # ── Exit tracking (filled by position_manager on close) ──────────────────
+    exit_price: Mapped[float | None] = mapped_column(Numeric(6, 4), nullable=True)
+    exit_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # "YES" | "NO" — which outcome resolved as winner
+    resolution: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # NULL until exit; set by PnL backfill job (see TODOS.md)
+    pnl_usdc: Mapped[float | None] = mapped_column(Numeric(18, 6), nullable=True)
+    pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Exit tx hash (CLOB exit order); NULL for paper trades
+    tx_hash_exit: Mapped[str | None] = mapped_column(String(66), nullable=True)
+
     __table_args__ = (
         UniqueConstraint("tx_hash", name="uq_trades_tx_hash"),
         # Whale trade history lookups
         Index("ix_trades_wallet_address", "wallet_address"),
         # Market activity view
         Index("ix_trades_market_traded_at", "market_id", traded_at.desc()),
+        # Category-filtered signal analytics
+        Index("ix_trades_market_category", "market_category"),
     )
 
 
