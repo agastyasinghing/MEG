@@ -14,10 +14,14 @@ Test categories:
   7. update_capital — CapitalRefreshJob write path
   8. register_if_new — idempotent registration
   9. get_tracked_addresses — returns only is_tracked wallets
+ 10. get_recent_trades — returns trades in window, excludes stale
+ 11. get_recent_same_direction — filters by outcome direction
+ 12. get_correlated_exposure — sums USDC in market, returns 0 when none
 """
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -25,6 +29,7 @@ from meg.core.config_loader import MegConfig
 from meg.core.events import RedisKeys
 from meg.data_layer import wallet_registry
 from meg.data_layer.wallet_registry import _wallet_data_key
+from meg.db.models import Trade
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
@@ -392,3 +397,248 @@ async def test_get_tracked_addresses_returns_only_tracked(db_session, mock_redis
     tracked = await wallet_registry.get_tracked_addresses(mock_redis, session=db_session)
     assert addr1 in tracked
     assert addr2 not in tracked
+
+
+# ── Trade helpers ──────────────────────────────────────────────────────────────
+
+
+def _make_trade(
+    wallet_address: str,
+    market_id: str,
+    outcome: str,
+    size_usdc: float,
+    hours_ago: float,
+    tx_hash_suffix: str = "0",
+) -> Trade:
+    """Build a Trade ORM row with traded_at offset by hours_ago from now."""
+    return Trade(
+        wallet_address=wallet_address,
+        market_id=market_id,
+        outcome=outcome,
+        size_usdc=size_usdc,
+        traded_at=datetime.now(tz=timezone.utc) - timedelta(hours=hours_ago),
+        tx_hash=f"0x{'a' * 62}{tx_hash_suffix[-2:].zfill(2)}",
+        block_number=1_000_000,
+        market_price_at_trade=0.50,
+        is_qualified=True,
+    )
+
+
+TRADE_WALLET = "0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+TRADE_MARKET = "market_001"
+OTHER_MARKET = "market_002"
+
+
+# ── 10. get_recent_trades ──────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_recent_trades_returns_within_window(db_session, mock_redis):
+    """Trades within the hour window are returned; older trades are excluded."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    recent = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 5_000.0, hours_ago=1.0, tx_hash_suffix="01")
+    old = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 8_000.0, hours_ago=8.0, tx_hash_suffix="02")
+    db_session.add(recent)
+    db_session.add(old)
+    await db_session.flush()
+
+    results = await wallet_registry.get_recent_trades(
+        TRADE_WALLET, TRADE_MARKET, hours=2.0, session=db_session
+    )
+
+    assert len(results) == 1
+    assert results[0]["size_usdc"] == pytest.approx(5_000.0)
+
+
+@pytest.mark.asyncio
+async def test_get_recent_trades_filters_by_market(db_session, mock_redis):
+    """Trades in a different market are not returned."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    target = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 5_000.0, hours_ago=0.5, tx_hash_suffix="03")
+    other = _make_trade(TRADE_WALLET, OTHER_MARKET, "YES", 9_000.0, hours_ago=0.5, tx_hash_suffix="04")
+    db_session.add(target)
+    db_session.add(other)
+    await db_session.flush()
+
+    results = await wallet_registry.get_recent_trades(
+        TRADE_WALLET, TRADE_MARKET, hours=2.0, session=db_session
+    )
+
+    assert len(results) == 1
+    assert results[0]["market_id"] == TRADE_MARKET
+
+
+@pytest.mark.asyncio
+async def test_get_recent_trades_empty_when_no_trades(db_session, mock_redis):
+    """Returns empty list when wallet has no trades in the market."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    results = await wallet_registry.get_recent_trades(
+        TRADE_WALLET, TRADE_MARKET, hours=6.0, session=db_session
+    )
+
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_get_recent_trades_ordered_ascending(db_session, mock_redis):
+    """Results are ordered by traded_at ascending — required for SIGNAL_LADDER check."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    t1 = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 1_000.0, hours_ago=3.0, tx_hash_suffix="05")
+    t2 = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 2_000.0, hours_ago=2.0, tx_hash_suffix="06")
+    t3 = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 4_000.0, hours_ago=1.0, tx_hash_suffix="07")
+    db_session.add_all([t3, t1, t2])  # inserted out of order intentionally
+    await db_session.flush()
+
+    results = await wallet_registry.get_recent_trades(
+        TRADE_WALLET, TRADE_MARKET, hours=6.0, session=db_session
+    )
+
+    sizes = [r["size_usdc"] for r in results]
+    assert sizes == [1_000.0, 2_000.0, 4_000.0]  # ascending
+
+
+# ── 11. get_recent_same_direction ─────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_recent_same_direction_filters_outcome(db_session, mock_redis):
+    """Only trades matching the requested outcome are returned."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    yes_trade = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 5_000.0, hours_ago=1.0, tx_hash_suffix="08")
+    no_trade = _make_trade(TRADE_WALLET, TRADE_MARKET, "NO", 3_000.0, hours_ago=1.0, tx_hash_suffix="09")
+    db_session.add(yes_trade)
+    db_session.add(no_trade)
+    await db_session.flush()
+
+    yes_results = await wallet_registry.get_recent_same_direction(
+        TRADE_WALLET, TRADE_MARKET, "YES", hours=2.0, session=db_session
+    )
+    no_results = await wallet_registry.get_recent_same_direction(
+        TRADE_WALLET, TRADE_MARKET, "NO", hours=2.0, session=db_session
+    )
+
+    assert len(yes_results) == 1 and yes_results[0]["outcome"] == "YES"
+    assert len(no_results) == 1 and no_results[0]["outcome"] == "NO"
+
+
+@pytest.mark.asyncio
+async def test_get_recent_same_direction_respects_time_window(db_session, mock_redis):
+    """Trades outside the hours window are excluded even if direction matches."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    within = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 2_000.0, hours_ago=5.0, tx_hash_suffix="10")
+    outside = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 9_000.0, hours_ago=12.0, tx_hash_suffix="11")
+    db_session.add(within)
+    db_session.add(outside)
+    await db_session.flush()
+
+    results = await wallet_registry.get_recent_same_direction(
+        TRADE_WALLET, TRADE_MARKET, "YES", hours=6.0, session=db_session
+    )
+
+    assert len(results) == 1
+    assert results[0]["size_usdc"] == pytest.approx(2_000.0)
+
+
+# ── 12. get_correlated_exposure ───────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_correlated_exposure_sums_all_directions(db_session, mock_redis):
+    """Total USDC across both YES and NO trades is returned (v1 approximation)."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    yes_trade = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 10_000.0, hours_ago=24.0, tx_hash_suffix="12")
+    no_trade = _make_trade(TRADE_WALLET, TRADE_MARKET, "NO", 5_000.0, hours_ago=12.0, tx_hash_suffix="13")
+    db_session.add(yes_trade)
+    db_session.add(no_trade)
+    await db_session.flush()
+
+    exposure = await wallet_registry.get_correlated_exposure(
+        TRADE_WALLET, TRADE_MARKET, session=db_session
+    )
+
+    assert exposure == pytest.approx(15_000.0)
+
+
+@pytest.mark.asyncio
+async def test_get_correlated_exposure_returns_zero_no_trades(db_session, mock_redis):
+    """Returns 0.0 when wallet has no trades in the market."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    exposure = await wallet_registry.get_correlated_exposure(
+        TRADE_WALLET, TRADE_MARKET, session=db_session
+    )
+
+    assert exposure == pytest.approx(0.0)
+
+
+@pytest.mark.asyncio
+async def test_get_correlated_exposure_excludes_old_trades(db_session, mock_redis):
+    """Trades older than 30 days are excluded from exposure calculation."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    recent = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 5_000.0, hours_ago=24.0, tx_hash_suffix="14")
+    stale = Trade(
+        wallet_address=TRADE_WALLET,
+        market_id=TRADE_MARKET,
+        outcome="YES",
+        size_usdc=99_000.0,
+        traded_at=datetime.now(tz=timezone.utc) - timedelta(days=31),
+        tx_hash="0x" + "b" * 64,
+        block_number=999_000,
+        market_price_at_trade=0.50,
+        is_qualified=True,
+    )
+    db_session.add(recent)
+    db_session.add(stale)
+    await db_session.flush()
+
+    exposure = await wallet_registry.get_correlated_exposure(
+        TRADE_WALLET, TRADE_MARKET, session=db_session
+    )
+
+    assert exposure == pytest.approx(5_000.0)
+
+
+@pytest.mark.asyncio
+async def test_get_correlated_exposure_ignores_other_markets(db_session, mock_redis):
+    """Trades in a different market do not contribute to the exposure total."""
+    await wallet_registry.upsert_wallet(
+        TRADE_WALLET, SAMPLE_WALLET_DATA, mock_redis, session=db_session
+    )
+
+    target_trade = _make_trade(TRADE_WALLET, TRADE_MARKET, "YES", 3_000.0, hours_ago=1.0, tx_hash_suffix="15")
+    other_trade = _make_trade(TRADE_WALLET, OTHER_MARKET, "YES", 50_000.0, hours_ago=1.0, tx_hash_suffix="16")
+    db_session.add(target_trade)
+    db_session.add(other_trade)
+    await db_session.flush()
+
+    exposure = await wallet_registry.get_correlated_exposure(
+        TRADE_WALLET, TRADE_MARKET, session=db_session
+    )
+
+    assert exposure == pytest.approx(3_000.0)
