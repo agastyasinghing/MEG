@@ -44,6 +44,38 @@ SignalStatus = Literal[
     "TRAP_DETECTED",
 ]
 
+SignalType = Literal[
+    "WHALE_REACTION",        # Direct response to a whale entry. Half-life: ~15 min.
+    "EVENT_CASCADE",         # Information spreading across related markets. Half-life: ~90 min.
+    "BEHAVIORAL_DRIFT",      # Sustained directional pressure from whale accumulation. Half-life: ~8 h.
+    "RESOLUTION_ASYMMETRY",  # Structural edge from contract design / resolution timing. Half-life: days.
+]
+
+
+# ── Exceptions ────────────────────────────────────────────────────────────────
+
+
+class SignalDroppedError(Exception):
+    """
+    Raised by composite_scorer._gather_component_scores() when a trade must be
+    dropped before composite scoring is complete.
+
+    Two trigger conditions:
+      1. wallet_data unavailable in Redis (cache miss on pre-fetch)
+      2. lead_lag_score < config.signal.lead_lag_min_gate after decay
+
+    The caller (composite_scorer.score()) catches this exception, writes
+    status=FILTERED to signal_outcomes, and returns without publishing.
+
+    reason: short string describing why the signal was dropped.
+    score:  the partial score at the time of drop (0.0 for data-miss cases).
+    """
+
+    def __init__(self, reason: str, score: float = 0.0) -> None:
+        self.reason = reason
+        self.score = score
+        super().__init__(f"Signal dropped: {reason} (score={score:.3f})")
+
 
 # ── Event schemas ─────────────────────────────────────────────────────────────
 
@@ -52,6 +84,11 @@ class RawWhaleTrade(BaseModel):
     """
     Emitted by data_layer when a whale wallet executes a trade on Polymarket.
     Published to: RedisKeys.CHANNEL_RAW_WHALE_TRADES
+
+    market_category: populated by polygon_feed from market:{id}:category Redis key.
+    Defaults to "" (empty string) when not yet available — this happens on the first
+    trade in a new market before CLOBMarketFeed has polled it. Signal engine modules
+    fall back to wallet.win_rate (overall) when market_category is empty.
     """
 
     event_type: Literal["raw_whale_trade"] = "raw_whale_trade"
@@ -63,6 +100,7 @@ class RawWhaleTrade(BaseModel):
     tx_hash: str
     block_number: int
     market_price_at_trade: float
+    market_category: str = ""  # e.g. "politics", "crypto", "sports"; "" = unknown
 
 
 class QualifiedWhaleTrade(BaseModel):
@@ -72,6 +110,9 @@ class QualifiedWhaleTrade(BaseModel):
       Gate 2: arbitrage whale exclusion
       Gate 3: intent classification (must be SIGNAL or SIGNAL_LADDER)
     Published to: RedisKeys.CHANNEL_QUALIFIED_WHALE_TRADES
+
+    market_category: forwarded from RawWhaleTrade. Used by signal_engine for
+    category-weighted lead_lag scoring and Kelly win_prob lookup. "" = unknown.
     """
 
     event_type: Literal["qualified_whale_trade"] = "qualified_whale_trade"
@@ -86,6 +127,7 @@ class QualifiedWhaleTrade(BaseModel):
     whale_score: float
     archetype: Archetype
     intent: Intent
+    market_category: str = ""  # forwarded from RawWhaleTrade; "" = unknown
 
 
 class SignalScores(BaseModel):
@@ -139,6 +181,18 @@ class SignalEvent(BaseModel):
     saturation_score: float = 0.0
     saturation_size_multiplier: float = 1.0
     trap_warning: bool = False
+    # Signal type — all v1 signals are WHALE_REACTION. Used by signal_decay for
+    # per-type half-life baselines (v1.5). Set by composite_scorer.
+    signal_type: SignalType = "WHALE_REACTION"
+    # Estimated half-life in minutes. Populated by signal_decay.set_signal_ttl().
+    # 0.0 = not yet computed (signal_decay has not run).
+    estimated_half_life_minutes: float = 0.0
+    # Archetype of the triggering whale. Forwarded from QualifiedWhaleTrade
+    # for dashboard display and agent_core trap detection.
+    whale_archetype: Archetype = "INFORMATION"
+    # Market category at signal time. Forwarded from QualifiedWhaleTrade.
+    # Used by dashboard for category-level P&L attribution.
+    market_category: str = ""
 
 
 class TradeProposal(BaseModel):
@@ -290,10 +344,18 @@ class RedisKeys:
     def last_processed_block() -> str:
         return "meg:last_processed_block"
 
-    # Sorted set window for consensus_filter: member=wallet_address, score=timestamp_ms
+    # Sorted set window for consensus_filter: member=wallet_address, score=timestamp_ms.
+    # Scoped by outcome so YES and NO consensus windows are tracked independently.
+    # Key: market:{market_id}:consensus:{outcome}  (e.g. "market:abc:consensus:YES")
     @staticmethod
-    def consensus_window(market_id: str) -> str:
-        return f"market:{market_id}:consensus_window"
+    def consensus_window(market_id: str, outcome: str) -> str:
+        return f"market:{market_id}:consensus:{outcome}"
+
+    # Market category string written by CLOBMarketFeed from CLOB /markets/{id} response.
+    # Read by polygon_feed when enriching RawWhaleTrade. "" when not yet polled.
+    @staticmethod
+    def market_category(market_id: str) -> str:
+        return f"market:{market_id}:category"
 
     # Serialized MegConfig JSON — set by config_loader after each hot-reload
     @staticmethod

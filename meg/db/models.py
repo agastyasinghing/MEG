@@ -185,6 +185,15 @@ class Wallet(Base):
     # For archetype classification: avg_lead_time_hours > 4 AND avg_hold_time_hours > 24 = INFORMATION
     avg_hold_time_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
 
+    # Required by lead_lag_scorer.compute_reputation_decay() (PRD §9.3.1).
+    # Formula: decay_factor = exp(-days_since_last_good_trade / tau)
+    # NULL for wallets with no closed profitable trades yet — scorer defaults to
+    # decay_factor=1.0 (no decay penalty) when this field is NULL.
+    # Set by the PnL backfill job when a position closes with pnl_usdc > 0.
+    last_profitable_trade_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     __table_args__ = (
         # Leaderboard query: WHERE is_qualified = true ORDER BY composite_whale_score DESC
         Index("ix_wallets_qualified_score", "is_qualified", composite_whale_score.desc()),
