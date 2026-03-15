@@ -3,6 +3,32 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.9.0] - 2026-03-15
+
+### Added
+- `meg/core/config_loader.py` — `AgentConfig` sub-model with saturation and trap
+  detection parameters: `saturation_threshold` (0.60), `saturation_size_reduction_sensitivity`
+  (2.0), `trap_window_minutes` (30), `trap_exit_threshold` (0.50), `trap_score_penalty` (0.20),
+  `trap_manipulator_threshold` (3). Registered as `config.agent` on `MegConfig`.
+- `meg/core/config_loader.py` — `PositionConfig` sub-model with position lifecycle risk
+  parameters: `take_profit_pct` (0.40), `stop_loss_pct` (0.25), `trailing_tp_enabled` (false),
+  `trailing_tp_floor_pct` (0.10), `auto_exit_stop_loss` (false), `auto_exit_take_profit`
+  (false). Registered as `config.position` on `MegConfig`.
+- `meg/core/config_loader.py` — `RiskConfig` extended with `max_portfolio_exposure_pct`
+  (0.60, PRD §10 Gate 3), `blacklisted_markets: list[str]` (hot-reloadable market block list).
+- `meg/core/events.py` — `RedisKeys` position tracking key builders: `open_positions()`,
+  `position(id)`, `daily_pnl_usdc()`, `portfolio_value_usdc()`, `market_exposure_usdc(market_id)`.
+  Used by `position_manager` and `risk_controller` in Phase 6.
+- `meg/core/events.py` — `RedisKeys.system_paused()` → `"meg:system_paused"`. Emergency
+  pause flag written atomically by Telegram `/pause`; read by `decision_agent`. Intentionally
+  NOT in config.yaml — hot-reload latency (~1s) is unacceptable for an emergency stop.
+- `meg/core/events.py` — `TradeProposal` enriched with dashboard approval queue fields:
+  `composite_score`, `scores` (full `SignalScores` breakdown), `saturation_score`,
+  `trap_warning`, `contributing_wallets`, `market_price_at_signal`,
+  `estimated_half_life_minutes`. All optional with safe defaults for backward compat.
+- `config/config.yaml` — `agent:` and `position:` sections matching new config models.
+  `risk:` section extended with `max_portfolio_exposure_pct: 0.60` and `blacklisted_markets: []`.
+
 ## [0.1.8.0] - 2026-03-15
 
 ### Added

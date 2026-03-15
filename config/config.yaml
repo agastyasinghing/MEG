@@ -36,10 +36,30 @@ signal:
 
 risk:
   max_position_pct: 0.05          # Max single position as fraction of portfolio
-  max_daily_loss_usdc: 500        # Hard daily loss limit in USDC
+  max_daily_loss_usdc: 500        # Circuit breaker: halt all new signals if daily loss hits this
   max_open_positions: 10          # Maximum concurrent open positions
-  max_market_exposure_pct: 0.20   # Max exposure to a single market
+  max_market_exposure_pct: 0.20   # Gate 4: max fraction of portfolio in any one market (PRD §10)
+  max_portfolio_exposure_pct: 0.60 # Gate 3: max fraction of total portfolio deployed (PRD §10)
   paper_trading: true             # Override with PAPER_TRADING env var
+  blacklisted_markets: []         # Market IDs that are never traded regardless of signal score
+  # system_paused is NOT a config value — it lives in Redis (meg:system_paused key).
+  # Use /pause and /resume Telegram commands to set/clear it at runtime.
+
+agent:
+  saturation_threshold: 0.60              # Score above which position size is reduced (PRD §9.4.3)
+  saturation_size_reduction_sensitivity: 2.0  # size_mult = clamp(1 - (score - threshold) * sensitivity, 0.25, 1.0)
+  trap_window_minutes: 30                 # Lookback window for rapid whale entry/exit (PRD §9.4.2)
+  trap_exit_threshold: 0.50              # Fraction of entry sold within window to flag as trap
+  trap_score_penalty: 0.20               # Wallet score penalty on trap detection
+  trap_manipulator_threshold: 3          # Trap event count before flagging wallet as MANIPULATOR
+
+position:
+  take_profit_pct: 0.40          # Flag position for exit at +40% gain on entry price (PRD §10)
+  stop_loss_pct: 0.25            # Flag position for exit at -25% loss on entry price (PRD §10)
+  trailing_tp_enabled: false     # Trail TP upward during drift continuation (v2 default: true)
+  trailing_tp_floor_pct: 0.10    # Lock in new TP floor 10% below current price when trailing
+  auto_exit_stop_loss: false     # v1: requires human approval; v2: flip to true
+  auto_exit_take_profit: false   # v1: requires human approval; v2: flip to true
 
 kelly:
   fraction: 0.25                  # Use 1/4 Kelly for position sizing (conservative)

@@ -123,10 +123,53 @@ class SignalConfig(BaseModel):
 
 class RiskConfig(BaseModel):
     max_position_pct: float = 0.05
-    max_daily_loss_usdc: float = 500.0
+    max_daily_loss_usdc: float = 500.0       # Circuit breaker: halt if daily loss hits this
     max_open_positions: int = 10
-    max_market_exposure_pct: float = 0.20
+    max_market_exposure_pct: float = 0.20    # Gate 4: max fraction of portfolio in one market
+    max_portfolio_exposure_pct: float = 0.60 # Gate 3: max fraction of portfolio deployed total
     paper_trading: bool = True
+    blacklisted_markets: list[str] = Field(default_factory=list)  # Never trade these market IDs
+    # system_paused is NOT here — it lives in Redis (RedisKeys.system_paused()).
+    # Telegram /pause writes Redis; decision_agent reads Redis. Config hot-reload
+    # latency (~1s) is unacceptable for an emergency stop.
+
+
+class AgentConfig(BaseModel):
+    """
+    Agent core behavioral parameters (PRD §9.4).
+
+    saturation_threshold: score above which position size is reduced (PRD §9.4.3).
+    saturation_size_reduction_sensitivity: rate at which size shrinks past threshold.
+      size_multiplier = clamp(1 - (score - threshold) * sensitivity, 0.25, 1.0)
+    trap_window_minutes: lookback window to detect rapid whale entry/exit (PRD §9.4.2).
+    trap_exit_threshold: fraction of entry size that must be sold to flag as trap.
+    trap_score_penalty: score penalty applied to wallet when trap is detected.
+    trap_manipulator_threshold: trap event count before wallet is flagged MANIPULATOR.
+    """
+
+    saturation_threshold: float = 0.60
+    saturation_size_reduction_sensitivity: float = 2.0  # default: halve size at score=1.0
+    trap_window_minutes: int = 30
+    trap_exit_threshold: float = 0.50   # ≥50% of entry sold within window = trap
+    trap_score_penalty: float = 0.20    # deducted from wallet score on trap detection
+    trap_manipulator_threshold: int = 3  # flag MANIPULATOR after this many trap events
+
+
+class PositionConfig(BaseModel):
+    """
+    Position lifecycle risk parameters (PRD §10 position-level risk).
+
+    In v1, auto_exit_stop_loss and auto_exit_take_profit are False — all exits
+    require operator approval via Telegram. The flags are wired in position_manager
+    so they can be set True in v2 without code changes.
+    """
+
+    take_profit_pct: float = 0.40        # Flag for exit at +40% gain on entry price
+    stop_loss_pct: float = 0.25          # Flag for exit at -25% loss on entry price
+    trailing_tp_enabled: bool = False    # Trail TP upward during drift continuation
+    trailing_tp_floor_pct: float = 0.10  # Lock in new floor 10% below current price
+    auto_exit_stop_loss: bool = False    # v1: requires human approval; v2: auto
+    auto_exit_take_profit: bool = False  # v1: requires human approval; v2: auto
 
 
 class KellyConfig(BaseModel):
@@ -202,6 +245,8 @@ class MegConfig(BaseModel):
     )
     signal: SignalConfig = Field(default_factory=SignalConfig)
     risk: RiskConfig = Field(default_factory=RiskConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
+    position: PositionConfig = Field(default_factory=PositionConfig)
     kelly: KellyConfig = Field(default_factory=KellyConfig)
     entry: EntryConfig = Field(default_factory=EntryConfig)
     pre_filter: PreFilterConfig = Field(default_factory=PreFilterConfig)
