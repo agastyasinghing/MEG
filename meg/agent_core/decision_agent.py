@@ -1,5 +1,5 @@
 """
-Decision agent.
+Decision agent — final gating before trade proposal (PRD §9.4.1).
 
 Gates a signal through all agent_core risk checks before creating a
 TradeProposal. In v1, all proposals require human approval via Telegram.
@@ -7,39 +7,247 @@ TradeProposal. In v1, all proposals require human approval via Telegram.
 Decision flow:
   SignalEvent
     ↓
-  risk_controller.check()        → REJECT if any risk gate fails
+  Hard blocks (cheapest first, decision_agent owns these):
+    • system_paused?           → Redis GET (instant emergency stop)
+    • blacklisted_market?      → config list check
+    • duplicate_position?      → Redis HEXISTS
     ↓
-  trap_detector.check()          → REJECT if whale trap detected
+  risk_controller.check()      → 5-gate risk framework
     ↓
-  saturation_monitor.check()     → REJECT if market is saturated
+  trap_detector.check()        → DB query for pump-and-exit pattern
     ↓
-  crowding_detector.check()      → REJECT if copy followers have closed the window
+  saturation_monitor.score()   → adjusts size (does NOT block)
+    ↓
+  crowding_detector.check()    → blocks if entry window closed
     ↓
   TradeProposal (PENDING_APPROVAL) → published to CHANNEL_TRADE_PROPOSALS
+    ↓
+  UPDATE signal_outcomes status
+
+Write responsibility:
+  - decision_agent UPDATEs signal_outcomes.status (composite_scorer owns INSERT)
+  - decision_agent PUBLISHes TradeProposal to CHANNEL_TRADE_PROPOSALS
+
+NOTE: Implement with Opus + ultrathink. Decision bugs = real financial loss.
 """
 from __future__ import annotations
 
-from redis.asyncio import Redis
+import json
+import time
+import uuid
 
+import structlog
+from redis.asyncio import Redis
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from meg.agent_core import (
+    crowding_detector,
+    risk_controller,
+    saturation_monitor,
+    trap_detector,
+)
 from meg.core.config_loader import MegConfig
-from meg.core.events import SignalEvent, TradeProposal
+from meg.core.events import RedisKeys, SignalEvent, TradeProposal
+from meg.db.models import SignalOutcome
+
+logger = structlog.get_logger(__name__)
 
 
 async def evaluate(
     signal: SignalEvent,
     redis: Redis,
     config: MegConfig,
+    session: AsyncSession,
 ) -> TradeProposal | None:
     """
     Run all risk gates against the signal. Return a TradeProposal if all
-    gates pass, or None if any gate rejects (logs the rejection reason).
+    gates pass, or None if any gate rejects.
+
+    Every outcome (approve/reject/block) updates signal_outcomes.status in DB.
     """
-    raise NotImplementedError("decision_agent.evaluate")
+    # ── Hard blocks (decision_agent owns these) ──────────────────────────
+
+    # 1. Emergency pause — instant check, Redis GET
+    paused = await redis.get(RedisKeys.system_paused())
+    if paused is not None:
+        await _update_signal_status(signal.signal_id, "BLOCKED", session)
+        logger.info(
+            "decision_agent.blocked",
+            signal_id=signal.signal_id,
+            reason="system_paused",
+        )
+        return None
+
+    # 2. Blacklisted market — config list check
+    if signal.market_id in config.risk.blacklisted_markets:
+        await _update_signal_status(signal.signal_id, "BLOCKED", session)
+        logger.info(
+            "decision_agent.blocked",
+            signal_id=signal.signal_id,
+            reason="market_blacklisted",
+            market_id=signal.market_id,
+        )
+        return None
+
+    # 3. Duplicate position — same market + outcome already open
+    has_dup = await _has_duplicate_position(
+        signal.market_id, signal.outcome, redis
+    )
+    if has_dup:
+        await _update_signal_status(signal.signal_id, "BLOCKED", session)
+        logger.info(
+            "decision_agent.blocked",
+            signal_id=signal.signal_id,
+            reason="duplicate_position",
+            market_id=signal.market_id,
+            outcome=signal.outcome,
+        )
+        return None
+
+    # ── Risk controller — 5-gate framework ───────────────────────────────
+
+    risk_passed, risk_reason = await risk_controller.check(signal, redis, config)
+    if not risk_passed:
+        await _update_signal_status(signal.signal_id, "REJECTED", session)
+        logger.info(
+            "decision_agent.rejected",
+            signal_id=signal.signal_id,
+            reason=risk_reason,
+        )
+        return None
+
+    # ── Trap detector — pump-and-exit check ──────────────────────────────
+
+    trap_detected, trap_reason = await trap_detector.check(
+        signal, redis, config, session
+    )
+    if trap_detected:
+        await _update_signal_status(signal.signal_id, "TRAP_DETECTED", session)
+        logger.warning(
+            "decision_agent.trap_detected",
+            signal_id=signal.signal_id,
+            reason=trap_reason,
+        )
+        return None
+
+    # ── Saturation monitor — size adjustment (never blocks) ──────────────
+
+    sat_score, size_multiplier = await saturation_monitor.score(
+        signal, redis, config
+    )
+    adjusted_size = signal.recommended_size_usdc * size_multiplier
+
+    # ── Crowding detector — entry distance gate ──────────────────────────
+
+    crowded, crowd_reason = await crowding_detector.check(signal, redis, config)
+    if crowded:
+        await _update_signal_status(signal.signal_id, "BLOCKED", session)
+        logger.info(
+            "decision_agent.blocked",
+            signal_id=signal.signal_id,
+            reason=crowd_reason,
+        )
+        return None
+
+    # ── All gates passed — build and publish proposal ────────────────────
+
+    proposal = _build_proposal(signal, adjusted_size, sat_score, config)
+
+    # Update signal_outcomes status to APPROVED
+    await _update_signal_status(signal.signal_id, "APPROVED", session)
+
+    # Publish proposal to Redis
+    try:
+        await redis.publish(
+            RedisKeys.CHANNEL_TRADE_PROPOSALS,
+            proposal.model_dump_json(),
+        )
+    except Exception:
+        logger.error(
+            "decision_agent.publish_failed",
+            signal_id=signal.signal_id,
+            proposal_id=proposal.proposal_id,
+            exc_info=True,
+        )
+
+    logger.info(
+        "decision_agent.proposal_created",
+        signal_id=signal.signal_id,
+        proposal_id=proposal.proposal_id,
+        market_id=signal.market_id,
+        outcome=signal.outcome,
+        size_usdc=adjusted_size,
+        saturation_score=sat_score,
+        size_multiplier=size_multiplier,
+    )
+
+    return proposal
 
 
-async def _build_proposal(
+def _build_proposal(
     signal: SignalEvent,
+    adjusted_size_usdc: float,
+    saturation_score: float,
     config: MegConfig,
 ) -> TradeProposal:
     """Construct a TradeProposal from an approved SignalEvent."""
-    raise NotImplementedError("decision_agent._build_proposal")
+    return TradeProposal(
+        proposal_id=f"meg_prop_{uuid.uuid4().hex[:12]}",
+        signal_id=signal.signal_id,
+        market_id=signal.market_id,
+        outcome=signal.outcome,
+        size_usdc=adjusted_size_usdc,
+        limit_price=signal.market_price_at_signal,
+        status="PENDING_APPROVAL",
+        created_at_ms=int(time.time() * 1000),
+        composite_score=signal.composite_score,
+        scores=signal.scores,
+        saturation_score=saturation_score,
+        trap_warning=signal.trap_warning,
+        contributing_wallets=signal.contributing_wallets,
+        market_price_at_signal=signal.market_price_at_signal,
+        estimated_half_life_minutes=signal.estimated_half_life_minutes,
+    )
+
+
+async def _has_duplicate_position(
+    market_id: str, outcome: str, redis: Redis
+) -> bool:
+    """Check if there's already an open position in this market + outcome."""
+    raw_positions = await redis.hgetall(RedisKeys.open_positions())
+    for pos_json in raw_positions.values():
+        try:
+            pos = json.loads(pos_json)
+            if pos.get("market_id") == market_id and pos.get("outcome") == outcome:
+                return True
+        except (json.JSONDecodeError, TypeError):
+            continue
+    return False
+
+
+async def _update_signal_status(
+    signal_id: str,
+    status: str,
+    session: AsyncSession,
+) -> None:
+    """
+    UPDATE signal_outcomes SET status = X WHERE signal_id = Y.
+
+    Best-effort: if DB write fails, log error but don't crash the pipeline.
+    The signal_outcomes row was INSERTed by composite_scorer — we only UPDATE status.
+    """
+    try:
+        await session.execute(
+            update(SignalOutcome)
+            .where(SignalOutcome.signal_id == signal_id)
+            .values(status=status)
+        )
+        await session.flush()
+    except Exception:
+        logger.error(
+            "decision_agent.status_update_failed",
+            signal_id=signal_id,
+            status=status,
+            exc_info=True,
+        )

@@ -231,6 +231,44 @@ class TradeProposal(BaseModel):
     estimated_half_life_minutes: float = 0.0  # edge decay estimate shown at approval
 
 
+class PositionState(BaseModel):
+    """
+    Runtime position state stored in Redis (meg:open_positions hash).
+
+    Mirrors PRD §9.4.4 position state schema. Serialized as JSON via
+    model_dump_json() / model_validate_json(). Separate from the Position
+    ORM model (meg/db/models.py) which handles DB persistence.
+
+    Written by position_manager on open/close. Read by:
+      - risk_controller (exposure checks via position_manager helpers)
+      - monitor loop (TP/SL/whale exit checking)
+      - dashboard API (current positions view)
+
+    Position lifecycle (v1):
+      OPEN → TP/SL/whale exit flagged → operator approves exit → CLOSED/EXITED
+    """
+
+    position_id: str
+    market_id: str
+    outcome: Outcome
+    entry_price: float
+    current_price: float
+    size_usdc: float
+    shares: float
+    unrealized_pnl_usdc: float = 0.0
+    unrealized_pnl_pct: float = 0.0
+    entry_signal_id: str
+    contributing_wallets: list[str] = Field(default_factory=list)
+    whale_archetype: Archetype = "INFORMATION"
+    opened_at_ms: int
+    take_profit_price: float
+    stop_loss_price: float
+    whale_exit_detected: bool = False
+    whale_exit_detected_at_ms: int | None = None
+    saturation_score_at_entry: float = 0.0
+    status: Literal["OPEN", "CLOSED", "EXITED"] = "OPEN"
+
+
 # ── Market state model ────────────────────────────────────────────────────────
 
 
@@ -289,6 +327,7 @@ class RedisKeys:
     CHANNEL_QUALIFIED_WHALE_TRADES: str = "qualified_whale_trades"
     CHANNEL_SIGNAL_EVENTS: str = "signal_events"
     CHANNEL_TRADE_PROPOSALS: str = "trade_proposals"
+    CHANNEL_WALLET_PENALTIES: str = "wallet_penalties"
 
     # ── Key builders ──────────────────────────────────────────────────────────
     @staticmethod

@@ -10,17 +10,32 @@
 - [x] Data Layer — **COMPLETE** (merged: v0.1.3.0)
 - [x] Pre-Filter Gates — **COMPLETE** (merged: v0.1.6.0 — Gate 1+2+3+pipeline+tests)
 - [~] Signal Engine — **IN PROGRESS** (pre-work gaps patched; archetype_weighter + ladder_detector implemented; 9 test specs pending)
-- [ ] Agent Core
+- [~] Agent Core — **IN PROGRESS** (all 7 modules implemented + 92 tests passing; pending /review + /ship)
 - [ ] Execution Layer
 - [ ] Telegram Bot
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** Signal Engine (pre-work complete; test specs + Opus modules next)
+**Active phase:** Agent Core (all modules built + tested; ready for /review + /ship)
 
 ---
 
 ## What Was Just Completed
+
+**Agent Core (2026-03-15) — All 7 modules + 92 tests:**
+- `meg/agent_core/signal_aggregator.py` — Redis pub/sub subscriber, TTL/dedup validation, routes to decision_agent
+- `meg/agent_core/decision_agent.py` — Gate orchestration: system_paused → blacklist → duplicate → risk → trap → saturation → crowding → build TradeProposal
+- `meg/agent_core/position_manager.py` — Redis-first CRUD, TP/SL monitor, whale exit detection, daily PnL reset
+- `meg/agent_core/risk_controller.py` — 5-gate framework: paper_trading → daily_loss → max_positions → market_exposure → position_size
+- `meg/agent_core/trap_detector.py` — Pump-and-exit detection, WhaleTrapEvent DB write, penalty + MANIPULATOR pub/sub
+- `meg/agent_core/saturation_monitor.py` — v1 formula (drift 0.60 + thinning 0.40), size reduction multiplier
+- `meg/agent_core/crowding_detector.py` — Price-based entry distance gate
+- `meg/core/events.py` — Added PositionState schema, CHANNEL_WALLET_PENALTIES
+- `meg/core/config_loader.py` — Added crowding_max_entry_distance_pct
+- `config/config.yaml` — Added crowding_max_entry_distance_pct: 0.08
+- `tests/agent_core/conftest.py` — JSONB→JSON SQLite compiler, 8 factory helpers
+- `tests/agent_core/test_*.py` — 7 test files, 92 tests total, all passing
+- `TODOS.md` — Added 3 items: full saturation formula (P2), copy-follower registry (P3), shared test fixture dedup (P3)
 
 **Signal Engine pre-work (2026-03-14) — GAP fixes + Sonnet-eligible module implementations:**
 - `meg/core/events.py` — Added `SignalType` Literal, `SignalDroppedError`, `market_category` field on RawWhaleTrade/QualifiedWhaleTrade, 4 new SignalEvent fields (signal_type, estimated_half_life_minutes, whale_archetype, market_category), fixed `RedisKeys.consensus_window()` to include outcome dimension, added `RedisKeys.market_category()`
@@ -88,6 +103,7 @@
 
 ## In Progress
 
+- Agent Core: all 7 modules implemented + 92 tests passing. Ready for `/review` + `/ship`.
 - Signal Engine: pre-work gaps patched (2026-03-14). Next: write 9 test spec files
   (`tests/signal_engine/conftest.py` + `test_*.py` for all modules), then Opus session
   for math-heavy modules (lead_lag, kelly, consensus, contrarian, signal_decay, composite_scorer).
@@ -105,9 +121,9 @@
 
 ## Next 3 Tasks
 
-1. **Write `tests/signal_engine/conftest.py` + 9 test spec files** — fully tested for archetype_weighter and ladder_detector; stubs with docstrings for Opus modules.
-2. **Opus session: implement math-heavy signal engine modules** — lead_lag_scorer, conviction_ratio, kelly_sizer, consensus_filter, contrarian_detector, signal_decay, composite_scorer. Read test specs first, use ultrathink.
-3. **Run `/review` then `/ship`** — paranoid review, then bump version and PR for Signal Engine phase.
+1. **Run `/review` then `/ship` for Agent Core** — paranoid review, bump version, PR.
+2. **Write `tests/signal_engine/conftest.py` + 9 test spec files** — fully tested for archetype_weighter and ladder_detector; stubs with docstrings for Opus modules.
+3. **Opus session: implement math-heavy signal engine modules** — lead_lag_scorer, conviction_ratio, kelly_sizer, consensus_filter, contrarian_detector, signal_decay, composite_scorer.
 
 ---
 
@@ -115,6 +131,14 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-15 | signal_aggregator is pure router — no DB writes; composite_scorer owns INSERT, decision_agent owns UPDATE | Clean ownership; aggregator only validates + routes |
+| 2026-03-15 | trap_detector.check() fail-open on DB errors — never block a legitimate signal on transient DB issue | Safety-first; false negatives > false positives for trap detection |
+| 2026-03-15 | saturation_monitor returns score() not check() — it reduces size, never blocks | Distinct from binary gates; size reduction is the correct semantic |
+| 2026-03-15 | v1 saturation formula: drift*0.60 + thinning*0.40 (simplified, no 30-day baselines) | 30-day baselines don't exist yet; deferred to v1.5 TODO |
+| 2026-03-15 | crowding_detector is price-based entry distance gate (not wallet-count-based) | No copy-follower wallet registry exists yet; price drift is available signal |
+| 2026-03-15 | decision_agent reads system_paused from Redis (not config) — Telegram /pause must be instant | Config hot-reload is seconds; Redis GET is milliseconds |
+| 2026-03-15 | position_manager Redis-first dual-write: Redis for real-time state, DB best-effort | Redis is authoritative for position CRUD; DB is persistence layer |
+| 2026-03-15 | risk_controller cheapest gates first: paper_trading → daily_loss → max_positions → market_exposure → position_size | Short-circuit optimization; Redis GET < HLEN < HGETALL |
 | 2026-03-14 | pipeline._process_event() wraps each gate call in try/except; gate errors → log ERROR + fail closed (skip trade) | Gates stay clean; pipeline owns resilience; consistent with 'feed never crashes' rule |
 | 2026-03-14 | Add 4 new fields to PreFilterConfig + config.yaml: arb_detection_window_hours=24, ladder_window_hours=6, ladder_min_trades=2, min_signal_size_pct=0.02 | One config pass; consistent with full-schema-at-scaffold decision from 2026-03-12 |
 | 2026-03-14 | Gate 2/3 behavioral detection queries Trade table directly (24h window for arb, 6h for ladder) | Authoritative over all trades; Redis set would miss trades filtered by Gate 1; whale trade frequency at v1 is low enough for DB queries |
@@ -170,7 +194,14 @@
 
 | Module | Tests Written | Passing |
 |--------|--------------|---------|
-| — | No | — |
+| agent_core/signal_aggregator | 8 | 8 |
+| agent_core/decision_agent | 12 | 12 |
+| agent_core/position_manager | 22 | 22 |
+| agent_core/risk_controller | 20 | 20 |
+| agent_core/trap_detector | 10 | 10 |
+| agent_core/saturation_monitor | 13 | 13 |
+| agent_core/crowding_detector | 8 | 8 |
+| **Total** | **92** | **92** |
 
 ---
 
