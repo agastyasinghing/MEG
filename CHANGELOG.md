@@ -3,6 +3,42 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.10.0] - 2026-03-15
+
+### Added
+- `meg/agent_core/signal_aggregator.py` — Redis pub/sub subscriber, TTL/dedup validation,
+  routes valid signals to decision_agent. In-memory dedup set capped at 10k entries.
+- `meg/agent_core/decision_agent.py` — Gate orchestration: system_paused → blacklist →
+  duplicate → risk_controller → trap_detector → saturation_monitor → crowding_detector.
+  Builds TradeProposal (PENDING_APPROVAL), publishes to CHANNEL_TRADE_PROPOSALS,
+  updates signal_outcomes status in DB.
+- `meg/agent_core/position_manager.py` — Redis-first CRUD for open positions, TP/SL
+  monitor loop (30s interval), whale exit detection (5min interval via Trade table queries),
+  daily PnL reset at midnight UTC. Dual-write pattern (Redis authoritative, DB best-effort).
+- `meg/agent_core/risk_controller.py` — 5-gate risk framework (cheapest first):
+  paper_trading → daily_loss circuit breaker → max_positions → market_exposure → position_size.
+  All reads from Redis keys. Short-circuits on first failure.
+- `meg/agent_core/trap_detector.py` — Pump-and-exit detection per PRD §9.4.2. Queries Trade
+  table for entry + sells within trap_window. Writes WhaleTrapEvent to DB, publishes penalty
+  to CHANNEL_WALLET_PENALTIES, flags MANIPULATOR after threshold.
+- `meg/agent_core/saturation_monitor.py` — v1 formula: drift_score * 0.60 + thinning_score * 0.40.
+  Returns size_multiplier [0.25, 1.0] — reduces position size, never blocks.
+- `meg/agent_core/crowding_detector.py` — Price-based entry distance gate. Blocks if
+  directional drift from whale fill exceeds crowding_max_entry_distance_pct (8%).
+- `meg/core/events.py` — `PositionState` Pydantic model for Redis position serialization.
+  `CHANNEL_WALLET_PENALTIES` Redis pub/sub channel.
+- `meg/core/config_loader.py` — `crowding_max_entry_distance_pct` on AgentConfig.
+- `config/config.yaml` — `crowding_max_entry_distance_pct: 0.08` under agent section.
+- `tests/agent_core/conftest.py` — JSONB→JSON SQLite compiler, db_engine/db_session/mock_redis
+  fixtures, 8 factory helpers (make_signal_event, make_position_state, set_market_redis_data,
+  add_position_to_redis, insert_trade_record, insert_wallet, insert_signal_outcome).
+- 92 agent_core tests across 7 test files covering all modules and edge cases.
+
+### Fixed
+- `meg/agent_core/position_manager.py` — `daily_pnl_reset_loop` used `.replace(day=day+1)`
+  which crashes on month-end (day 31 → 32). Fixed to use `timedelta(days=1)`.
+- `meg/agent_core/saturation_monitor.py` — removed dead code block (`if signal.scores ... pass`).
+
 ## [0.1.9.0] - 2026-03-15
 
 ### Added

@@ -471,3 +471,92 @@ PRs for dependency updates.
 **Effort:** S
 **Priority:** P2
 **Blocked by:** CI pipeline (no CI pipeline exists yet — planned for after dashboard phase)
+
+---
+
+## [P2] Full PRD saturation formula with 30-day baselines (v1.5)
+
+**What:** Replace the simplified v1 saturation formula (price drift + liquidity ratio)
+with the full PRD §9.4.3 formula using 30-day baseline data: price velocity spike
+(vs 30-day avg velocity), order book thinning (vs baseline ask depth), and trade
+frequency spike (vs 30-day avg trades per minute).
+
+**Why:** v1 uses available data — price drift since whale entry and current liquidity
+relative to config floor — but lacks the historical baselines needed for proper spike
+detection. The full formula detects relative anomalies (this market is behaving
+abnormally right now) rather than absolute thresholds (price moved X%).
+
+**Pros:** More accurate saturation detection. Catches subtle crowding that absolute
+thresholds miss. Market-specific baselines adapt to each market's normal behavior.
+
+**Cons:** Requires new background jobs to compute 30-day rolling averages per market
+(velocity, depth, frequency). New Redis sorted sets for baseline storage. Significant
+infrastructure (~2 modules of work). Cannot be calibrated until 30 days of market
+data has been accumulated.
+
+**Context:** Current v1 formula in `meg/agent_core/saturation_monitor.py` uses two
+signals: directional price drift (weight 0.60) and liquidity ratio (weight 0.40).
+The PRD formula uses three signals with weights 0.40/0.35/0.25. To upgrade: (1) build
+baseline accumulation jobs (30-day rolling averages per market), (2) add Redis keys for
+baselines, (3) swap formula in `score()`. The config (`agent.saturation_threshold` and
+`agent.saturation_size_reduction_sensitivity`) remains unchanged.
+
+**Effort:** L
+**Priority:** P2
+**Blocked by:** 30 days of market data accumulation; data layer must be running in production
+
+---
+
+## [P3] Copy-follower wallet registry for crowding detection
+
+**What:** Build a registry of known copy-follower wallets by analyzing on-chain behavior
+— wallets that consistently trade the same markets within minutes of tracked whale trades.
+
+**Why:** v1 crowding_detector uses price-based heuristics only (entry distance from whale
+fill price). Wallet-level copy detection would catch crowding before price moves,
+enabling earlier blocking of signals where copy bots have already entered.
+
+**Pros:** Earlier crowding detection. More precise blocking. Enables volume-based crowding
+metrics (how much copy-follower USDC has entered this market since the whale trade).
+
+**Cons:** Requires on-chain behavioral analysis, a new DB table (copy_followers or similar),
+and classification logic to distinguish copy bots from independent traders who happen to
+trade the same market. Risk of false positives on legitimate independent traders.
+
+**Context:** PRD references "copy followers" in the crowding problem description (§3)
+but does not spec a registry. The `crowding_detector.get_copy_follower_volume()` stub
+was originally designed for this but v1 implementation uses price-based detection instead.
+To build: (1) analyze Trade table for wallets that trade within N minutes of tracked
+whales at >50% frequency, (2) maintain a scored registry, (3) use in crowding_detector
+for volume-based crowding alongside price-based checks.
+
+**Effort:** L
+**Priority:** P3
+**Blocked by:** Trade table having 1000+ trades for behavioral analysis; data layer stable
+
+---
+
+## [P3] Shared test fixture deduplication across test directories
+
+**What:** Extract common test fixtures (db_engine, db_session, mock_redis, factory helpers)
+into a shared location to avoid copy-pasting between test directories.
+
+**Why:** tests/pre_filter/conftest.py and tests/agent_core/conftest.py both define
+db_engine, db_session, and mock_redis with identical implementations (~40 lines).
+tests/signal_engine/ will need the same fixtures, creating a third copy.
+
+**Pros:** DRY. Single source of truth for DB test setup. Changes to test infrastructure
+propagate automatically.
+
+**Cons:** Introduces a tests/conftest.py (root) or tests/helpers.py import pattern
+not yet established in the codebase. May be premature with only 2-3 copies.
+
+**Context:** Current project convention (Decision T-1 from Phase 6 eng review) is
+independent test directories with their own conftest.py files. This works well for
+isolation but creates duplication. Refactor to shared fixtures when the pattern
+stabilizes after 3+ test directories use the same fixtures. Options: move to
+tests/conftest.py (root), or create tests/fixtures.py as a shared import.
+
+**Effort:** S
+**Priority:** P3
+**Blocked by:** Phase 7+ (wait until 3 test dirs duplicate the same fixtures)
