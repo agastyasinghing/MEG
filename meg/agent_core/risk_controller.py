@@ -1,26 +1,28 @@
 """
-Risk controller — 5-gate risk framework.
+Risk controller — 4-gate risk framework + position size clamp.
 
-All 5 gates must pass for a signal to proceed to execution. Any failure
-immediately rejects the signal with a logged reason. Gates are evaluated
-in order of computational cost (cheapest first).
+Gates 1–4 are hard blocks: any failure immediately rejects the signal.
+Position size clamping (PRD §10 Gate 2) is a separate function that
+reduces oversized trades to the maximum allowed — it never blocks.
 
-Gate order:
+Gate order (cheapest first):
   Gate 1: Paper trading mode     — config read only (cheapest)
   Gate 2: Daily loss limit       — 1 Redis GET
   Gate 3: Max open positions     — 1 Redis HLEN
   Gate 4: Market exposure limit  — 2 Redis GETs (exposure + portfolio)
-  Gate 5: Position size limit    — 1 Redis GET (portfolio)
+
+Size clamp (called separately by decision_agent after check()):
+  clamp_position_size()          — 1 Redis GET (portfolio)
 
 Gate evaluation flow:
-  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-  │ Gate 1   │─►│ Gate 2   │─►│ Gate 3   │─►│ Gate 4   │─►│ Gate 5   │
-  │ Paper    │  │ Daily    │  │ Max      │  │ Market   │  │ Position │
-  │ Trading  │  │ Loss     │  │ Positions│  │ Exposure │  │ Size     │
-  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘
-       │              │              │              │              │
-    (False,        (False,        (False,        (False,        (False,
-     reason)        reason)        reason)        reason)        reason)
+  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
+  │ Gate 1   │─►│ Gate 2   │─►│ Gate 3   │─►│ Gate 4   │─► (True, "")
+  │ Paper    │  │ Daily    │  │ Max      │  │ Market   │
+  │ Trading  │  │ Loss     │  │ Positions│  │ Exposure │
+  └──────────┘  └──────────┘  └──────────┘  └──────────┘
+       │              │              │              │
+    (False,        (False,        (False,        (False,
+     reason)        reason)        reason)        reason)
 
 Missing Redis key semantics:
   - daily_pnl_usdc missing   → default 0.0 (no loss recorded yet) → PASS
@@ -47,8 +49,11 @@ async def check(
     config: MegConfig,
 ) -> tuple[bool, str]:
     """
-    Run all 5 risk gates in order. Return (True, "") if all pass.
+    Run all 4 risk gates in order. Return (True, "") if all pass.
     Return (False, reason) on first failure — short-circuit, no further gates.
+
+    Position size clamping is NOT in this function — call
+    clamp_position_size() separately after check() passes.
     """
     # Gate 1: Paper trading safety check
     passed, reason = _check_paper_trading(config)
@@ -67,13 +72,6 @@ async def check(
 
     # Gate 4: Market exposure limit
     passed, reason = await _check_market_exposure(signal.market_id, redis, config)
-    if not passed:
-        return False, reason
-
-    # Gate 5: Position size limit
-    passed, reason = await _check_position_size(
-        signal.recommended_size_usdc, redis, config
-    )
     if not passed:
         return False, reason
 
@@ -174,17 +172,20 @@ async def _check_market_exposure(
     return True, ""
 
 
-async def _check_position_size(
+async def clamp_position_size(
     proposed_size_usdc: float,
     redis: Redis,
     config: MegConfig,
-) -> tuple[bool, str]:
+) -> float:
     """
-    Gate 5: Reject if the proposed size exceeds max_position_pct of portfolio.
+    Clamp proposed position size to max_position_pct * portfolio_value.
 
-    Compares proposed_size_usdc against max_position_pct * portfolio_value_usdc.
+    PRD §10 Gate 2: "Reduce position size to maximum allowed. Do not block
+    the trade."  This is a size reducer, not a hard block — Kelly sizing
+    should naturally stay within the limit; this is the backstop.
 
-    Missing portfolio_value → fall back to config default.
+    Returns the original size if within limits, or the clamped maximum.
+    If portfolio value is unavailable, returns the proposed size unchanged.
     """
     portfolio_val = await _get_redis_float(
         redis, RedisKeys.portfolio_value_usdc(), None
@@ -192,17 +193,20 @@ async def _check_position_size(
     if portfolio_val is None or portfolio_val <= 0:
         portfolio_val = config.kelly.portfolio_value_usdc
         if portfolio_val <= 0:
-            return False, "no_portfolio_value: cannot compute position size limit"
+            return proposed_size_usdc
 
     max_size = config.risk.max_position_pct * portfolio_val
 
     if proposed_size_usdc > max_size:
-        return False, (
-            f"position_too_large: ${proposed_size_usdc:.2f} "
-            f"> limit ${max_size:.2f} "
-            f"({config.risk.max_position_pct:.0%} of ${portfolio_val:.2f})"
+        logger.info(
+            "risk_controller.position_size_clamped",
+            proposed=round(proposed_size_usdc, 2),
+            max_allowed=round(max_size, 2),
+            portfolio_value=round(portfolio_val, 2),
         )
-    return True, ""
+        return max_size
+
+    return proposed_size_usdc
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────

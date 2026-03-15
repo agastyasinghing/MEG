@@ -12,11 +12,13 @@ Decision flow:
     • blacklisted_market?      → config list check
     • duplicate_position?      → Redis HEXISTS
     ↓
-  risk_controller.check()      → 5-gate risk framework
+  risk_controller.check()      → 4-gate risk framework
     ↓
-  trap_detector.check()        → DB query for pump-and-exit pattern
+  trap_detector.check()        → warn-only (operator decides, PRD §9.4.2)
     ↓
   saturation_monitor.score()   → adjusts size (does NOT block)
+    ↓
+  clamp_position_size()        → reduce to max if oversized (PRD §10)
     ↓
   crowding_detector.check()    → blocks if entry window closed
     ↓
@@ -117,19 +119,20 @@ async def evaluate(
         )
         return None
 
-    # ── Trap detector — pump-and-exit check ──────────────────────────────
+    # ── Trap detector — warn-only (PRD §9.4.2: operator decides) ─────────
 
+    trap_warning = False
     trap_detected, trap_reason = await trap_detector.check(
         signal, redis, config, session
     )
     if trap_detected:
         await _update_signal_status(signal.signal_id, "TRAP_DETECTED", session)
+        trap_warning = True
         logger.warning(
-            "decision_agent.trap_detected",
+            "decision_agent.trap_warning",
             signal_id=signal.signal_id,
             reason=trap_reason,
         )
-        return None
 
     # ── Saturation monitor — size adjustment (never blocks) ──────────────
 
@@ -137,6 +140,12 @@ async def evaluate(
         signal, redis, config
     )
     adjusted_size = signal.recommended_size_usdc * size_multiplier
+
+    # ── Position size clamp (PRD §10: reduce, don't block) ───────────────
+
+    adjusted_size = await risk_controller.clamp_position_size(
+        adjusted_size, redis, config
+    )
 
     # ── Crowding detector — entry distance gate ──────────────────────────
 
@@ -152,10 +161,11 @@ async def evaluate(
 
     # ── All gates passed — build and publish proposal ────────────────────
 
-    proposal = _build_proposal(signal, adjusted_size, sat_score, config)
+    proposal = _build_proposal(signal, adjusted_size, sat_score, trap_warning, config)
 
-    # Update signal_outcomes status to APPROVED
-    await _update_signal_status(signal.signal_id, "APPROVED", session)
+    # Update signal_outcomes status — keep TRAP_DETECTED if trap was flagged
+    if not trap_warning:
+        await _update_signal_status(signal.signal_id, "APPROVED", session)
 
     # Publish proposal to Redis
     try:
@@ -189,6 +199,7 @@ def _build_proposal(
     signal: SignalEvent,
     adjusted_size_usdc: float,
     saturation_score: float,
+    trap_warning: bool,
     config: MegConfig,
 ) -> TradeProposal:
     """Construct a TradeProposal from an approved SignalEvent."""
@@ -204,7 +215,7 @@ def _build_proposal(
         composite_score=signal.composite_score,
         scores=signal.scores,
         saturation_score=saturation_score,
-        trap_warning=signal.trap_warning,
+        trap_warning=trap_warning,
         contributing_wallets=signal.contributing_wallets,
         market_price_at_signal=signal.market_price_at_signal,
         estimated_half_life_minutes=signal.estimated_half_life_minutes,

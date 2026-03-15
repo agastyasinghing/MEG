@@ -3,7 +3,7 @@ Tests for meg.agent_core.decision_agent — signal gating + proposal creation.
 
 Decision flow:
   Hard blocks: system_paused → blacklist → duplicate position
-  Risk gates:  risk_controller.check() (5 gates)
+  Risk gates:  risk_controller.check() (4 gates) + clamp_position_size()
   Detectors:   trap_detector → saturation_monitor → crowding_detector
   Output:      TradeProposal (PENDING_APPROVAL) → CHANNEL_TRADE_PROPOSALS
 
@@ -109,15 +109,20 @@ async def test_risk_controller_rejects(mock_redis, test_config, db_session):
     assert result is None
 
 
-# ── Trap detector rejection ───────────────────────────────────────────────
+# ── Trap detector — warn-only (PRD §9.4.2) ───────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_trap_detected_blocks(mock_redis, test_config, db_session):
-    """Trap detected → signal TRAP_DETECTED."""
-    signal = make_signal_event(signal_id="sig_trap")
+async def test_trap_detected_warns_not_blocks(mock_redis, test_config, db_session):
+    """Trap detected → proposal still created with trap_warning=True (PRD §9.4.2)."""
+    signal = make_signal_event(
+        signal_id="sig_trap",
+        recommended_size_usdc=30.0,
+        market_price_at_signal=0.55,
+    )
     await insert_signal_outcome(db_session, signal_id="sig_trap")
     await mock_redis.set(RedisKeys.portfolio_value_usdc(), "10000")
+    await set_market_redis_data(mock_redis, mid_price=0.55)
 
     with patch(
         "meg.agent_core.trap_detector.check",
@@ -126,7 +131,37 @@ async def test_trap_detected_blocks(mock_redis, test_config, db_session):
     ):
         result = await decision_agent.evaluate(signal, mock_redis, test_config, db_session)
 
-    assert result is None
+    assert result is not None
+    assert result.trap_warning is True
+    assert result.status == "PENDING_APPROVAL"
+
+
+@pytest.mark.asyncio
+async def test_trap_detected_keeps_trap_status(mock_redis, test_config, db_session):
+    """Trap detected → signal_outcomes status stays TRAP_DETECTED (not overwritten to APPROVED)."""
+    signal = make_signal_event(
+        signal_id="sig_trap_status",
+        recommended_size_usdc=30.0,
+        market_price_at_signal=0.55,
+    )
+    await insert_signal_outcome(db_session, signal_id="sig_trap_status", status="PENDING")
+    await mock_redis.set(RedisKeys.portfolio_value_usdc(), "10000")
+    await set_market_redis_data(mock_redis, mid_price=0.55)
+
+    with patch(
+        "meg.agent_core.trap_detector.check",
+        new_callable=AsyncMock,
+        return_value=(True, "whale_trap: rapid exit detected"),
+    ):
+        await decision_agent.evaluate(signal, mock_redis, test_config, db_session)
+
+    from sqlalchemy import select
+    from meg.db.models import SignalOutcome
+    result = await db_session.execute(
+        select(SignalOutcome.status).where(SignalOutcome.signal_id == "sig_trap_status")
+    )
+    status = result.scalar_one()
+    assert status == "TRAP_DETECTED"
 
 
 # ── Saturation size adjustment ────────────────────────────────────────────
