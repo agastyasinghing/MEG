@@ -60,10 +60,65 @@ class WhaleQualificationConfig(BaseModel):
     exclude_archetypes: list[str] = Field(default_factory=lambda: ["ARBITRAGE", "MANIPULATOR"])
 
 
+class CompositeWeightsConfig(BaseModel):
+    """
+    Weights for the four scored inputs in the composite formula (PRD §9.3.9).
+
+    base_score = lead_lag * lead_lag + consensus * consensus
+               + kelly * kelly + divergence * divergence
+    Must sum to 1.0. Hot-configurable so weights can be tuned from signal_outcomes data.
+    """
+
+    lead_lag: float = 0.35   # Primary: is this whale consistently early?
+    consensus: float = 0.30  # Multi-whale independent agreement
+    kelly: float = 0.20      # Kelly confidence (positive expected value)
+    divergence: float = 0.15 # Contrarian vs order flow
+
+
+class ArchetypeWeightsConfig(BaseModel):
+    """
+    Signal weight multipliers by whale archetype (PRD §9.3.7).
+
+    Applied to the post-weights adjusted base score:
+      adjusted = base_score * archetype_multiplier * ladder_multiplier
+
+    ARBITRAGE and MANIPULATOR should never reach the signal engine (excluded at
+    Gate 2). Their weights are 0.0 as a defense-in-depth backstop.
+    """
+
+    INFORMATION: float = 1.0   # Full weight — genuine information edge
+    MOMENTUM: float = 0.65     # Discounted — trend follower, likely priced in
+    ARBITRAGE: float = 0.0     # Should be excluded at Gate 2; 0.0 as backstop
+    MANIPULATOR: float = 0.0   # Should be excluded at Gate 2; 0.0 as backstop
+
+
 class SignalConfig(BaseModel):
     composite_score_threshold: float = 0.45
     ttl_seconds: int = 7200
     min_whales_for_consensus: int = 2
+    # Composite scoring weights (PRD §9.3.9). Hot-tunable from signal_outcomes data.
+    composite_weights: CompositeWeightsConfig = Field(
+        default_factory=CompositeWeightsConfig
+    )
+    # Archetype multipliers (PRD §9.3.7). Fixes stub bug: MOMENTUM was 0.6, PRD is 0.65.
+    archetype_weights: ArchetypeWeightsConfig = Field(
+        default_factory=ArchetypeWeightsConfig
+    )
+    # Consensus window: how long to look back for other whale trades in the same direction.
+    consensus_window_hours: float = 4.0       # PRD §9.3.4 default
+    consensus_sensitivity: float = 1.5        # Sigmoid sensitivity parameter (PRD §9.3.4)
+    # Ladder: conviction added per rung above the base (2 rungs = 1.0x, 3 = 1.15x, etc.)
+    ladder_conviction_per_rung: float = 0.15  # PRD §9.3.6 default; max multiplier 2.0
+    # Signal TTL = half_life * ttl_half_life_multiplier.
+    # At 3x: edge is ~12% of original at expiry (exp(-3*ln2) = 0.125).
+    ttl_half_life_multiplier: float = 3.0     # PRD §9.3.8 default
+    # Floor on estimated half-life. No signal expires in less than this time.
+    min_half_life_minutes: float = 5.0        # PRD §9.3.8 default
+    # Lead-lag minimum gate: scores below this after reputation decay are dropped.
+    # Signal is logged FILTERED; does not proceed to consensus/kelly scoring.
+    lead_lag_min_gate: float = 0.40           # PRD §9.3.1
+    # Contrarian threshold: divergence_score above this → is_contrarian = True on SignalEvent.
+    contrarian_threshold: float = 0.55        # PRD §9.3.5
 
 
 class RiskConfig(BaseModel):
@@ -77,6 +132,10 @@ class RiskConfig(BaseModel):
 class KellyConfig(BaseModel):
     fraction: float = 0.25
     max_bet_usdc: float = 1000.0
+    # Paper-trading portfolio value used by kelly_sizer for position sizing.
+    # agent_core Position Manager recalibrates with real capital before execution.
+    # Set this to the paper trading starting balance.
+    portfolio_value_usdc: float = 1000.0
 
 
 class EntryConfig(BaseModel):
@@ -114,6 +173,10 @@ class ReputationConfig(BaseModel):
     boost_on_win: float = 0.03
     min_score: float = 0.10
     max_score: float = 1.00
+    # Exponential decay time constant for reputation decay formula (PRD §9.3.1):
+    #   decay_factor = exp(-days_since_last_good_trade / decay_tau_days)
+    # Effect: 0 days → 1.00 (full), 30 days → 0.37, 60 days → 0.14, 90 days → 0.05
+    decay_tau_days: float = 30.0
 
 
 class RedisConfig(BaseModel):

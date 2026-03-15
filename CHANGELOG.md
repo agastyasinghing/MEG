@@ -3,6 +3,65 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.7.0] - 2026-03-15
+
+### Added
+- `meg/signal_engine/archetype_weighter.py` — fully implemented. Config-driven multipliers
+  (hot-reloadable via `config.signal.archetype_weights`). ARBITRAGE/MANIPULATOR log a structlog
+  WARNING as defense-in-depth and return 0.0; INFORMATION returns 1.0; MOMENTUM returns 0.65.
+- `meg/signal_engine/ladder_detector.py` — fully implemented. Returns a conviction multiplier
+  in [1.0, 2.0]. Counts qualifying prior same-wallet/market/outcome DB trades within
+  `config.pre_filter.ladder_window_hours` as rungs. Formula: `min(1.0 + rungs * per_rung, 2.0)`.
+- `meg/signal_engine/composite_scorer._combine_scores()` — fully implemented. PRD §9.3.9 formula:
+  Step 1 weighted base (lead_lag·0.35 + consensus·0.30 + kelly·0.20 + divergence·0.15),
+  Step 2 archetype+ladder multipliers, Step 3 conviction blend (adjusted·0.85 + conviction·0.15),
+  result clamped to [0.0, 1.0], all weights config-driven and hot-reloadable.
+- `meg/signal_engine/conviction_ratio.py` — fully implemented. `get_wallet_capital()` prefers
+  `total_capital_usdc`, falls back to `total_volume_usdc`, then 1.0 to avoid division by zero.
+  `score()` returns `min(trade.size_usdc / capital, 1.0)`.
+- `meg/core/events.py` — Added `SignalType` Literal, `SignalDroppedError` exception, `market_category`
+  field on RawWhaleTrade/QualifiedWhaleTrade, 4 new SignalEvent fields (signal_type,
+  estimated_half_life_minutes, whale_archetype, market_category). Fixed `RedisKeys.consensus_window()`
+  to include outcome dimension; added `RedisKeys.market_category()`.
+- `meg/core/config_loader.py` — New `CompositeWeightsConfig` and `ArchetypeWeightsConfig`
+  sub-models. `SignalConfig` extended with 8 new fields (composite_weights, archetype_weights,
+  consensus params, ladder params, TTL params, lead_lag gate, contrarian threshold).
+  `ReputationConfig.decay_tau_days` and `KellyConfig.portfolio_value_usdc` added.
+- `config/config.yaml` — All new config fields: composite_weights block, archetype_weights block,
+  consensus_window_hours, consensus_sensitivity, min_whales_for_consensus, ladder_conviction_per_rung,
+  ttl_half_life_multiplier, min_half_life_minutes, lead_lag_min_gate, contrarian_threshold,
+  kelly.portfolio_value_usdc, reputation.decay_tau_days.
+- `meg/db/models.py` — Added `last_profitable_trade_at` column to Wallet model (nullable DateTime).
+- `meg/data_layer/clob_client.py` — `_fetch_market_state()` now returns `tuple[MarketState, str]`
+  carrying market_category alongside state. `_write_state()` writes category to Redis at
+  `market:{id}:category`.
+- `meg/data_layer/polygon_feed.py` — `_process_block()` enriches emitted RawWhaleTrade with
+  market_category from Redis (populated by CLOBMarketFeed).
+- `meg/data_layer/wallet_registry.py` — Serialization includes `last_profitable_trade_at` field.
+- `tests/signal_engine/` — Full test suite for signal engine: conftest with fixtures
+  (`db_session`, `test_config`, `make_qualified_trade`, `make_wallet_data`, `insert_trade`).
+  2 modules fully tested (archetype_weighter: 13 tests, ladder_detector: 12 tests).
+  7 modules marked `xfail` as Opus specs (lead_lag_scorer, conviction_ratio, kelly_sizer,
+  consensus_filter, contrarian_detector, signal_decay, composite_scorer integration tests).
+- `tests/data_layer/test_clob_client.py` — 2 new tests for market_category Redis write.
+- `tests/data_layer/test_polygon_feed.py` — 2 new tests for market_category enrichment branch.
+
+### Fixed
+- `meg/data_layer/clob_client.py:122` — `_fetch_market_state()` return type annotation corrected
+  from `-> MarketState` to `-> tuple[MarketState, str]`; docstring updated to match.
+- `meg/signal_engine/archetype_weighter.py:51` — Warning log `note` field reworded to not claim
+  a hardcoded "0.0" return when the actual value comes from config.
+- `tests/signal_engine/test_composite_scorer.py` — Corrected arithmetic error in
+  `test_combine_scores_uses_config_weights` expected value (0.434 → 0.5615).
+- Existing `test_clob_client.py` `_write_state()` calls updated to pass `market_category` arg.
+- Existing `test_clob_client.py` `_fetch_market_state()` calls updated to unpack `(state, category)` tuple.
+
+### Changed
+- `meg/signal_engine/composite_scorer.py` — Imports all sub-scorer modules at module level
+  (required for `unittest.mock.patch()` in integration tests).
+- `TODOS.md` — Added TODO-1 (per-signal-type half-life v1.5) and TODO-2 (composite weight
+  calibration from signal_outcomes data after 200+ resolved signals).
+
 ## [0.1.6.0] - 2026-03-14
 
 ### Added

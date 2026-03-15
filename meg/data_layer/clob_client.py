@@ -23,6 +23,7 @@ Market state Redis layout (per market):
   market:{id}:last_updated_ms      ← int string (epoch ms)
   market:{id}:days_to_resolution   ← int string | "" (empty = None/unknown)
   market:{id}:price_history        ← sorted set: score=timestamp_ms, member=mid_price
+  market:{id}:category             ← string (e.g. "politics", "crypto") | "" (unknown)
 """
 from __future__ import annotations
 
@@ -109,8 +110,8 @@ class CLOBMarketFeed:
         Per-market errors are logged and the market is skipped this cycle.
         """
         try:
-            state = await self._fetch_market_state(market_id)
-            await self._write_state(state)
+            state, category = await self._fetch_market_state(market_id)
+            await self._write_state(state, category)
         except Exception as exc:
             logger.warning(
                 "clob_market_feed.market_poll_failed",
@@ -118,10 +119,11 @@ class CLOBMarketFeed:
                 error=str(exc),
             )
 
-    async def _fetch_market_state(self, market_id: str) -> MarketState:
+    async def _fetch_market_state(self, market_id: str) -> tuple[MarketState, str]:
         """
         Fetch current market state from CLOB REST API.
-        Returns a MarketState Pydantic model.
+        Returns (MarketState, market_category) where market_category is a
+        lowercase string (e.g. "politics", "crypto") or "" when unknown.
 
         Uses httpx for async HTTP. Falls back to dummy values if httpx is
         not available (enables unit tests without network).
@@ -171,6 +173,13 @@ class CLOBMarketFeed:
                 mk.get("end_date_iso") or mk.get("end_date") or mk.get("endDate"),
             )
 
+            # market_category: Polymarket uses "category" or "market_type" field.
+            # Stored as market:{id}:category for polygon_feed to enrich RawWhaleTrade.
+            # "" (empty string) when the field is absent from the API response.
+            market_category: str = str(
+                mk.get("category") or mk.get("market_type") or mk.get("type") or ""
+            ).lower()
+
         except ImportError:
             # httpx not available — return placeholder state for testing
             logger.debug(
@@ -185,21 +194,25 @@ class CLOBMarketFeed:
             volume_24h = 0.0
             participants = 0
             days_to_resolution = None
+            market_category = ""
 
-        return MarketState(
-            market_id=market_id,
-            bid=best_bid,
-            ask=best_ask,
-            mid_price=mid_price,
-            spread=spread,
-            liquidity_usdc=liquidity,
-            volume_24h_usdc=volume_24h,
-            participants=participants,
-            last_updated_at=datetime.now(tz=timezone.utc),
-            days_to_resolution=days_to_resolution,
+        return (
+            MarketState(
+                market_id=market_id,
+                bid=best_bid,
+                ask=best_ask,
+                mid_price=mid_price,
+                spread=spread,
+                liquidity_usdc=liquidity,
+                volume_24h_usdc=volume_24h,
+                participants=participants,
+                last_updated_at=datetime.now(tz=timezone.utc),
+                days_to_resolution=days_to_resolution,
+            ),
+            market_category,
         )
 
-    async def _write_state(self, state: MarketState) -> None:
+    async def _write_state(self, state: MarketState, market_category: str) -> None:
         """
         Write all market state fields to Redis.
         Price history sorted set is trimmed on every write to maintain 1h window.
@@ -224,6 +237,8 @@ class CLOBMarketFeed:
                 RedisKeys.market_days_to_resolution(mid),
                 str(state.days_to_resolution) if state.days_to_resolution is not None else "",
             )
+            # market_category: "" when unknown — polygon_feed enriches RawWhaleTrade with this
+            pipe.set(RedisKeys.market_category(mid), market_category)
 
             # Price history sorted set: score=timestamp_ms, member=mid_price@timestamp
             # Member includes timestamp to allow duplicate prices at different times

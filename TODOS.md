@@ -383,6 +383,70 @@ Start with log aggregator approach — only build a DB table if the dashboard ne
 
 ---
 
+## [P2] Per-signal-type half-life baselines (v1.5)
+
+**What:** Calibrate a distinct `half_life_seconds` for each `SignalType` value:
+`WHALE_REACTION`, `EVENT_CASCADE`, `BEHAVIORAL_DRIFT`, `RESOLUTION_ASYMMETRY`.
+
+**Why:** v1 uses a single uniform half-life (config.signal_decay.half_life_seconds = 3600).
+Different signal types decay at fundamentally different rates — a RESOLUTION_ASYMMETRY
+signal (market nearing resolution) has a much shorter information window than a
+BEHAVIORAL_DRIFT signal (structural wallet behavior shift). Uniform decay under-expires
+slow signals and over-runs fast ones, leading to stale signals reaching agent_core.
+
+**Pros:** More precise TTL per signal type. Reduces stale signal execution. Enables
+signal_decay to act as a second-pass quality filter beyond score threshold.
+
+**Cons:** Requires historical signal_outcomes data to calibrate baselines — these cannot
+be guessed accurately. Building before data exists = arbitrary values. Requires new
+config structure (per-type map, not a single scalar).
+
+**Context:** `meg/signal_engine/signal_decay.py` docstring documents this TODO. The
+`SignalType` Literal is defined in `meg/core/events.py`. Suggested starting baselines
+(to validate against data): WHALE_REACTION=3600s, EVENT_CASCADE=1800s,
+BEHAVIORAL_DRIFT=7200s, RESOLUTION_ASYMMETRY=900s. Config change needed in
+`SignalDecayConfig` — add `per_type_half_life: dict[SignalType, int]` with fallback
+to `half_life_seconds` when type is not in the map.
+
+**Effort:** S (config + code), M (calibration from signal_outcomes)
+**Priority:** P2
+**Blocked by:** ~3 months of signal_outcomes data with `signal_type` populated; Signal Engine shipped first
+
+---
+
+## [P2] Composite score weight calibration from signal_outcomes
+
+**What:** After accumulating signal_outcomes data (minimum 200 resolved signals),
+run a weight optimization pass on `config.signal.composite_weights` using actual
+P&L outcomes as the objective function.
+
+**Why:** The current weights (lead_lag=0.35, consensus=0.30, kelly=0.20, divergence=0.15)
+are set from PRD §9.3.9 defaults and engineering judgment. Real market data will show
+whether lead_lag is truly the strongest predictor, or whether consensus or divergence
+outperforms in practice. Un-calibrated weights = leaving alpha on the table.
+
+**Pros:** Data-driven weight tuning replaces judgment-based defaults. Even small
+improvements in weight allocation (e.g. +5% to the strongest predictor) improve
+composite score accuracy across thousands of signals. signal_outcomes has both
+FILTERED and EXECUTED labels — this is a labeled training dataset.
+
+**Cons:** Requires resolved signals (pnl_usdc filled by backfill job). Requires the
+resolved_pnl_usdc backfill job to be running first. Optimization can overfit on small
+datasets — minimum 200 resolved signals before tuning.
+
+**Context:** `config/config.yaml` composite_weights block is hot-reloadable, so
+weight updates can be applied without restart once calibrated. The optimization can be
+as simple as a grid search or as sophisticated as Bayesian optimization. Start with a
+manual Pandas analysis of `signal_outcomes` data, then automate once the pattern is clear.
+The JSONB `scores_json` field stores all component scores per signal — all features
+are already captured for regression.
+
+**Effort:** M (analysis + manual tuning), L (automated optimization loop)
+**Priority:** P2
+**Blocked by:** resolved_pnl_usdc backfill job (see above) + 200+ resolved signals
+
+---
+
 ## [P2] pip-audit: dependency vulnerability scanning in CI
 
 **What:** Add `pip-audit -r requirements.txt` as a required CI check on every PR.

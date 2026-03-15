@@ -63,7 +63,7 @@ async def test_write_state_sets_all_scalar_keys(mock_redis, config):
     """_write_state writes all 8 scalar market keys to Redis."""
     feed = CLOBMarketFeed(redis=mock_redis, config=config)
     state = make_market_state(market_id="market_001")
-    await feed._write_state(state)
+    await feed._write_state(state, "")
 
     mid = "market_001"
     assert await mock_redis.get(RedisKeys.market_mid_price(mid)) == str(state.mid_price)
@@ -81,7 +81,7 @@ async def test_write_state_adds_to_price_history_sorted_set(mock_redis, config):
     """_write_state adds an entry to the price_history sorted set."""
     feed = CLOBMarketFeed(redis=mock_redis, config=config)
     state = make_market_state(market_id="market_002", mid_price=0.55)
-    await feed._write_state(state)
+    await feed._write_state(state, "")
 
     key = RedisKeys.market_price_history("market_002")
     members = await mock_redis.zrange(key, 0, -1, withscores=True)
@@ -96,7 +96,7 @@ async def test_write_state_multiple_prices_accumulate_in_sorted_set(mock_redis, 
 
     for price in [0.50, 0.55, 0.60]:
         state = make_market_state(market_id=mid, mid_price=price)
-        await feed._write_state(state)
+        await feed._write_state(state, "")
 
     key = RedisKeys.market_price_history(mid)
     members = await mock_redis.zrange(key, 0, -1)
@@ -120,12 +120,34 @@ async def test_write_state_trims_old_price_history(mock_redis, config):
 
     # Write a fresh state — trim should remove the stale entry
     state = make_market_state(market_id=mid, mid_price=0.60)
-    await feed._write_state(state)
+    await feed._write_state(state, "")
 
     members = await mock_redis.zrange(key, 0, -1)
     # Only the fresh entry should remain; the stale one should be removed
     assert all("stale" not in m for m in members)
     assert len(members) == 1
+
+
+@pytest.mark.asyncio
+async def test_write_state_writes_market_category_to_redis(mock_redis, config):
+    """_write_state writes market_category to RedisKeys.market_category()."""
+    feed = CLOBMarketFeed(redis=mock_redis, config=config)
+    state = make_market_state(market_id="market_cat")
+    await feed._write_state(state, "politics")
+
+    value = await mock_redis.get(RedisKeys.market_category("market_cat"))
+    assert value == "politics"
+
+
+@pytest.mark.asyncio
+async def test_write_state_writes_empty_category_when_unknown(mock_redis, config):
+    """_write_state writes empty string when category is unknown."""
+    feed = CLOBMarketFeed(redis=mock_redis, config=config)
+    state = make_market_state(market_id="market_nocat")
+    await feed._write_state(state, "")
+
+    value = await mock_redis.get(RedisKeys.market_category("market_nocat"))
+    assert value == ""
 
 
 # ── Active markets subscription management ────────────────────────────────────
@@ -200,11 +222,12 @@ async def test_fetch_market_state_returns_placeholder_without_httpx(mock_redis, 
     feed = CLOBMarketFeed(redis=mock_redis, config=config)
 
     with patch.dict("sys.modules", {"httpx": None}):
-        state = await feed._fetch_market_state("market_nohttpx")
+        state, category = await feed._fetch_market_state("market_nohttpx")
 
     assert isinstance(state, MarketState)
     assert state.market_id == "market_nohttpx"
     assert 0.0 <= state.mid_price <= 1.0
+    assert category == ""  # placeholder path always returns empty category
 
 
 @pytest.mark.asyncio
@@ -250,7 +273,7 @@ async def test_fetch_market_state_sets_days_to_resolution_from_end_date_iso(
     mock_httpx.AsyncClient = MagicMock(return_value=mock_client)
 
     with patch.dict("sys.modules", {"httpx": mock_httpx}):
-        state = await feed._fetch_market_state("market_with_enddate")
+        state, category = await feed._fetch_market_state("market_with_enddate")
 
     assert isinstance(state, MarketState)
     assert state.days_to_resolution is not None

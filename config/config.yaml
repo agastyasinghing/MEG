@@ -16,6 +16,23 @@ signal:
   composite_score_threshold: 0.45 # Minimum composite score to pass to agent_core
   ttl_seconds: 7200               # 2 hours — signals older than this are never executed
   min_whales_for_consensus: 2     # Minimum independent whale agreements for consensus bonus
+  composite_weights:
+    lead_lag: 0.35                # Primary: is this whale consistently early? (PRD §9.3.9)
+    consensus: 0.30               # Multi-whale independent agreement
+    kelly: 0.20                   # Kelly confidence (positive expected value)
+    divergence: 0.15              # Contrarian vs order flow (contrarian = boost)
+  archetype_weights:
+    INFORMATION: 1.0              # Full weight — genuine information edge (PRD §9.3.7)
+    MOMENTUM: 0.65                # Discounted — trend follower, likely priced in
+    ARBITRAGE: 0.0                # Defense-in-depth; should be excluded at Gate 2
+    MANIPULATOR: 0.0              # Defense-in-depth; should be excluded at Gate 2
+  consensus_window_hours: 4.0     # Rolling window for multi-whale agreement (PRD §9.3.4)
+  consensus_sensitivity: 1.5      # Sigmoid sensitivity: higher = sharper 1→2 whale jump
+  ladder_conviction_per_rung: 0.15 # Each ladder rung adds 0.15 to multiplier (PRD §9.3.6)
+  ttl_half_life_multiplier: 3.0   # TTL = half_life * 3.0 → ~12% edge remaining at expiry
+  min_half_life_minutes: 5.0      # Floor: no signal can expire in less than 5 minutes
+  lead_lag_min_gate: 0.40         # Drop signal if lead_lag < 0.40 after decay (PRD §9.3.1)
+  contrarian_threshold: 0.55      # divergence_score above this → is_contrarian=True
 
 risk:
   max_position_pct: 0.05          # Max single position as fraction of portfolio
@@ -27,6 +44,7 @@ risk:
 kelly:
   fraction: 0.25                  # Use 1/4 Kelly for position sizing (conservative)
   max_bet_usdc: 1000              # Hard cap per trade regardless of Kelly output
+  portfolio_value_usdc: 1000.0    # Paper trading starting balance for signal sizing
 
 entry:
   max_entry_distance_pct: 0.05    # Max price drift from whale entry before skipping
@@ -52,6 +70,7 @@ reputation:
   boost_on_win: 0.03               # Score boost per winning trade
   min_score: 0.10                  # Floor — never drop a whale below this
   max_score: 1.00                  # Ceiling
+  decay_tau_days: 30.0             # Time constant for exp(-days/tau) reputation decay (PRD §9.3.1)
 
 logging:
   level: INFO                      # DEBUG / INFO / WARNING / ERROR

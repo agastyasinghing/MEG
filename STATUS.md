@@ -7,22 +7,40 @@
 ## Current Phase
 - [x] Repo scaffolding — **COMPLETE** (merged: feat/repo-scaffold, v0.1.0.0)
 - [x] DB schema — **COMPLETE** (merged: v0.1.1.0)
-- [~] Data Layer — **BUILT, needs /review + /ship**
-- [~] Pre-Filter Gates — **IN PLANNING** (`/plan-eng-review` in progress, 2026-03-14)
-- [ ] Signal Engine
+- [x] Data Layer — **COMPLETE** (merged: v0.1.3.0)
+- [x] Pre-Filter Gates — **COMPLETE** (merged: v0.1.6.0 — Gate 1+2+3+pipeline+tests)
+- [~] Signal Engine — **IN PROGRESS** (pre-work gaps patched; archetype_weighter + ladder_detector implemented; 9 test specs pending)
 - [ ] Agent Core
 - [ ] Execution Layer
 - [ ] Telegram Bot
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** Pre-Filter Gates (planning)
+**Active phase:** Signal Engine (pre-work complete; test specs + Opus modules next)
 
 ---
 
 ## What Was Just Completed
 
-**Pre-Filter Gates phase (2026-03-14) — IN PROGRESS (Gate 3 classify() pending Opus):**
+**Signal Engine pre-work (2026-03-14) — GAP fixes + Sonnet-eligible module implementations:**
+- `meg/core/events.py` — Added `SignalType` Literal, `SignalDroppedError`, `market_category` field on RawWhaleTrade/QualifiedWhaleTrade, 4 new SignalEvent fields (signal_type, estimated_half_life_minutes, whale_archetype, market_category), fixed `RedisKeys.consensus_window()` to include outcome dimension, added `RedisKeys.market_category()`
+- `meg/core/config_loader.py` — New `CompositeWeightsConfig` + `ArchetypeWeightsConfig` sub-models; `SignalConfig` extended with 8 new fields; `ReputationConfig.decay_tau_days`; `KellyConfig.portfolio_value_usdc`
+- `config/config.yaml` — All new config fields added (composite_weights block, archetype_weights block, all new signal params, reputation.decay_tau_days, kelly.portfolio_value_usdc)
+- `meg/db/models.py` — Added `Wallet.last_profitable_trade_at` (required by lead_lag_scorer reputation decay)
+- `meg/db/migrations/versions/e2f4a6b8c1d5_add_last_profitable_trade_at_to_wallets.py` — Alembic migration
+- `meg/data_layer/wallet_registry.py` — `last_profitable_trade_at` in `_wallet_to_dict()` + `upsert_wallet()`
+- `meg/data_layer/clob_client.py` — `market_category` extraction + tuple return from `_fetch_market_state()`, write to Redis pipeline via `RedisKeys.market_category()`
+- `meg/data_layer/polygon_feed.py` — Enriches RawWhaleTrade with `market_category` from Redis after filter
+- `meg/signal_engine/lead_lag_scorer.py` — Stub signatures fixed: `wallet_data: dict` param on `score()` + `compute_reputation_decay()`
+- `meg/signal_engine/conviction_ratio.py` — Stub signatures fixed: `wallet_data: dict` param; `get_wallet_capital(wallet_data)` (sync, no DB)
+- `meg/signal_engine/kelly_sizer.py` — Signature rewritten: explicit `win_prob, entry_price, portfolio_value_usdc` params; `QualifiedWhaleTrade` (not `SignalEvent`)
+- `meg/signal_engine/contrarian_detector.py` — Docstring fixed: range corrected to `[0.0, 1.0]` with accurate semantics
+- `meg/signal_engine/composite_scorer.py` — Rewritten: PRD §9.3.9 formula in docstring, `session: AsyncSession` param, `SignalDroppedError` handling documented
+- `meg/signal_engine/archetype_weighter.py` — **FULLY IMPLEMENTED**: config-driven weights, ARBITRAGE/MANIPULATOR warning, no hardcoded dict
+- `meg/signal_engine/ladder_detector.py` — **FULLY IMPLEMENTED**: renamed `multiplier()`, DB session, `[1.0, 2.0]` range, Trade table query for rung count
+- `meg/signal_engine/signal_decay.py` — TODO comment added for per-signal-type half-life baselines (v1.5)
+
+**Pre-Filter Gates phase (2026-03-14) — COMPLETE (v0.1.6.0):**
 - `meg/core/events.py` — Added `market_days_to_resolution` to `RedisKeys`
 - `meg/core/config_loader.py` — Added 4 fields to `PreFilterConfig`: `arb_detection_window_hours`, `ladder_window_hours`, `ladder_min_trades`, `min_signal_size_pct`; updated `min_days_to_resolution` default to 3
 - `config/config.yaml` — Added all 5 new `pre_filter` params
@@ -70,10 +88,9 @@
 
 ## In Progress
 
-- Pre-Filter Gates (2026-03-14): Gates 1 and 2 complete + pipeline + all tests.
-  **Blocked on Opus session for intent_classifier.classify() + build_qualified_trade()**
-  See TODOS.md: "OPUS SESSION: Implement intent_classifier.py"
-- Data Layer built — still needs `/review` then `/ship` (prerequisite for pre-filter ship)
+- Signal Engine: pre-work gaps patched (2026-03-14). Next: write 9 test spec files
+  (`tests/signal_engine/conftest.py` + `test_*.py` for all modules), then Opus session
+  for math-heavy modules (lead_lag, kelly, consensus, contrarian, signal_decay, composite_scorer).
 
 ---
 
@@ -88,9 +105,9 @@
 
 ## Next 3 Tasks
 
-1. **Opus session: implement `intent_classifier.classify()` + `build_qualified_trade()`** — read `tests/pre_filter/test_intent_classifier.py` first, implement against tests, use ultrathink.
-2. **Run `/review` on Data Layer + Pre-Filter Gates** — paranoid review before shipping.
-3. **Run `/ship`** — sync main, test, push, PRs for data layer and pre-filter phases.
+1. **Write `tests/signal_engine/conftest.py` + 9 test spec files** — fully tested for archetype_weighter and ladder_detector; stubs with docstrings for Opus modules.
+2. **Opus session: implement math-heavy signal engine modules** — lead_lag_scorer, conviction_ratio, kelly_sizer, consensus_filter, contrarian_detector, signal_decay, composite_scorer. Read test specs first, use ultrathink.
+3. **Run `/review` then `/ship`** — paranoid review, then bump version and PR for Signal Engine phase.
 
 ---
 
