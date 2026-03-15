@@ -252,6 +252,11 @@ class PolygonFeed:
             try:
                 event = await _filter_whale_transaction(tx, self._config)
                 if event is not None:
+                    # Enrich market_category from Redis (written by CLOBMarketFeed).
+                    # Empty string when CLOBMarketFeed hasn't polled this market yet — fine.
+                    cat: str = (await self._redis.get(RedisKeys.market_category(event.market_id))) or ""
+                    if cat:
+                        event = event.model_copy(update={"market_category": cat})
                     await _emit_event(self._redis, event)
                     # Register this market as active so CLOBMarketFeed subscribes to it
                     await self._redis.sadd(RedisKeys.active_markets(), event.market_id)

@@ -93,6 +93,11 @@ def _wallet_to_dict(w: Wallet) -> dict[str, Any]:
         "is_excluded": w.is_excluded,
         "exclusion_reason": w.exclusion_reason,
         "avg_hold_time_hours": float(w.avg_hold_time_hours) if w.avg_hold_time_hours is not None else None,
+        # ISO-8601 string so JSON serialization is lossless. lead_lag_scorer reads this
+        # and parses it back to a datetime for the reputation decay calculation.
+        "last_profitable_trade_at": (
+            w.last_profitable_trade_at.isoformat() if w.last_profitable_trade_at is not None else None
+        ),
     }
 
 
@@ -221,6 +226,7 @@ async def upsert_wallet(
         is_excluded=data.get("is_excluded", False),
         exclusion_reason=data.get("exclusion_reason"),
         avg_hold_time_hours=data.get("avg_hold_time_hours"),
+        last_profitable_trade_at=data.get("last_profitable_trade_at"),
     ).on_conflict_do_update(
         index_elements=["address"],
         set_={
@@ -246,6 +252,7 @@ async def upsert_wallet(
             "is_excluded": data.get("is_excluded", False),
             "exclusion_reason": data.get("exclusion_reason"),
             "avg_hold_time_hours": data.get("avg_hold_time_hours"),
+            "last_profitable_trade_at": data.get("last_profitable_trade_at"),
         },
     )
 

@@ -316,6 +316,75 @@ async def test_run_reconnects_on_exception(mock_redis, config):
     assert call_count == 3
 
 
+# ── 3b. market_category enrichment ────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_process_block_enriches_event_with_market_category(mock_redis, config):
+    """When market_category is in Redis, the emitted event carries it."""
+    rpc = MockRPCConnection()
+    tx = make_clob_tx(wallet="0xwhale", tx_hash="0x" + "e" * 64, block_number=102)
+    rpc._txs_per_block[102] = [tx]
+
+    feed = PolygonFeed(rpc=rpc, redis=mock_redis, config=config)
+
+    # Pre-populate category — market_id is derived from tx_hash prefix
+    tx_hash = "0x" + "e" * 64
+    market_id = f"market_{tx_hash[:16]}"
+    await mock_redis.set(RedisKeys.market_category(market_id), "crypto")
+
+    published: list[str] = []
+    original_publish = None
+
+    import meg.data_layer.polygon_feed as pf_module
+    from meg.core.events import RawWhaleTrade
+
+    original_emit = pf_module._emit_event
+
+    async def capture_emit(redis, event: RawWhaleTrade) -> None:
+        published.append(event.market_category)
+        await original_emit(redis, event)
+
+    pf_module._emit_event = capture_emit  # type: ignore[assignment]
+    try:
+        await feed._process_block(102)
+    finally:
+        pf_module._emit_event = original_emit  # type: ignore[assignment]
+
+    assert published == ["crypto"]
+
+
+@pytest.mark.asyncio
+async def test_process_block_emits_event_without_category_when_not_in_redis(
+    mock_redis, config
+):
+    """When market_category is not in Redis, event.market_category is empty string."""
+    rpc = MockRPCConnection()
+    tx = make_clob_tx(wallet="0xwhale2", tx_hash="0x" + "f" * 64, block_number=103)
+    rpc._txs_per_block[103] = [tx]
+
+    feed = PolygonFeed(rpc=rpc, redis=mock_redis, config=config)
+
+    import meg.data_layer.polygon_feed as pf_module
+    from meg.core.events import RawWhaleTrade
+
+    published: list[str] = []
+    original_emit = pf_module._emit_event
+
+    async def capture_emit(redis, event: RawWhaleTrade) -> None:
+        published.append(event.market_category)
+        await original_emit(redis, event)
+
+    pf_module._emit_event = capture_emit  # type: ignore[assignment]
+    try:
+        await feed._process_block(103)
+    finally:
+        pf_module._emit_event = original_emit  # type: ignore[assignment]
+
+    # No category in Redis → field stays at default empty string
+    assert published == [""]
+
+
 # ── 6. _emit_event ────────────────────────────────────────────────────────────
 
 
