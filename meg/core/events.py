@@ -200,6 +200,15 @@ class TradeProposal(BaseModel):
     Emitted by agent_core after a SignalEvent passes all risk gates.
     In v1, all proposals require human approval via Telegram before execution.
     Published to: RedisKeys.CHANNEL_TRADE_PROPOSALS
+
+    Fields are a superset of what execution layer needs plus what the dashboard
+    approval queue and Telegram bot display (PRD §9.6 Trade Approval Queue):
+      - composite_score + scores: full score breakdown shown at approval time
+      - saturation_score: how crowded the market is right now
+      - trap_warning: prominent red flag if whale trap pattern detected
+      - contributing_wallets: which whales contributed (info panel)
+      - market_price_at_signal: reference price for entry distance display
+      - estimated_half_life_minutes: decay context for operator
     """
 
     event_type: Literal["trade_proposal"] = "trade_proposal"
@@ -211,6 +220,15 @@ class TradeProposal(BaseModel):
     limit_price: float
     status: Literal["PENDING_APPROVAL", "APPROVED", "REJECTED", "EXECUTED", "CANCELLED"]
     created_at_ms: int
+
+    # ── Score context (forwarded from SignalEvent for dashboard display) ───────
+    composite_score: float = 0.0
+    scores: SignalScores | None = None  # full per-module breakdown
+    saturation_score: float = 0.0
+    trap_warning: bool = False
+    contributing_wallets: list[str] = Field(default_factory=list)
+    market_price_at_signal: float = 0.0       # whale's fill price; base for entry distance
+    estimated_half_life_minutes: float = 0.0  # edge decay estimate shown at approval
 
 
 # ── Market state model ────────────────────────────────────────────────────────
@@ -375,3 +393,49 @@ class RedisKeys:
     @staticmethod
     def market_days_to_resolution(market_id: str) -> str:
         return f"market:{market_id}:days_to_resolution"
+
+    # ── Position tracking keys (written by position_manager) ──────────────────
+
+    # Hash of all open positions: field=position_id, value=JSON-serialised position state.
+    # position_manager uses HSET/HDEL/HGETALL. Single hash keeps all positions accessible
+    # with one HGETALL call for risk_controller gate checks.
+    @staticmethod
+    def open_positions() -> str:
+        return "meg:open_positions"
+
+    # JSON-serialised position state for a single position.
+    # Redundant with the open_positions hash field but used for direct lookup by ID.
+    # TTL is set to 0 (no expiry) — positions must be explicitly closed by position_manager.
+    @staticmethod
+    def position(position_id: str) -> str:
+        return f"position:{position_id}"
+
+    # Running net P&L for the current UTC day in USDC (float string).
+    # Reset to "0" at midnight UTC by position_manager daily reset task.
+    # risk_controller reads this for the circuit breaker (Gate 2).
+    @staticmethod
+    def daily_pnl_usdc() -> str:
+        return "meg:daily_pnl_usdc"
+
+    # Current portfolio value in USDC (float string).
+    # Written by position_manager after every open/close. Initialised from
+    # kelly.portfolio_value_usdc config on first start. Used by risk_controller
+    # for max_portfolio_exposure_pct and max_position_pct gate checks.
+    @staticmethod
+    def portfolio_value_usdc() -> str:
+        return "meg:portfolio_value_usdc"
+
+    # Total USDC currently deployed in a specific market (float string).
+    # Written by position_manager on open/close. Read by risk_controller
+    # for max_market_exposure_pct gate check (Gate 4).
+    @staticmethod
+    def market_exposure_usdc(market_id: str) -> str:
+        return f"market:{market_id}:exposure_usdc"
+
+    # Emergency pause flag. SET "1" to pause, DEL to resume.
+    # Written by Telegram /pause and /resume commands.
+    # Read by decision_agent on every signal — bypasses hot-reload latency.
+    # NOT in config.yaml: runtime state must be mutable by Telegram bot atomically.
+    @staticmethod
+    def system_paused() -> str:
+        return "meg:system_paused"
