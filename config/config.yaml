@@ -33,8 +33,9 @@ entry:
   max_spread_pct: 0.03            # Max bid-ask spread to allow entry
 
 pre_filter:
-  min_market_liquidity_usdc: 50000  # Gate 1: minimum market liquidity
-  max_spread_pct: 0.05              # Gate 1: maximum spread at time of whale trade
+  min_volume_24h_usdc: 50000        # Gate 1: minimum 24-hour trading volume (PRD default)
+  min_market_liquidity_usdc: 10000  # Gate 1: minimum liquidity depth within 5 ticks (PRD default)
+  max_spread_pct: 0.06              # Gate 1: maximum spread at time of whale trade (PRD default)
   min_unique_participants: 20       # Gate 1: minimum distinct traders in market
   min_days_to_resolution: 3        # Gate 1: skip check if days_to_resolution is None
   arb_detection_window_hours: 24   # Gate 2: YES+NO same-market behavioral arb window

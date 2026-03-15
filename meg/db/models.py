@@ -246,6 +246,10 @@ class Trade(Base):
     pnl_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Exit tx hash (CLOB exit order); NULL for paper trades
     tx_hash_exit: Mapped[str | None] = mapped_column(String(66), nullable=True)
+    # Market's final price at resolution. NULL until market resolves.
+    # Used by PnL backfill job for lead-lag calibration and signal attribution.
+    # PRD §12 trades table: price_at_market_end DECIMAL(6,4).
+    price_at_market_end: Mapped[float | None] = mapped_column(Numeric(6, 4), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("tx_hash", name="uq_trades_tx_hash"),

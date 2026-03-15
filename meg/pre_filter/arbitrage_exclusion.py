@@ -21,6 +21,26 @@ Detection has two layers (short-circuited in order):
      This catches wallets whose archetype hasn't been classified yet and wallets
      that recently shifted to arb behavior.
 
+v1 simplification vs PRD §9.1:
+  The PRD specifies three arb detection heuristics. This implementation covers
+  heuristic #1 only (both-sides detection), simplified to a single occurrence
+  within the window rather than "more than 3 times in 30 days". Heuristics #2
+  and #3 are deferred to v1.5:
+
+  #2 [DEFERRED v1.5] Hold time: reject if avg_hold_time_hours < 2.
+     Requires Wallet.avg_hold_time_hours to be populated by the reputation_decay
+     system (signal_engine phase). Field exists in models.py; check not implemented.
+     See TODOS.md: "Gate 2: hold-time arb heuristic".
+
+  #3 [DEFERRED v1.5] Tight-spread volume concentration: reject if >80% of wallet
+     volume is in markets with spread < 0.02 (classic cross-market arb behavior).
+     Requires per-market spread history not yet tracked. See TODOS.md:
+     "Gate 2: tight-spread volume concentration heuristic".
+
+  The current check is conservative in the false-negative direction (some arb
+  wallets will slip through), which is acceptable for v1 — the archetype check
+  catches pre-classified wallets, and behavioral detection is a secondary net.
+
 Architecture note: This module reads wallet data directly from Redis (no import
 of meg.data_layer.wallet_registry — layer coupling violation). Trade table queries
 use meg.db.models (shared infrastructure, not a layer). The compound index
