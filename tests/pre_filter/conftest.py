@@ -123,6 +123,7 @@ async def set_market_redis_data(
     redis: Redis,
     *,
     market_id: str = "market_001",
+    volume_24h: float = 500_000.0,
     liquidity: float = 100_000.0,
     spread: float = 0.02,
     participants: int = 50,
@@ -137,6 +138,7 @@ async def set_market_redis_data(
     """
     ts = last_updated_ms or int(time.time() * 1000)
     await redis.set(RedisKeys.market_last_updated_ms(market_id), str(ts))
+    await redis.set(RedisKeys.market_volume_24h(market_id), str(volume_24h))
     await redis.set(RedisKeys.market_liquidity(market_id), str(liquidity))
     await redis.set(RedisKeys.market_spread(market_id), str(spread))
     await redis.set(RedisKeys.market_participants(market_id), str(participants))

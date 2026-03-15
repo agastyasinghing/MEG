@@ -48,6 +48,7 @@ _QUALITY_FAILED_TTL_SECONDS = 3600
 async def check(trade: RawWhaleTrade, redis: Redis, config: MegConfig) -> bool:
     """
     Return True if the trade's market meets all quality thresholds:
+      - 24h trading volume >= config.pre_filter.min_volume_24h_usdc
       - Market liquidity >= config.pre_filter.min_market_liquidity_usdc
       - Bid-ask spread <= config.pre_filter.max_spread_pct
       - Unique participant count >= config.pre_filter.min_unique_participants
@@ -86,6 +87,7 @@ async def check(trade: RawWhaleTrade, redis: Redis, config: MegConfig) -> bool:
         return False
 
     # Fetch all quality metrics (individual reads — serial at v1 whale frequency).
+    volume_24h = await _get_volume_24h(market_id, redis)
     liquidity = await _get_market_liquidity(market_id, redis)
     spread = await _get_market_spread(market_id, redis)
     participants = await _get_participants(market_id, redis)
@@ -93,6 +95,9 @@ async def check(trade: RawWhaleTrade, redis: Redis, config: MegConfig) -> bool:
 
     pf = config.pre_filter
     failures: list[str] = []
+
+    if volume_24h is None or volume_24h < pf.min_volume_24h_usdc:
+        failures.append(f"volume_24h={volume_24h} < min={pf.min_volume_24h_usdc}")
 
     if liquidity is None or liquidity < pf.min_market_liquidity_usdc:
         failures.append(f"liquidity={liquidity} < min={pf.min_market_liquidity_usdc}")
@@ -129,6 +134,17 @@ async def check(trade: RawWhaleTrade, redis: Redis, config: MegConfig) -> bool:
         return False
 
     return True
+
+
+async def _get_volume_24h(market_id: str, redis: Redis) -> float | None:
+    """Return the 24-hour trading volume (USDC) for a market from Redis cache."""
+    raw = await redis.get(RedisKeys.market_volume_24h(market_id))
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (ValueError, TypeError):
+        return None
 
 
 async def _get_last_updated_ms(market_id: str, redis: Redis) -> int | None:

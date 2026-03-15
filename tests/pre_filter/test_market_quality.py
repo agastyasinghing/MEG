@@ -4,6 +4,7 @@ Tests for pre_filter/market_quality.py (Gate 1).
 Coverage map:
   check() fast-exit path        → test_check_quality_failed_cache_hit
   UNCHARACTERIZED (no cache)    → test_check_uncharacterized_market
+  volume_24h threshold          → test_check_low_volume_24h
   liquidity threshold           → test_check_low_liquidity
   spread threshold              → test_check_spread_too_wide
   participants threshold        → test_check_too_few_participants
@@ -63,13 +64,29 @@ async def test_check_quality_failed_cache_not_written_on_uncharacterized(
 # ── Individual threshold failures ─────────────────────────────────────────────
 
 
+async def test_check_low_volume_24h(mock_redis: Redis, test_config: MegConfig) -> None:
+    """volume_24h_usdc below min_volume_24h_usdc → rejected, quality_failed written."""
+    trade = make_raw_trade(market_id="market_001")
+    await set_market_redis_data(
+        mock_redis,
+        market_id="market_001",
+        volume_24h=1_000.0,  # well below default 50_000
+    )
+
+    result = await market_quality.check(trade, mock_redis, test_config)
+
+    assert result is False
+    cached = await mock_redis.exists(RedisKeys.market_quality_failed("market_001"))
+    assert cached == 1
+
+
 async def test_check_low_liquidity(mock_redis: Redis, test_config: MegConfig) -> None:
     """Liquidity below min_market_liquidity_usdc → rejected, quality_failed written."""
     trade = make_raw_trade(market_id="market_001")
     await set_market_redis_data(
         mock_redis,
         market_id="market_001",
-        liquidity=1_000.0,  # well below default 50_000
+        liquidity=1_000.0,  # well below default 10_000
     )
 
     result = await market_quality.check(trade, mock_redis, test_config)
@@ -85,7 +102,7 @@ async def test_check_spread_too_wide(mock_redis: Redis, test_config: MegConfig) 
     await set_market_redis_data(
         mock_redis,
         market_id="market_001",
-        spread=0.20,  # well above default max 0.05
+        spread=0.20,  # well above default max 0.06
     )
 
     result = await market_quality.check(trade, mock_redis, test_config)

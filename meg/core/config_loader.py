@@ -85,8 +85,9 @@ class EntryConfig(BaseModel):
 
 
 class PreFilterConfig(BaseModel):
-    min_market_liquidity_usdc: float = 50_000.0
-    max_spread_pct: float = 0.05
+    min_volume_24h_usdc: float = 50_000.0     # Gate 1: min 24h trading volume (PRD §9.1 mq_min_volume_24h)
+    min_market_liquidity_usdc: float = 10_000.0  # Gate 1: min liquidity depth within 5 ticks (PRD §9.1 mq_min_liquidity)
+    max_spread_pct: float = 0.06              # Gate 1: max bid-ask spread (PRD §9.1 mq_max_spread default)
     min_unique_participants: int = 20
     # Minimum calendar days until market resolution. None-valued days_to_resolution
     # on MarketState skips this check (conservative — allows trade to proceed).
