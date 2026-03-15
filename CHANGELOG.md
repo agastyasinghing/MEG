@@ -3,6 +3,39 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.8.0] - 2026-03-15
+
+### Added
+- `meg/signal_engine/lead_lag_scorer.py` — fully implemented. `score()` returns [0.0, 1.0]
+  using saturating lead-time factor `1-exp(-hours/6)` × win_rate × reputation decay multiplier.
+  `compute_reputation_decay()` uses exponential decay `exp(-days/τ)` with configurable τ
+  (default 30 days). None last_profitable_trade_at → no penalty (1.0).
+- `meg/signal_engine/kelly_sizer.py` — fully implemented. `_kelly_fraction()` computes
+  `f* = (p·b - q) / b` for binary markets. `compute_size()` applies quarter-Kelly scaling
+  (`config.kelly.fraction`), hard cap (`config.kelly.max_bet_usdc`), returns 0.0 on
+  negative/zero edge.
+- `meg/signal_engine/consensus_filter.py` — fully implemented. `score()` adds current wallet
+  to Redis consensus sorted set, trims stale entries outside `consensus_window_hours`,
+  counts agreeing whales (excluding self), returns `tanh(n × sensitivity / 2)`. YES/NO
+  tracked independently via `RedisKeys.consensus_window(market_id, outcome)`.
+- `meg/signal_engine/contrarian_detector.py` — fully implemented. `get_order_flow_direction()`
+  reads price history from Redis sorted set, computes trend via `tanh(Δprice × 5.0)`.
+  `score()` returns divergence `0.5 × (1 - trade_dir × flow_dir)`: 1.0 = contrarian,
+  0.5 = neutral, 0.0 = momentum.
+- `meg/signal_engine/signal_decay.py` — fully implemented. `apply_decay()` uses half-life
+  formula `score × 0.5^(age/half_life)`, returns 0.0 below min threshold or negative age.
+  `is_expired()` checks TTL. `set_signal_ttl()` writes expiry to Redis with configurable
+  multiplier and minimum floor.
+- `meg/signal_engine/composite_scorer.py` — `score()` and `_gather_component_scores()` fully
+  implemented. Pre-fetches wallet_data once from Redis (SignalDroppedError on miss). Runs all
+  7 sub-scorers concurrently via `asyncio.gather()`. Lead-lag gate checked after gather
+  (raises SignalDroppedError if below threshold). Builds SignalEvent with all sub-scores,
+  Kelly sizing, TTL, contrarian flag, and PENDING/FILTERED status.
+
+### Changed
+- `meg/signal_engine/composite_scorer.py` — fixed module docstring: lead-lag gate is checked
+  AFTER asyncio.gather() returns (all components computed concurrently), not before.
+
 ## [0.1.7.0] - 2026-03-15
 
 ### Added
