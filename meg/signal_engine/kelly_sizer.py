@@ -13,7 +13,7 @@ Formula: f* = (p * b - q) / b
 On a binary market priced at entry_price = 0.40:
   b = 0.60 / 0.40 = 1.5 (win $1.50 per $1 risked)
 
-NOTE: Implement with Opus + ultrathink. This directly determines trade size.
+PRD reference: §9.3.5 Kelly Position Sizer
 """
 from __future__ import annotations
 
@@ -33,13 +33,24 @@ def compute_size(
 
     win_prob: model's estimated probability the outcome resolves correctly (0.0–1.0).
     entry_price: limit price to enter the position (0.0–1.0, binary market price).
-    portfolio_value_usdc: current portfolio value (from config.kelly.portfolio_value_usdc
-      or live balance when available).
+    portfolio_value_usdc: current portfolio value.
 
     Applies Kelly fraction (config.kelly.fraction) and hard cap (config.kelly.max_bet_usdc).
     Returns 0.0 if Kelly formula yields a negative or zero bet (no positive edge).
     """
-    raise NotImplementedError("kelly_sizer.compute_size")
+    if entry_price <= 0.0 or entry_price >= 1.0:
+        return 0.0
+
+    payout_odds = (1.0 - entry_price) / entry_price
+    f_star = _kelly_fraction(win_prob, payout_odds)
+
+    if f_star <= 0.0:
+        return 0.0
+
+    scaled_fraction = f_star * config.kelly.fraction
+    size = scaled_fraction * portfolio_value_usdc
+
+    return min(size, config.kelly.max_bet_usdc)
 
 
 def _kelly_fraction(
@@ -50,4 +61,13 @@ def _kelly_fraction(
     Compute raw Kelly fraction f* = (p*b - q) / b.
     Returns 0.0 if result is negative (no edge — do not bet).
     """
-    raise NotImplementedError("kelly_sizer._kelly_fraction")
+    p = win_probability
+    q = 1.0 - p
+    b = payout_odds
+
+    if b <= 0.0:
+        return 0.0
+
+    f_star = (p * b - q) / b
+
+    return max(0.0, f_star)
