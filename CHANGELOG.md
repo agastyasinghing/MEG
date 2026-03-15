@@ -3,6 +3,35 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.5.0] - 2026-03-14
+
+### Added
+- `meg/pre_filter/market_quality.py` — Gate 1 now checks `volume_24h_usdc >= min_volume_24h_usdc`
+  (PRD §9.1 first threshold, previously missing). Adds `_get_volume_24h()` helper. Docstring
+  updated to list all five checks including the new volume check.
+- `meg/db/models.py` — `Trade.price_at_market_end` column (`Numeric(6,4)`, nullable). Required
+  by PRD §12 for lead-lag calibration and PnL attribution at market resolution.
+- `meg/db/migrations/versions/d1e3f5a2b8c4_add_trade_price_at_market_end.py` — Alembic migration
+  adding `price_at_market_end` to the `trades` table. Revises `c8f2e4b1a9d3`.
+- `TODOS.md` — Gate 2 heuristic #2 (hold-time arb, P2) and #3 (tight-spread volume
+  concentration, P2) added as deferred v1.5 items with full implementation context.
+- `TODOS.md` — HEDGE detection note added to Opus session TODO: implement against test spec
+  (same-market opposing position), not PRD §9.1 pseudocode (cross-market correlated exposure).
+
+### Changed
+- `meg/core/config_loader.py` — `PreFilterConfig`: split `min_market_liquidity_usdc` (now
+  `10_000` per PRD §9.1 `mq_min_liquidity`) from new `min_volume_24h_usdc` (`50_000` per PRD
+  `mq_min_volume_24h`). `max_spread_pct` corrected to `0.06` per PRD default.
+- `config/config.yaml` — pre_filter section updated: `min_volume_24h_usdc: 50000` added,
+  `min_market_liquidity_usdc: 10000` (was 50000), `max_spread_pct: 0.06` (was 0.05).
+- `meg/pre_filter/arbitrage_exclusion.py` — Docstring updated with explicit v1 simplification
+  rationale: covers PRD heuristic #1 only; heuristics #2 and #3 deferred to v1.5 with
+  rationale and TODOS.md references.
+- `tests/pre_filter/conftest.py` — `set_market_redis_data()` adds `volume_24h` param
+  (default `500_000.0`) and writes `market:{id}:volume_24h` to fakeredis.
+- `tests/pre_filter/test_market_quality.py` — New test `test_check_low_volume_24h` covers
+  the volume_24h threshold path. Comment corrections for updated defaults (10k, 0.06).
+
 ## [0.1.4.0] - 2026-03-14
 
 ### Added
