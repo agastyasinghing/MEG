@@ -188,6 +188,65 @@ resolution oracle. Candidate field names: `resolution_source`, `resolver`,
 
 ---
 
+## [P2] Gate 2: hold-time arb heuristic (PRD §9.1 heuristic #2)
+
+**What:** Add hold-time check to Gate 2: reject wallets whose `avg_hold_time_hours < 2`.
+
+**Why:** PRD §9.1 specifies this as one of three arbitrage detection signals. Wallets
+that hold positions for < 2 hours on average are exploiting price discrepancies, not
+expressing directional views. The current Gate 2 only detects same-market both-sides
+behavior (heuristic #1). This adds a complementary signal that catches single-sided
+arb patterns (e.g. a wallet that buys YES on one platform and sells immediately after
+the fill, never holding overnight).
+
+**Pros:** Catches arb wallets that trade only one side (not detected by heuristic #1).
+Small behavioral signal with high signal-to-noise for pure arb detection.
+
+**Cons:** `avg_hold_time_hours` must be populated by the reputation_decay system before
+this check is meaningful. Checking an un-populated field would false-positive on all
+new wallets. Gate must remain conservative (skip check if field is NULL).
+
+**Context:** `Wallet.avg_hold_time_hours` column exists in `meg/db/models.py`. The
+check in `arbitrage_exclusion._is_arb_archetype()` or a new `_has_short_hold_time()`
+helper would read `wallet:{addr}:data` JSON from Redis (already written by wallet_registry).
+Add check only if `data["avg_hold_time_hours"] is not None`. See docstring in
+`meg/pre_filter/arbitrage_exclusion.py` for v1 simplification rationale.
+
+**Effort:** S (once avg_hold_time_hours is populated)
+**Priority:** P2
+**Blocked by:** reputation_decay system (signal_engine phase) must populate avg_hold_time_hours
+
+---
+
+## [P2] Gate 2: tight-spread volume concentration heuristic (PRD §9.1 heuristic #3)
+
+**What:** Add volume-concentration check to Gate 2: reject wallets where >80% of their
+observed volume is in markets with bid-ask spread < 0.02.
+
+**Why:** Classic cross-market arb behavior concentrates volume in tight-spread markets
+(high liquidity, low friction) rather than spreading across market categories. This
+heuristic catches arb wallets that trade single-sided but exclusively in liquid markets.
+
+**Pros:** Orthogonal to heuristics #1 and #2 — catches a distinct arb pattern.
+
+**Cons:** Requires per-trade spread data at the time of trade entry, and an aggregate
+query across wallet trade history. Neither is available at Gate 2 evaluation time without
+significant additional storage. Requires a new field (e.g. `spread_at_trade` on trades)
+or a materialized wallet aggregate.
+
+**Context:** To implement: (1) add `spread_at_trade DECIMAL(6,4)` to Trade model,
+(2) write it in polygon_feed / clob_client at trade detection time,
+(3) add a wallet aggregate query in Gate 2 or a periodic batch job that computes
+`pct_volume_tight_spread` per wallet, (4) read from `wallet:{addr}:data`.
+This is a v1.5 enhancement — the current two-layer detection is sufficient for v1.
+See docstring in `meg/pre_filter/arbitrage_exclusion.py` for full rationale.
+
+**Effort:** M
+**Priority:** P2
+**Blocked by:** spread_at_trade field on trades (new migration) + wallet aggregate computation
+
+---
+
 ## [P1] OPUS SESSION: Implement intent_classifier.py classify() and build_qualified_trade()
 
 **What:** Implement the two NotImplementedError stubs in `meg/pre_filter/intent_classifier.py`:
@@ -220,6 +279,15 @@ Key implementation constraints:
 Config params available in config.pre_filter:
   ladder_window_hours: 6, ladder_min_trades: 2, min_signal_size_pct: 0.02,
   arb_detection_window_hours: 24
+
+⚠️  HEDGE detection — use test spec, NOT PRD §9.1 pseudocode:
+  The PRD §9.1 classify_intent() uses `wallet_history.get_correlated_exposure(market_id)`
+  which checks for opposing exposure across *correlated markets* (e.g. YES on "Trump wins
+  2026" hedged by NO on "Republicans control Senate"). This requires cross-market position
+  data that is not yet available (wallet_scores has no cross-market exposure field).
+  The test spec (test_classify_hedge_opposing_direction) defines HEDGE as: wallet has a
+  significant existing position in the *same market* opposite direction. Implement against
+  the test spec. Cross-market correlated HEDGE detection is a v1.5 enhancement.
 
 **Depends on / blocked by:** Nothing — test spec is ready. Start immediately
 after any Opus context window is available.
