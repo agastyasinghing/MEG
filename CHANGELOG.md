@@ -3,6 +3,22 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.11.0] - 2026-03-15
+
+### Changed
+- `meg/agent_core/decision_agent.py` — Trap detection is now warn-only per PRD §9.4.2:
+  trap-detected signals produce a TradeProposal with `trap_warning=True` instead of
+  cancelling. Operator decides via Telegram approval. Status stays TRAP_DETECTED in
+  signal_outcomes (not overwritten to APPROVED).
+- `meg/agent_core/risk_controller.py` — Converted from 5-gate to 4-gate framework.
+  Position size check removed from `check()` and replaced with public
+  `clamp_position_size()` per PRD §10 Gate 2: "Reduce position size to maximum
+  allowed. Do not block the trade." Called by decision_agent after saturation adjustment.
+- `TODOS.md` — Removed completed intent_classifier TODO (P1). Added 5 deferred TODOs
+  for PRD compliance gaps (P2–P3): saturation sensitivity default, trailing TP
+  half-life condition, trailing TP 1-hour price change, position state machine
+  states, decision agent gate ordering.
+
 ## [0.1.10.0] - 2026-03-15
 
 ### Added
