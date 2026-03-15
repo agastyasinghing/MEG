@@ -1,12 +1,14 @@
 """
-Tests for meg.agent_core.risk_controller — 5-gate risk framework.
+Tests for meg.agent_core.risk_controller — 4-gate risk framework + size clamp.
 
 Gate order (cheapest first):
   Gate 1: Paper trading mode   — config read only
   Gate 2: Daily loss limit     — 1 Redis GET
   Gate 3: Max open positions   — 1 Redis HLEN
   Gate 4: Market exposure      — 2 Redis GETs
-  Gate 5: Position size        — 1 Redis GET
+
+Position size clamp (separate function, PRD §10: reduce, don't block):
+  clamp_position_size()        — 1 Redis GET
 
 Each gate tested independently: pass, fail, and missing-data defaults.
 """
@@ -163,40 +165,49 @@ async def test_gate4_no_portfolio_falls_back_to_config(mock_redis, test_config):
     assert passed is True  # 50/1000 = 5% < 20% limit
 
 
-# ── Gate 5: Position size limit ───────────────────────────────────────────
+# ── Position size clamp (PRD §10: reduce, don't block) ───────────────────
 
 
 @pytest.mark.asyncio
-async def test_gate5_under_limit_passes(mock_redis, test_config):
-    """Proposed size under limit → PASS."""
+async def test_clamp_under_limit_unchanged(mock_redis, test_config):
+    """Proposed size under limit → returned unchanged."""
     await mock_redis.set(RedisKeys.portfolio_value_usdc(), "1000")
     # max_position_pct = 0.05 → max_size = 50
-    passed, reason = await risk_controller._check_position_size(
+    result = await risk_controller.clamp_position_size(
         40.0, mock_redis, test_config
     )
-    assert passed is True
+    assert result == 40.0
 
 
 @pytest.mark.asyncio
-async def test_gate5_over_limit_fails(mock_redis, test_config):
-    """Proposed size over limit → FAIL."""
+async def test_clamp_over_limit_reduced(mock_redis, test_config):
+    """Proposed size over limit → clamped to max allowed."""
     await mock_redis.set(RedisKeys.portfolio_value_usdc(), "1000")
     # max_position_pct = 0.05 → max_size = 50
-    passed, reason = await risk_controller._check_position_size(
+    result = await risk_controller.clamp_position_size(
         60.0, mock_redis, test_config
     )
-    assert passed is False
-    assert "position_too_large" in reason
+    assert result == 50.0
 
 
 @pytest.mark.asyncio
-async def test_gate5_no_portfolio_falls_back_to_config(mock_redis, test_config):
+async def test_clamp_no_portfolio_falls_back_to_config(mock_redis, test_config):
     """Missing portfolio_value → falls back to config default."""
     # config default kelly.portfolio_value_usdc = 1000.0, max_position_pct = 0.05 → 50
-    passed, reason = await risk_controller._check_position_size(
+    result = await risk_controller.clamp_position_size(
         40.0, mock_redis, test_config
     )
-    assert passed is True
+    assert result == 40.0
+
+
+@pytest.mark.asyncio
+async def test_clamp_no_portfolio_no_config_passes_through(mock_redis, test_config):
+    """Missing portfolio_value + zero config → original size returned."""
+    test_config.kelly.portfolio_value_usdc = 0.0
+    result = await risk_controller.clamp_position_size(
+        60.0, mock_redis, test_config
+    )
+    assert result == 60.0
 
 
 # ── Full check() integration ──────────────────────────────────────────────
@@ -204,7 +215,7 @@ async def test_gate5_no_portfolio_falls_back_to_config(mock_redis, test_config):
 
 @pytest.mark.asyncio
 async def test_check_all_pass(mock_redis, test_config):
-    """All gates pass → (True, "")."""
+    """All 4 gates pass → (True, "")."""
     await mock_redis.set(RedisKeys.portfolio_value_usdc(), "1000")
     signal = make_signal_event(recommended_size_usdc=40.0)
     passed, reason = await risk_controller.check(signal, mock_redis, test_config)

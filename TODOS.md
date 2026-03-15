@@ -247,54 +247,6 @@ See docstring in `meg/pre_filter/arbitrage_exclusion.py` for full rationale.
 
 ---
 
-## [P1] OPUS SESSION: Implement intent_classifier.py classify() and build_qualified_trade()
-
-**What:** Implement the two NotImplementedError stubs in `meg/pre_filter/intent_classifier.py`:
-`classify(trade, redis, config, session)` and `build_qualified_trade(trade, intent, redis)`.
-
-**Why:** Gate 3 is the final pre-filter gate. Without it, the pipeline raises
-NotImplementedError on every event and nothing reaches the signal engine. This is
-the last blocker before pre_filter → signal_engine is end-to-end runnable.
-
-**Pros:** Completes Phase 4. Enables signal engine work to begin.
-
-**Cons:** Must be done with Opus + ultrathink — the classification logic directly
-determines what reaches execution. Getting SIGNAL vs HEDGE/REBALANCE wrong means
-either signal starvation (false HEDGE positives) or noise injection (REBALANCE
-trades reaching the signal engine with real sizing).
-
-**Context:** The test spec is fully written at `tests/pre_filter/test_intent_classifier.py`.
-Read that file first — it defines the exact expected behaviour for all 14 test cases
-(SIGNAL, SIGNAL_LADDER, HEDGE, REBALANCE, boundary conditions, edge cases).
-
-Key implementation constraints:
-- No import of meg.data_layer.wallet_registry (layer coupling violation)
-- Read wallet data from Redis directly: wallet:{addr}:data (JSON blob),
-  wallet:{addr}:score, wallet:{addr}:archetype
-- Query Trade table via sqlalchemy (session param) for behavioral signals
-- session=None: skip Trade queries, return SIGNAL conservatively
-- build_qualified_trade returns None on any cache miss (never emit whale_score=0.0)
-- The compound index ix_trades_wallet_market_time already exists for efficient queries
-
-Config params available in config.pre_filter:
-  ladder_window_hours: 6, ladder_min_trades: 2, min_signal_size_pct: 0.02,
-  arb_detection_window_hours: 24
-
-⚠️  HEDGE detection — use test spec, NOT PRD §9.1 pseudocode:
-  The PRD §9.1 classify_intent() uses `wallet_history.get_correlated_exposure(market_id)`
-  which checks for opposing exposure across *correlated markets* (e.g. YES on "Trump wins
-  2026" hedged by NO on "Republicans control Senate"). This requires cross-market position
-  data that is not yet available (wallet_scores has no cross-market exposure field).
-  The test spec (test_classify_hedge_opposing_direction) defines HEDGE as: wallet has a
-  significant existing position in the *same market* opposite direction. Implement against
-  the test spec. Cross-market correlated HEDGE detection is a v1.5 enhancement.
-
-**Depends on / blocked by:** Nothing — test spec is ready. Start immediately
-after any Opus context window is available.
-
-**Effort:** M (Opus session ~1–2 hours with ultrathink)
-**Priority:** P1
-
 ---
 
 ## [P3] Gate 1: Redis pipeline optimization
@@ -560,3 +512,105 @@ tests/conftest.py (root), or create tests/fixtures.py as a shared import.
 **Effort:** S
 **Priority:** P3
 **Blocked by:** Phase 7+ (wait until 3 test dirs duplicate the same fixtures)
+
+---
+
+## [P2] Saturation sensitivity default: 2.0 → 1.5 (PRD §15)
+
+**What:** Change `AgentConfig.saturation_size_reduction_sensitivity` default from
+`2.0` to `1.5` to match PRD §15 `saturation.size_reduction_sensitivity: 1.5`.
+
+**Why:** At 2.0, the saturation size reduction curve is more aggressive than the PRD
+specifies — e.g. at score 0.90, multiplier is 0.40 (2.0) vs 0.55 (1.5). The 2.0 value
+hits the 0.25 floor at score ~0.97 while 1.5 reaches it at score ~1.10 (never in
+practice). This over-reduces position size on moderately saturated markets.
+
+**Effort:** S (one-line config change + update docstring)
+**Priority:** P2
+**Blocked by:** Nothing — safe to change at any time
+
+---
+
+## [P2] Trailing TP: add half_life_pct_remaining condition (PRD §9.4.4)
+
+**What:** Add `signal_half_life_pct_remaining` field to `PositionState` and check
+`> 0.25` before trailing the take-profit price in `position_manager._check_single_position()`.
+
+**Why:** PRD §9.4.4 requires `half_life_remaining = position.signal_half_life_pct_remaining > 0.25`
+as a condition for trailing TP. Without it, trailing TP can fire on signals whose information
+edge has fully decayed — trailing on a stale signal risks holding into a reversion.
+
+**Context:** `PositionState` needs: `signal_half_life_pct_remaining: float = 1.0`.
+Must be set by the caller of `open_position()` using the signal's `estimated_half_life_minutes`
+and `fired_at`. The monitor loop recalculates it each iteration from elapsed time.
+Trailing TP is currently disabled (`trailing_tp_enabled=False`) so this is dormant.
+
+**Effort:** S
+**Priority:** P2
+**Blocked by:** Nothing — but trailing TP is disabled in v1 so low urgency
+
+---
+
+## [P2] Trailing TP: use 1-hour price change instead of entry-relative drift (PRD §9.4.4)
+
+**What:** Change trailing TP drift detection from `current_price > entry_price * 1.005`
+to `market.price_change_pct(hours=1, direction=outcome) > 0.005`.
+
+**Why:** PRD §9.4.4 checks 1-hour rolling price change, not total drift from entry.
+The current implementation's entry-relative check becomes permanently True for positions
+open >1 day with even modest drift, causing the trailing TP to trail unnecessarily on
+flat markets. The 1-hour check captures recent momentum.
+
+**Context:** Requires reading price_history sorted set from Redis (already available via
+CLOBMarketFeed). Calculate 1h price change as `(current_mid - price_1h_ago) / price_1h_ago`.
+Trailing TP is disabled in v1; implement before enabling.
+
+**Effort:** S
+**Priority:** P2
+**Blocked by:** Nothing — but trailing TP is disabled in v1 so low urgency
+
+---
+
+## [P3] Position state machine: add PENDING_EXIT and WHALE_EXIT_FLAGGED states (PRD §9.4.4)
+
+**What:** Add `PENDING_EXIT` and `WHALE_EXIT_FLAGGED` to `PositionState.status` Literal
+and set them in `position_manager._check_single_position()` when TP/SL or whale exit
+conditions are met.
+
+**Why:** PRD §9.4.4 lifecycle shows TP/SL → `PENDING_EXIT` and whale exit → `WHALE_EXIT_FLAGGED`.
+Currently TP/SL and whale exit only log warnings — status stays `OPEN`. The dashboard
+approval queue (Phase 9) needs these states to show "awaiting exit decision" positions
+distinctly from normal open positions.
+
+**Context:** `PositionState.status` is `Literal["OPEN", "CLOSED", "EXITED"]`. Add
+`"PENDING_EXIT"` and `"WHALE_EXIT_FLAGGED"`. In `_check_single_position()`, when `tp_hit`
+or `sl_hit`: set `status = "PENDING_EXIT"`. When whale exit detected: set
+`status = "WHALE_EXIT_FLAGGED"`. The DB `Position.status` enum (`PositionStatus`) also
+needs these values. Requires a migration.
+
+**Effort:** M
+**Priority:** P3
+**Blocked by:** Dashboard phase (Phase 9) — states only matter for UI display
+
+---
+
+## [P3] Decision agent gate ordering: circuit breaker before system_paused (PRD §9.4.1)
+
+**What:** Move the daily loss / circuit breaker check before the system_paused check
+in `decision_agent.evaluate()`.
+
+**Why:** PRD §9.4.1 and §10 Gate 1 list circuit_breaker as the highest-priority check —
+"Immediately halt ALL new signal processing." Currently `system_paused` is checked first.
+If the system is not paused but daily loss has exceeded the threshold, the signal passes
+through `system_paused` and `blacklisted_markets` checks before hitting the circuit breaker
+in `risk_controller`. The circuit breaker should fire before any other check.
+
+**Context:** In `decision_agent.evaluate()`, add a daily PnL read from Redis before
+the system_paused check: `daily_pnl = float(await redis.get(RedisKeys.daily_pnl_usdc()) or "0")`.
+If `daily_pnl < 0 and abs(daily_pnl) >= config.risk.max_daily_loss_usdc`: block immediately.
+This duplicates the check from risk_controller but ensures correct priority ordering.
+Alternatively, call risk_controller's daily loss gate first, then the hard blocks.
+
+**Effort:** S
+**Priority:** P3
+**Blocked by:** Nothing — but practical impact at v1 is near-zero
