@@ -36,8 +36,8 @@ Intent definitions:
                  trades within the window. Higher conviction than a single SIGNAL.
 
   HEDGE:         Risk management. Whale is offsetting exposure elsewhere.
-                 Characterised by: opposing direction to an existing position
-                 in the same market (YES position + buys NO, or vice versa).
+                 Characterised by: current trade opposing a prior position of
+                 equal or greater size in the same market.
 
   REBALANCE:     Portfolio mechanics. Size adjustment, profit-taking, or
                  liquidity management. Characterised by: trade size below
@@ -46,14 +46,18 @@ Intent definitions:
 """
 from __future__ import annotations
 
+import json
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 import structlog
 from redis.asyncio import Redis
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.config_loader import MegConfig
-from meg.core.events import QualifiedWhaleTrade, RawWhaleTrade
+from meg.core.events import QualifiedWhaleTrade, RawWhaleTrade, RedisKeys
+from meg.db.models import Trade
 
 logger = structlog.get_logger(__name__)
 
@@ -70,22 +74,112 @@ async def classify(
     Classify a whale trade's intent. Returns one of: SIGNAL, SIGNAL_LADDER,
     HEDGE, REBALANCE.
 
-    Reads wallet data from Redis:
-      wallet:{addr}:data  → JSON blob with composite_whale_score, archetype,
-                            total_capital_usdc, avg_conviction_ratio
-    Queries Trade table (via session) for:
-      - Recent same-direction trades (SIGNAL_LADDER detection, ladder_window_hours)
-      - Existing opposing positions (HEDGE detection, arb_detection_window_hours)
-      - Existing same-direction positions (REBALANCE detection)
-
-    session=None: Trade table queries are skipped. Behavioral classification
-    (HEDGE, REBALANCE, SIGNAL_LADDER) falls back to SIGNAL — conservative
-    direction (never filters a trade that could be a SIGNAL).
-
-    IMPLEMENT WITH OPUS + ULTRATHINK. See CLAUDE.md model selection rules.
-    Read tests/pre_filter/test_intent_classifier.py first — tests are the spec.
+    Decision order:
+      1. Read wallet data from Redis → wallet:{addr}:data JSON blob.
+         If unavailable (cache miss), return SIGNAL conservatively.
+      2. Compute size threshold = min_signal_size_pct * total_capital_usdc.
+         If trade.size_usdc < threshold → REBALANCE (portfolio mechanics).
+      3. If session is None → skip DB queries → return SIGNAL (conservative).
+      4. Check HEDGE: prior opposing-direction trade with size >= current trade
+         size → HEDGE (current trade fits within existing opposing exposure).
+      5. Check SIGNAL_LADDER: >= ladder_min_trades same-direction trades within
+         ladder_window_hours → SIGNAL_LADDER (escalating conviction).
+      6. Default → SIGNAL.
     """
-    raise NotImplementedError("intent_classifier.classify")
+    # 1. Read wallet data from Redis
+    wallet_data_raw = await redis.get(RedisKeys.wallet_data(trade.wallet_address))
+    if wallet_data_raw is None:
+        logger.info(
+            "intent_classifier.wallet_data_missing",
+            wallet=trade.wallet_address,
+            fallback="SIGNAL",
+        )
+        return "SIGNAL"
+
+    wallet_data = json.loads(wallet_data_raw)
+    total_capital_usdc: float = wallet_data.get("total_capital_usdc", 0.0)
+
+    # 2. Size threshold check — below threshold is portfolio noise
+    threshold = config.pre_filter.min_signal_size_pct * total_capital_usdc
+    if trade.size_usdc < threshold:
+        logger.info(
+            "intent_classifier.rebalance_below_threshold",
+            wallet=trade.wallet_address,
+            market=trade.market_id,
+            size_usdc=trade.size_usdc,
+            threshold_usdc=threshold,
+        )
+        return "REBALANCE"
+
+    # 3. No session → can't query Trade table for behavioral patterns
+    if session is None:
+        logger.info(
+            "intent_classifier.no_session_fallback",
+            wallet=trade.wallet_address,
+            market=trade.market_id,
+            fallback="SIGNAL",
+        )
+        return "SIGNAL"
+
+    # 4. HEDGE: the current trade fits within an existing opposing position.
+    #    Requires at least one prior opposing-direction trade whose size >= the
+    #    current trade's size — meaning the whale is offsetting part of their
+    #    existing exposure, not making a new net directional bet.
+    opposing_outcome = "NO" if trade.outcome == "YES" else "YES"
+    hedge_stmt = (
+        select(func.count())
+        .select_from(Trade)
+        .where(
+            and_(
+                Trade.wallet_address == trade.wallet_address,
+                Trade.market_id == trade.market_id,
+                Trade.outcome == opposing_outcome,
+                Trade.size_usdc >= trade.size_usdc,
+            )
+        )
+    )
+    hedge_result = await session.execute(hedge_stmt)
+    if hedge_result.scalar() > 0:
+        logger.info(
+            "intent_classifier.hedge_detected",
+            wallet=trade.wallet_address,
+            market=trade.market_id,
+            outcome=trade.outcome,
+            opposing=opposing_outcome,
+        )
+        return "HEDGE"
+
+    # 5. SIGNAL_LADDER: same-direction trades within ladder window.
+    #    Pushed to SQL to avoid timezone-naive vs timezone-aware comparison
+    #    issues across database backends (PostgreSQL vs SQLite in tests).
+    window_cutoff = datetime.now(tz=timezone.utc) - timedelta(
+        hours=config.pre_filter.ladder_window_hours
+    )
+    ladder_stmt = (
+        select(func.count())
+        .select_from(Trade)
+        .where(
+            and_(
+                Trade.wallet_address == trade.wallet_address,
+                Trade.market_id == trade.market_id,
+                Trade.outcome == trade.outcome,
+                Trade.traded_at >= window_cutoff,
+            )
+        )
+    )
+    ladder_result = await session.execute(ladder_stmt)
+    if ladder_result.scalar() >= config.pre_filter.ladder_min_trades:
+        logger.info(
+            "intent_classifier.signal_ladder_detected",
+            wallet=trade.wallet_address,
+            market=trade.market_id,
+            outcome=trade.outcome,
+            window_hours=config.pre_filter.ladder_window_hours,
+        )
+        return "SIGNAL_LADDER"
+
+    # 6. Default — new directional position
+    return "SIGNAL"
 
 
 async def build_qualified_trade(
@@ -100,15 +194,35 @@ async def build_qualified_trade(
       wallet:{addr}:score     → float string (composite_whale_score)
       wallet:{addr}:archetype → archetype string
 
-    Returns None if wallet data is unavailable in Redis (cache miss with no
-    DB fallback). The pipeline logs ERROR and skips the trade in this case —
-    never emit a QualifiedWhaleTrade with whale_score=0.0.
-
-    Only call this function if intent is SIGNAL or SIGNAL_LADDER. The pipeline
-    guarantees this invariant — build_qualified_trade is never called for
-    HEDGE or REBALANCE intents.
-
-    IMPLEMENT WITH OPUS + ULTRATHINK. See CLAUDE.md model selection rules.
-    Read tests/pre_filter/test_intent_classifier.py first — tests are the spec.
+    Returns None if either key is absent — never emit a QualifiedWhaleTrade
+    with whale_score=0.0 or a missing archetype.
     """
-    raise NotImplementedError("intent_classifier.build_qualified_trade")
+    score_raw = await redis.get(RedisKeys.wallet_score(trade.wallet_address))
+    if score_raw is None:
+        logger.error(
+            "intent_classifier.wallet_score_missing",
+            wallet=trade.wallet_address,
+        )
+        return None
+
+    archetype_raw = await redis.get(RedisKeys.wallet_archetype(trade.wallet_address))
+    if archetype_raw is None:
+        logger.error(
+            "intent_classifier.wallet_archetype_missing",
+            wallet=trade.wallet_address,
+        )
+        return None
+
+    return QualifiedWhaleTrade(
+        wallet_address=trade.wallet_address,
+        market_id=trade.market_id,
+        outcome=trade.outcome,
+        size_usdc=trade.size_usdc,
+        timestamp_ms=trade.timestamp_ms,
+        tx_hash=trade.tx_hash,
+        block_number=trade.block_number,
+        market_price_at_trade=trade.market_price_at_trade,
+        whale_score=float(score_raw),
+        archetype=archetype_raw,
+        intent=intent,
+    )

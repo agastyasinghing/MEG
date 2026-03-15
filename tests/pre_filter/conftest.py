@@ -1,9 +1,14 @@
 """
 Pre-filter test fixtures and factory helpers.
 
-DB fixtures (db_engine, db_session) mirror the pattern from tests/db/conftest.py.
-Gate 2 and Gate 3 tests that query the Trade table need a real PostgreSQL instance
-(pytest-postgresql) — fakeredis alone is not sufficient for behavioral detection tests.
+DB fixtures (db_engine, db_session) use SQLite in-memory via aiosqlite for
+fast local testing. Production uses PostgreSQL — the ORM layer abstracts
+differences (SAEnum(native_enum=False), no JSONB in these tables).
+
+TODO: Restore pytest-postgresql as the CI fixture when PostgreSQL is available
+in the CI environment. SQLite is acceptable for Gate 2/3 (Trade table only,
+no JSONB) but real PG catches type/constraint edge cases SQLite masks.
+See original conftest at commit 600bd9b for the pytest-postgresql pattern.
 
 Factory helpers (make_raw_trade, set_wallet_redis_data, set_market_redis_data,
 insert_trade_record) are shared across all four pre_filter test modules.
@@ -19,33 +24,29 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 
 from meg.core.events import RawWhaleTrade, RedisKeys
-from meg.db.models import Base, Trade
-from meg.db.session import init_db, close_db, get_engine
+from meg.db.models import Trade
 
 
-# ── DB fixtures ───────────────────────────────────────────────────────────────
+# ── DB fixtures ───────────────────────────────────────────────────────────
 
 
-@pytest_asyncio.fixture(scope="session")
-async def db_engine(postgresql) -> AsyncEngine:
+@pytest_asyncio.fixture
+async def db_engine() -> AsyncEngine:
     """
-    Spin up a real PostgreSQL instance via pytest-postgresql.
-    Creates all tables from Base.metadata. Tears down after the test session.
+    SQLite in-memory engine for behavioral detection tests (Gate 2/3).
+    Creates only the Trade table (other models use JSONB which SQLite
+    doesn't support). Gate 2/3 tests only query the Trade table.
     """
-    info = postgresql.info
-    url = f"postgresql+asyncpg://{info.user}:@{info.host}:{info.port}/{info.dbname}"
-    await init_db(url)
-
-    engine = get_engine()
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
 
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Trade.__table__.create)
 
     yield engine
 
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await close_db()
+        await conn.run_sync(Trade.__table__.drop)
+    await engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -62,7 +63,7 @@ async def db_session(db_engine: AsyncEngine) -> AsyncSession:
             await session.rollback()
 
 
-# ── Factory helpers ───────────────────────────────────────────────────────────
+# ── Factory helpers ───────────────────────────────────────────────────────
 
 
 def make_raw_trade(
