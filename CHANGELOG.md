@@ -3,6 +3,25 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.6.0] - 2026-03-14
+
+### Added
+- `meg/pre_filter/intent_classifier.py` — Gate 3 `classify()` and `build_qualified_trade()`
+  fully implemented. 6-step decision tree: wallet data check → size threshold (REBALANCE) →
+  session check → HEDGE (opposing trade with size >= current) → SIGNAL_LADDER (same-direction
+  trades within ladder window) → default SIGNAL. All behavioral detection pushed to SQL queries.
+- `build_qualified_trade()` enriches RawWhaleTrade with whale_score and archetype from Redis;
+  returns None on cache miss (never emits whale_score=0.0).
+
+### Changed
+- `tests/pre_filter/conftest.py` — DB fixtures switched from pytest-postgresql to SQLite
+  in-memory (aiosqlite) for local testing. Only creates Trade table (other models use JSONB
+  which SQLite doesn't support). TODO added to restore pytest-postgresql for CI.
+- `meg/pre_filter/intent_classifier.py` — HEDGE docstring corrected: "current trade opposing
+  a prior position of equal or greater size" (was incorrectly symmetric "or vice versa").
+- `tests/pre_filter/conftest.py` — Removed dead `Base` import; removed unused
+  `meg.db.session` imports (`init_db`, `close_db`, `get_engine`).
+
 ## [0.1.5.0] - 2026-03-14
 
 ### Added
