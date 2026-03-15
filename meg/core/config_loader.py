@@ -153,6 +153,7 @@ class AgentConfig(BaseModel):
     trap_exit_threshold: float = 0.50   # ≥50% of entry sold within window = trap
     trap_score_penalty: float = 0.20    # deducted from wallet score on trap detection
     trap_manipulator_threshold: int = 3  # flag MANIPULATOR after this many trap events
+    crowding_max_entry_distance_pct: float = 0.08  # max price drift from whale fill before crowding blocks
 
 
 class PositionConfig(BaseModel):

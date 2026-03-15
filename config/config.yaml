@@ -52,6 +52,7 @@ agent:
   trap_exit_threshold: 0.50              # Fraction of entry sold within window to flag as trap
   trap_score_penalty: 0.20               # Wallet score penalty on trap detection
   trap_manipulator_threshold: 3          # Trap event count before flagging wallet as MANIPULATOR
+  crowding_max_entry_distance_pct: 0.08  # Max price drift from whale fill before crowding blocks signal
 
 position:
   take_profit_pct: 0.40          # Flag position for exit at +40% gain on entry price (PRD §10)
