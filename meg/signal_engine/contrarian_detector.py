@@ -23,10 +23,13 @@ async def score(
     config: MegConfig,
 ) -> float:
     """
-    Return a contrarian score modifier in [-0.2, +0.3].
-    Positive: whale is against order flow (contrarian boost).
-    Negative: whale is following order flow (momentum penalty).
-    Zero: insufficient data to determine order flow direction.
+    Return a divergence score in [0.0, 1.0].
+    1.0 = whale is strongly against prevailing order flow (contrarian — high conviction).
+    0.5 = neutral / insufficient order flow data.
+    0.0 = whale is following the crowd (momentum — lower information content).
+
+    Scores above config.signal.contrarian_threshold mark the signal as is_contrarian=True
+    in the composite scorer (used for Telegram alerts and signal attribution).
     """
     raise NotImplementedError("contrarian_detector.score")
 

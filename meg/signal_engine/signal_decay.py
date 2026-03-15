@@ -12,6 +12,13 @@ are marked EXPIRED and are never executed, regardless of their original score.
   t=30min  score = 0.57  (half-life = 1hr, so ~71% after 30min)
   t=1hr    score = 0.40  (half of original)
   t=2hr    score = 0.20  (min threshold — signal expires)
+
+v1 uses a single uniform half_life for all signal types.
+TODO(v1.5): calibrate per-signal-type half-life baselines from signal_outcomes data.
+  RESOLUTION_ASYMMETRY signals decay faster (resolution is imminent — 15–30min half-life).
+  EVENT_CASCADE signals decay faster than WHALE_REACTION (crowd catches up quickly).
+  BEHAVIORAL_DRIFT signals decay slower (structural edge, not time-sensitive).
+  See TODOS.md: "per-signal-type half-life baselines".
 """
 from __future__ import annotations
 
