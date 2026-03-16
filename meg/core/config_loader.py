@@ -183,8 +183,26 @@ class KellyConfig(BaseModel):
 
 
 class EntryConfig(BaseModel):
-    max_entry_distance_pct: float = 0.05
-    max_spread_pct: float = 0.03
+    """
+    Execution-time entry quality thresholds. Evaluated immediately before
+    order submission — after human approval but before money moves.
+
+    max_entry_distance_pct:      max drift of current price from market_price_at_signal
+                                 (whale's fill price). Checked by entry_filter.
+    max_spread_pct:              max bid-ask spread as fraction of mid. Checked by slippage_guard.
+    taker_spread:                max spread for an aggressive taker re-entry order.
+                                 Used by limit→market conversion (deferred to Phase 7.5).
+    limit_timeout_seconds:       seconds before an unfilled limit order is considered stale.
+                                 Conversion logic deferred to Phase 7.5 (requires fill detection).
+    max_price_drift_since_signal: max abs price drift from market_price_at_signal at placement.
+                                 Checked by slippage_guard price-drift gate.
+    """
+
+    max_entry_distance_pct: float = 0.06
+    max_spread_pct: float = 0.04
+    taker_spread: float = 0.005
+    limit_timeout_seconds: int = 30
+    max_price_drift_since_signal: float = 0.08
 
 
 class PreFilterConfig(BaseModel):
