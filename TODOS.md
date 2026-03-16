@@ -5,6 +5,95 @@ context to be picked up without re-reading the original planning session.
 
 ---
 
+## [P1] Live order placement auth in clob_client
+
+**What:** Implement `_get_clob_client()` in `meg/data_layer/clob_client.py` with real
+py-clob-client authentication (API key + private key from env / AWS Secrets Manager).
+
+**Why:** `place_order(paper_trading=False)` currently raises `NotImplementedError`.
+This is the final blocker before MEG can submit any live order to the Polymarket CLOB.
+
+**Pros:** Unblocks live trading. The lazy initializer hook (`_get_clob_client()`) is
+already the designed extension point in the module.
+
+**Cons:** Cannot be done until OQ-05 (private key custody) is resolved. Rushing this
+risks storing private keys insecurely.
+
+**Context:** `clob_client.place_order()` checks `config.risk.paper_trading` first — if
+`True`, the paper path is taken and this code never runs. The live path raises
+`NotImplementedError` with a message pointing here. To implement:
+(1) Confirm Polymarket CLOB auth flow from py-clob-client docs (API key + L1/L2 key pair),
+(2) Read credentials from env vars (never from config.yaml),
+(3) Implement `_get_clob_client()` as a module-level lazy singleton,
+(4) Wire it into `place_order()`, `cancel_order()`, `get_open_orders()`, `get_position()`.
+See py-clob-client README for auth patterns.
+
+**Effort:** S–M
+**Priority:** P1
+**Blocked by:** OQ-05 (private key custody decision), AWS Secrets Manager setup
+
+---
+
+## [P2] Limit→market order timeout conversion in order_router
+
+**What:** Implement limit order timeout in `order_router.place()`: after
+`config.entry.limit_timeout_seconds`, cancel the unfilled limit order and re-place
+as an aggressive taker order (limit price at current ask for BUY, current bid for SELL).
+
+**Why:** Unfilled limit orders leave capital allocated but undeployed, and the signal
+edge may have already decayed by the time the limit fills (if it ever does). Forcing
+a taker fill within the timeout window ensures execution happens while the signal is fresh.
+
+**Pros:** Guarantees execution within `limit_timeout_seconds`. Reduces stranded capital.
+The config param (`limit_timeout_seconds: 30`) is already wired and hot-reloadable.
+
+**Cons:** Requires fill detection — polling `get_open_orders()` or a CLOB websocket.
+Both are currently `NotImplementedError` stubs. Taker pricing needs careful definition
+for Polymarket's binary market structure (buy at ask = aggressive fill).
+
+**Context:** `config.entry.limit_timeout_seconds` is already in `EntryConfig` (added
+Phase 7). A TODO comment in `order_router._place_with_retry()` marks the extension point.
+To implement: (1) after `place_order()` returns an order_id, start an asyncio.Task that
+polls `get_open_orders()` every 5s up to `limit_timeout_seconds`, (2) if still open,
+`cancel_order()` + `place_order()` at aggressive price, (3) update position entry_price
+with actual fill price. See `handle_fill()` stub in order_router.py.
+
+**Effort:** M
+**Priority:** P2
+**Blocked by:** `handle_fill()` + `get_open_orders()` live mode (both `NotImplementedError`)
+
+---
+
+## [P2] Real orderbook depth slippage estimation in slippage_guard
+
+**What:** Replace the `size_usdc / liquidity_usdc` proxy in `slippage_guard.estimate_slippage()`
+with a full bid-side depth walk through the orderbook to get a true slippage estimate.
+
+**Why:** The proxy overestimates slippage for small orders in deep markets (a 100 USDC order
+in a 50k USDC book is estimated at 0.2% but actual impact is near zero) and underestimates
+for large orders in thin markets (a 500 USDC order in a 1k book hits the proxy cap of 1.0 but
+the real slippage at specific price levels could be lower). The difference matters as position
+sizes grow in live trading.
+
+**Pros:** Tighter, more accurate slippage estimate. Enables better entry decisions.
+Allows higher `max_slippage_pct` threshold without fear of false positives.
+
+**Cons:** Requires either (a) storing the full orderbook in Redis (significant memory,
+requires a new CLOBMarketFeed write path) or (b) calling `get_orderbook()` live on every
+check (adds latency on the hot path). Option (a) is preferred.
+
+**Context:** `slippage_guard.estimate_slippage()` has a `TODO` comment pointing here.
+`clob_client.get_orderbook()` is already stubbed — implement it first in the live auth
+phase (see above). The depth walk should sum bid sizes from best bid downward until
+`size_usdc` is consumed, then compute weighted average slippage from bid-ask spread at
+each level.
+
+**Effort:** M
+**Priority:** P2
+**Blocked by:** `get_orderbook()` live mode implementation; decision on Redis orderbook storage
+
+---
+
 ## [P2] wallet_scores retention policy
 
 **What:** Add a retention/pruning policy for the `wallet_scores` time-series table.

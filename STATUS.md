@@ -1,6 +1,6 @@
 # MEG — Session Status
 > Update this file at the end of every Claude Code session. Read it at the start of every session.
-> Last updated: 2026-03-14
+> Last updated: 2026-03-16
 
 ---
 
@@ -11,16 +11,30 @@
 - [x] Pre-Filter Gates — **COMPLETE** (merged: v0.1.6.0 — Gate 1+2+3+pipeline+tests)
 - [~] Signal Engine — **IN PROGRESS** (pre-work gaps patched; archetype_weighter + ladder_detector implemented; 9 test specs pending)
 - [~] Agent Core — **IN PROGRESS** (all 7 modules implemented + 92 tests passing; pending /review + /ship)
-- [ ] Execution Layer
+- [~] Execution Layer — **IN PROGRESS** (entry_filter + slippage_guard + order_router implemented + 28 tests passing; pending /review + /ship)
 - [ ] Telegram Bot
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** Agent Core (all modules built + tested; ready for /review + /ship)
+**Active phase:** Execution Layer (Phase 7 core modules built + tested; ready for /review + /ship)
 
 ---
 
 ## What Was Just Completed
+
+**Execution Layer (2026-03-16) — Phase 7 core + 28 tests:**
+- `meg/core/logger.py` — `setup_logging()` + `get_logger()` implemented (structlog JSON chain)
+- `meg/core/config_loader.py` — `EntryConfig` extended: 3 new fields + 2 default fixes
+- `config/config.yaml` — `entry` block updated to match new EntryConfig
+- `meg/data_layer/clob_client.py` — `place_order()` paper mode implemented (logs `[PAPER]`, returns synthetic ID; live raises NotImplementedError pending OQ-05)
+- `meg/execution/entry_filter.py` — `check()` + `get_current_price()` implemented; direction-aware vs `market_price_at_signal`; fail-closed on Redis miss
+- `meg/execution/slippage_guard.py` — `check()` (spread + drift gates, 3-tuple return) + `estimate_slippage()` (size/liquidity proxy, fail-closed); spread gate fails fast
+- `meg/execution/order_router.py` — `place()` full chain: entry_filter → slippage_guard → `_place_with_retry()` (transport-only retry, 2^n backoff) → `open_position()`; session param added
+- `tests/execution/conftest.py` — `mock_redis`, `test_config`, `make_proposal()`, `set_market_redis_data()`
+- `tests/execution/test_entry_filter.py` — 8 tests (all pass)
+- `tests/execution/test_slippage_guard.py` — 12 tests (all pass)
+- `tests/execution/test_order_router.py` — 8 tests (all pass)
+- `TODOS.md` — 3 new entries: live auth, limit timeout, real orderbook depth
 
 **Agent Core (2026-03-15) — All 7 modules + 92 tests:**
 - `meg/agent_core/signal_aggregator.py` — Redis pub/sub subscriber, TTL/dedup validation, routes to decision_agent
@@ -103,7 +117,8 @@
 
 ## In Progress
 
-- Agent Core: all 7 modules implemented + 92 tests passing. Ready for `/review` + `/ship`.
+- Execution Layer: Phase 7 core built + 28 tests passing. Ready for `/review` + `/ship`.
+- Agent Core: all 7 modules implemented + 92 tests passing. Also ready for `/review` + `/ship`.
 - Signal Engine: pre-work gaps patched (2026-03-14). Next: write 9 test spec files
   (`tests/signal_engine/conftest.py` + `test_*.py` for all modules), then Opus session
   for math-heavy modules (lead_lag, kelly, consensus, contrarian, signal_decay, composite_scorer).
@@ -121,9 +136,9 @@
 
 ## Next 3 Tasks
 
-1. **Run `/review` then `/ship` for Agent Core** — paranoid review, bump version, PR.
-2. **Write `tests/signal_engine/conftest.py` + 9 test spec files** — fully tested for archetype_weighter and ladder_detector; stubs with docstrings for Opus modules.
-3. **Opus session: implement math-heavy signal engine modules** — lead_lag_scorer, conviction_ratio, kelly_sizer, consensus_filter, contrarian_detector, signal_decay, composite_scorer.
+1. **Run `/review` then `/ship` for Execution Layer** — paranoid review, bump version, PR.
+2. **Run `/review` then `/ship` for Agent Core** — paranoid review, bump version, PR.
+3. **Write `tests/signal_engine/conftest.py` + 9 test spec files** — fully tested for archetype_weighter and ladder_detector; stubs with docstrings for Opus modules.
 
 ---
 
@@ -131,6 +146,14 @@
 
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-03-16 | entry_filter uses market_price_at_signal (whale fill price) not limit_price as reference for distance check | limit_price as reference is circular; market_price_at_signal is "base for entry distance" per events.py docstring |
+| 2026-03-16 | order_router.place() takes session: AsyncSession | None = None — matches position_manager pattern | Enables DB write at execution time; consistent injection pattern for tests |
+| 2026-03-16 | CLOB execution functions stay as module-level functions; lazy _get_clob_client() for live mode | Paper mode only needs config.risk.paper_trading flag; zero refactor of call sites |
+| 2026-03-16 | limit_timeout_seconds added to EntryConfig; limit→market conversion logic deferred | Config param wired hot-reloadable; logic blocked by handle_fill() + get_open_orders() NotImplementedError |
+| 2026-03-16 | Retry only on asyncio.TimeoutError, ConnectionError, OSError — not on CLOB responses | Avoids duplicate order placement when CLOB accepted but response was lost |
+| 2026-03-16 | slippage_guard.check() returns tuple[bool, str, float] — 3-tuple with estimated_slippage | Slippage always returned for logging/analytics regardless of gate outcome |
+| 2026-03-16 | estimate_slippage returns 1.0 on zero/absent liquidity | Fail-closed: unknown book depth = reject; never trade into an uncharacterized market |
+| 2026-03-16 | get_current_price raises ValueError on Redis miss; check() catches it → (False, reason) | Explicit failure; impossible to accidentally trade at a stale price |
 | 2026-03-15 | signal_aggregator is pure router — no DB writes; composite_scorer owns INSERT, decision_agent owns UPDATE | Clean ownership; aggregator only validates + routes |
 | 2026-03-15 | trap_detector.check() fail-open on DB errors — never block a legitimate signal on transient DB issue | Safety-first; false negatives > false positives for trap detection |
 | 2026-03-15 | saturation_monitor returns score() not check() — it reduces size, never blocks | Distinct from binary gates; size reduction is the correct semantic |
@@ -201,7 +224,10 @@
 | agent_core/trap_detector | 10 | 10 |
 | agent_core/saturation_monitor | 13 | 13 |
 | agent_core/crowding_detector | 8 | 8 |
-| **Total** | **92** | **92** |
+| execution/entry_filter | 8 | 8 |
+| execution/slippage_guard | 12 | 12 |
+| execution/order_router | 8 | 8 |
+| **Total** | **120** | **120** |
 
 ---
 
