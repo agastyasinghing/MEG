@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -329,10 +330,33 @@ async def place_order(
 ) -> str:
     """
     Place a limit order on the CLOB. Returns the order ID.
-    In paper trading mode (config.risk.paper_trading=True): logs the order
-    and returns a synthetic order ID without submitting to the exchange.
+
+    Paper trading mode (config.risk.paper_trading=True):
+      Logs the intended order with a [PAPER] prefix and returns a synthetic
+      order ID (format: "PAPER_{12 hex chars}") without submitting anything
+      to the exchange. Safe to call in any environment.
+
+    Live mode (config.risk.paper_trading=False):
+      Raises NotImplementedError until py-clob-client auth is wired.
+      See TODOS.md: "Live order placement auth in clob_client".
+      Blocked by OQ-05 (private key custody decision).
     """
-    raise NotImplementedError("clob_client.place_order")
+    if config.risk.paper_trading:
+        order_id = f"PAPER_{uuid.uuid4().hex[:12]}"
+        logger.info(
+            "[PAPER] place_order",
+            order_id=order_id,
+            market_id=market_id,
+            outcome=outcome,
+            side=side,
+            size_usdc=size_usdc,
+            limit_price=limit_price,
+        )
+        return order_id
+    raise NotImplementedError(
+        "clob_client.place_order: live mode not implemented — OQ-05 pending. "
+        "See TODOS.md: 'Live order placement auth in clob_client'."
+    )
 
 
 async def cancel_order(order_id: str) -> bool:

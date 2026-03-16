@@ -3,6 +3,43 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.12.0] - 2026-03-16
+
+### Added
+- `meg/execution/entry_filter.py` — `check()` + `get_current_price()` implemented.
+  Direction-aware entry distance gate against `market_price_at_signal` (whale fill price).
+  Fail-closed: Redis miss → reject. Added explicit guard for `signal_price=0` (unset) → reject.
+- `meg/execution/slippage_guard.py` — `check()` (spread gate + price-drift gate, 3-tuple return)
+  + `estimate_slippage()` (size/liquidity proxy, fail-closed). Spread gate fails fast — drift gate
+  not evaluated on spread failure. Slippage always computed and returned for analytics.
+- `meg/execution/order_router.py` — `place()` full execution chain implemented:
+  entry_filter → slippage_guard → `_place_with_retry()` (transport-only retry, exponential backoff)
+  → `position_manager.open_position()`. Added `session: AsyncSession | None = None` param.
+  Direction-aware TP/SL price computation (YES: price rises to TP, NO: price falls to TP).
+- `meg/core/logger.py` — `setup_logging()` + `get_logger()` implemented with structlog JSON
+  processor chain (stdlib backend, ISO timestamps, contextvars merge, exc_info rendering).
+- `meg/data_layer/clob_client.py` — `place_order()` paper mode implemented: logs `[PAPER]`
+  prefix, returns `PAPER_{12 hex chars}` synthetic ID without touching the exchange.
+  Live mode raises `NotImplementedError` (blocked by OQ-05).
+- `meg/core/config_loader.py` — `EntryConfig` extended with 3 new fields:
+  `taker_spread`, `limit_timeout_seconds`, `max_price_drift_since_signal`; defaults fixed
+  (`max_entry_distance_pct: 0.06`, `max_spread_pct: 0.04`).
+- `config/config.yaml` — `entry` block updated to match new `EntryConfig`.
+- `tests/execution/` — 29 tests: `conftest.py` (mock_redis, test_config, make_proposal,
+  set_market_redis_data) + `test_entry_filter.py` (8) + `test_slippage_guard.py` (11)
+  + `test_order_router.py` (10). All pass.
+- `TODOS.md` — 3 new P1/P2 entries: live order placement auth, limit→market timeout
+  conversion, real orderbook depth slippage estimation.
+
+### Fixed
+- `order_router._place_with_retry`: `asyncio.TimeoutError` removed from retryable set.
+  In Python 3.11+ `asyncio.TimeoutError` is a subclass of `OSError` — it was being retried,
+  which risks placing duplicate CLOB orders when a response timeout fires after the CLOB
+  accepted the order. Added explicit `isinstance` guard to re-raise immediately.
+- `tests/data_layer/test_clob_client.py` — `test_place_order_stub_raises` updated to
+  `test_place_order_paper_mode_returns_synthetic_id` (paper mode now implemented) +
+  new `test_place_order_live_mode_raises` (asserts live mode still raises `NotImplementedError`).
+
 ## [0.1.11.0] - 2026-03-15
 
 ### Changed

@@ -291,10 +291,23 @@ async def test_get_market_stub_raises():
 
 
 @pytest.mark.asyncio
-async def test_place_order_stub_raises(config):
+async def test_place_order_paper_mode_returns_synthetic_id(config):
+    # Paper mode: returns "PAPER_<hex>" without touching the CLOB.
     from meg.data_layer.clob_client import place_order
+    order_id = await place_order("test", "YES", "buy", 100.0, 0.5, config)
+    assert order_id.startswith("PAPER_")
+    assert len(order_id) == len("PAPER_") + 12
+
+
+@pytest.mark.asyncio
+async def test_place_order_live_mode_raises(config):
+    # Live mode (paper_trading=False) raises NotImplementedError — OQ-05 pending.
+    from meg.core.config_loader import MegConfig
+    from meg.data_layer.clob_client import place_order
+    live_config = MegConfig()
+    live_config.risk.paper_trading = False
     with pytest.raises(NotImplementedError):
-        await place_order("test", "YES", "buy", 100.0, 0.5, config)
+        await place_order("test", "YES", "buy", 100.0, 0.5, live_config)
 
 
 # ── _parse_days_to_resolution ─────────────────────────────────────────────────

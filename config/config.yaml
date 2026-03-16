@@ -68,8 +68,11 @@ kelly:
   portfolio_value_usdc: 1000.0    # Paper trading starting balance for signal sizing
 
 entry:
-  max_entry_distance_pct: 0.05    # Max price drift from whale entry before skipping
-  max_spread_pct: 0.03            # Max bid-ask spread to allow entry
+  max_entry_distance_pct: 0.06    # Max price drift from whale entry (market_price_at_signal) before skipping
+  max_spread_pct: 0.04            # Max bid-ask spread at execution time (slippage_guard gate)
+  taker_spread: 0.005             # Max spread for taker (aggressive) order re-entry
+  limit_timeout_seconds: 30       # Seconds before limit order is considered stale (conversion logic deferred)
+  max_price_drift_since_signal: 0.08  # Max abs price drift from signal_price at order placement
 
 pre_filter:
   min_volume_24h_usdc: 50000        # Gate 1: minimum 24-hour trading volume (PRD default)
