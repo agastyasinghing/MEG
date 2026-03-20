@@ -3,6 +3,38 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.13.0] - 2026-03-20
+
+### Added
+- `meg/telegram/bot.py` — Phase 8 Telegram bot fully implemented. Functions: `start()`,
+  `send_approval_request()`, `handle_approval_callback()`, `handle_pause_command()`,
+  `handle_resume_command()`, `send_alert()`. Internal helpers: `_format_proposal()`,
+  `_execute_approved_proposal()`, `_subscriber_loop()`.
+  - `start()` uses lower-level PTB API (`initialize/start/updater.start_polling`) for
+    non-blocking asyncio coexistence with the Redis subscriber loop.
+  - `send_approval_request()` stores the full `TradeProposal` in Redis with TTL =
+    `config.signal.ttl_seconds` and sends an HTML-formatted message with inline
+    APPROVE / REJECT keyboard buttons.
+  - `handle_approval_callback()` uses `redis.getdel()` for atomic get+delete —
+    eliminates TOCTOU race between concurrent PTB update tasks (duplicate order prevention).
+    Routes APPROVE → `order_router.place(session=None)`; REJECT → edits message only.
+  - `handle_pause_command()` / `handle_resume_command()` write to `RedisKeys.system_paused()`.
+    Optional `TELEGRAM_AUTHORIZED_USER_IDS` env var restricts commands to a whitelist.
+  - `_subscriber_loop()` reconnects on `ConnectionError` with exponential backoff (cap 60s).
+    Invalid JSON / `ValidationError` messages are logged and skipped — loop never crashes.
+  - `send_alert()` safe to call before `start()` — logs warning, returns, never raises.
+- `meg/core/events.py` — `RedisKeys.pending_proposal(proposal_id)` key builder added.
+  Stores pending `TradeProposal` JSON between send and callback; deleted atomically by
+  `handle_approval_callback()` as the double-click guard.
+- `tests/telegram/` — 20 tests, all passing. Covers: approval request formatting, Redis
+  TTL storage, inline keyboard, APPROVE/REJECT/expired/double-click callback paths,
+  pause/resume auth, `send_alert` pre-start safety, subscriber loop error recovery.
+
+### Fixed
+- `handle_approval_callback`: replaced `redis.get()` + `redis.delete()` (two round trips,
+  TOCTOU window) with `redis.getdel()` (atomic). Prevents duplicate `order_router.place()`
+  calls if two Telegram callbacks arrive concurrently for the same proposal.
+
 ## [0.1.12.0] - 2026-03-16
 
 ### Added
