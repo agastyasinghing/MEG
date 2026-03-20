@@ -478,3 +478,12 @@ class RedisKeys:
     @staticmethod
     def system_paused() -> str:
         return "meg:system_paused"
+
+    # Pending approval proposal. Stored by telegram/bot.send_approval_request()
+    # when a TradeProposal is sent to the approval chat. Deleted by
+    # handle_approval_callback() on first approve/reject (double-click guard).
+    # TTL = config.signal.ttl_seconds — proposal auto-expires when signal edge is gone.
+    # Value: TradeProposal.model_dump_json()
+    @staticmethod
+    def pending_proposal(proposal_id: str) -> str:
+        return f"proposal:{proposal_id}:pending"
