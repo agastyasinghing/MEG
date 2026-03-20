@@ -1,6 +1,6 @@
 # MEG — Session Status
 > Update this file at the end of every Claude Code session. Read it at the start of every session.
-> Last updated: 2026-03-16
+> Last updated: 2026-03-20
 
 ---
 
@@ -12,15 +12,33 @@
 - [~] Signal Engine — **IN PROGRESS** (pre-work gaps patched; archetype_weighter + ladder_detector implemented; 9 test specs pending)
 - [~] Agent Core — **IN PROGRESS** (all 7 modules implemented + 92 tests passing; pending /review + /ship)
 - [~] Execution Layer — **IN PROGRESS** (entry_filter + slippage_guard + order_router implemented + 28 tests passing; pending /review + /ship)
-- [ ] Telegram Bot
+- [~] Telegram Bot — **IN PROGRESS** (bot.py implemented + 20 tests passing; pending /review + /ship)
 - [ ] Dashboard
 - [ ] Bootstrap script
 
-**Active phase:** Execution Layer (Phase 7 core modules built + tested; ready for /review + /ship)
+**Active phase:** Telegram Bot (Phase 8 core module built + tested; ready for /review + /ship)
 
 ---
 
 ## What Was Just Completed
+
+**Telegram Bot (2026-03-20) — Phase 8 core + 20 tests:**
+- `meg/core/events.py` — added `RedisKeys.pending_proposal(proposal_id)` key builder
+- `meg/telegram/bot.py` — fully implemented: `start()`, `send_approval_request()`,
+  `handle_approval_callback()`, `handle_pause_command()`, `handle_resume_command()`,
+  `send_alert()`, `_format_proposal()`, `_execute_approved_proposal()`, `_subscriber_loop()`
+- `tests/telegram/__init__.py` — module init
+- `tests/telegram/conftest.py` — `mock_bot_app`, `mock_redis`, `make_proposal`, `make_mock_query`
+- `tests/telegram/test_bot.py` — 20 tests (all passing)
+- `TODOS.md` — added structured alert types TODO (P2)
+
+Key decisions made:
+- Lower-level PTB API (`initialize/start/updater.start_polling`) for non-blocking asyncio coexistence
+- `pending_proposal` stored in Redis with `ex=signal.ttl_seconds`; DEL = double-click guard
+- `handle_approval_callback(query, redis, config)` takes `CallbackQuery` directly for message editing
+- `TELEGRAM_AUTHORIZED_USER_IDS` env var for /pause and /resume auth (empty = no restriction)
+- PTB handlers are closures inside `start()` — capture `redis + config` without globals
+- `send_alert()` safe to call before `start()` — logs warning, returns, never crashes
 
 **Execution Layer (2026-03-16) — Phase 7 core + 28 tests:**
 - `meg/core/logger.py` — `setup_logging()` + `get_logger()` implemented (structlog JSON chain)
@@ -117,7 +135,8 @@
 
 ## In Progress
 
-- Execution Layer: Phase 7 core built + 28 tests passing. Ready for `/review` + `/ship`.
+- Telegram Bot: Phase 8 core built + 20 tests passing. Ready for `/review` + `/ship`.
+- Execution Layer: Phase 7 core built + 28 tests passing. Also ready for `/review` + `/ship`.
 - Agent Core: all 7 modules implemented + 92 tests passing. Also ready for `/review` + `/ship`.
 - Signal Engine: pre-work gaps patched (2026-03-14). Next: write 9 test spec files
   (`tests/signal_engine/conftest.py` + `test_*.py` for all modules), then Opus session
@@ -136,9 +155,9 @@
 
 ## Next 3 Tasks
 
-1. **Run `/review` then `/ship` for Execution Layer** — paranoid review, bump version, PR.
-2. **Run `/review` then `/ship` for Agent Core** — paranoid review, bump version, PR.
-3. **Write `tests/signal_engine/conftest.py` + 9 test spec files** — fully tested for archetype_weighter and ladder_detector; stubs with docstrings for Opus modules.
+1. **Run `/review` then `/ship` for Telegram Bot** — paranoid review, bump version, PR.
+2. **Run `/review` then `/ship` for Execution Layer** — paranoid review, bump version, PR.
+3. **Run `/review` then `/ship` for Agent Core** — paranoid review, bump version, PR.
 
 ---
 
@@ -227,7 +246,8 @@
 | execution/entry_filter | 8 | 8 |
 | execution/slippage_guard | 12 | 12 |
 | execution/order_router | 8 | 8 |
-| **Total** | **120** | **120** |
+| telegram/bot | 20 | 20 |
+| **Total** | **140** | **140** |
 
 ---
 

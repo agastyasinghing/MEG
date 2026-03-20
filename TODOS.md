@@ -683,6 +683,35 @@ needs these values. Requires a migration.
 
 ---
 
+## [P2] Structured alert types for Telegram bot (v1.5)
+
+**What:** Add an optional `alert_type: Literal["trap", "position", "pnl", "system"] | None = None`
+param to `send_alert()` so distinct alert categories get distinct Telegram formatting (bold,
+emoji prefix, `parse_mode=Markdown`) rather than uniform plain text.
+
+**Why:** v1 plain-text alerts are adequate, but operators reading multiple alerts will find
+it hard to triage trap warnings vs P&L summaries vs position update messages when they all
+look identical. Structured types enable visual differentiation and eventually Telegram topic
+routing (different threads per alert type in supergroups).
+
+**Pros:** Better operator UX. Low code change — `send_alert` grows one optional param.
+Backward-compatible: existing callers continue working unchanged.
+
+**Cons:** Callers must be updated to pass `alert_type` to get the benefit; silent without it.
+Formatting logic adds ~30 lines to bot.py. Not needed until alert volume grows enough to
+cause confusion.
+
+**Context:** Decided against building now in the Phase 8 plan review (2026-03-20) — plain text
+is fine for v1 paper trading. Revisit when live trading generates enough alerts that operators
+report difficulty triaging. The `send_alert()` function signature is `(message: str, config: MegConfig)`.
+Add `alert_type` as the third optional param; format with a type-specific prefix if provided.
+
+**Effort:** S
+**Priority:** P2
+**Blocked by:** v1 paper trading validation — needs real usage data to determine what formatting helps
+
+---
+
 ## [P3] Decision agent gate ordering: circuit breaker before system_paused (PRD §9.4.1)
 
 **What:** Move the daily loss / circuit breaker check before the system_paused check
