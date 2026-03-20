@@ -3,6 +3,24 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.15.0] - 2026-03-20
+
+### Added
+- `meg/dashboard/ui/` — Phase 9 dashboard scaffold: Vite + React 18 + React Three Fiber + Drei + GSAP.
+  Full-screen R3F canvas with `ScrollControls` (5 pages). Camera lerps through megalodon body parts
+  (Mouth → Eye → Head → Dorsal Fin → Tail) via `useFrame` + `THREE.Vector3.lerp`.
+- `meg/dashboard/ui/src/Scene.jsx` — Megalodon GLB loaded via `useGLTF`/`useAnimations`. Plays "bite"
+  once on mount then crossfades to "swim"; crossfades to "circle" when scroll enters eye section (18–42%).
+  200-particle bioluminescent `Points` system drifting upward. `FogExp2` ocean atmosphere.
+  `PanelController` drives panel opacity via direct DOM manipulation inside `useFrame` (zero re-renders).
+- `meg/dashboard/ui/src/App.jsx` — 5 HUD panels (absolute-positioned, `pointer-events: none`) with mock
+  data matching PRD §13 shapes: Approval Queue, Signal Feed, System Status, Open Positions, P&L History.
+  Raw SVG line chart with area fill gradient for P&L panel. Seeded deterministic mock data (LCG, seed=42).
+- Custom cyan crosshair cursor via CSS `url()` data-URI. No Tailwind, no component libraries.
+
+### Changed
+- `README.md` — replaced stub with concise architecture summary, stack table, and current status.
+
 ## [0.1.14.0] - 2026-03-20
 
 ### Added
