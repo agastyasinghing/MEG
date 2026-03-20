@@ -5,9 +5,8 @@ Responsibilities:
   - Receive TradeProposal notifications and send approval requests to the
     configured TELEGRAM_APPROVAL_CHAT_ID
   - Route APPROVED / REJECTED responses back to order_router
-  - Send alerts for: signal events, risk gate rejections, position opens/closes,
-    daily P&L summaries, and system health warnings
-  - Provide /pause and /resume commands that halt / resume new proposal execution
+  - Receive AlertMessage notifications and forward them as plain-text alerts
+  - Provide /pause, /resume, and /reject commands for operator control
 
 In v1, every TradeProposal requires approval before execution. The bot is
 the only interface for that approval flow.
@@ -15,24 +14,27 @@ the only interface for that approval flow.
 Module state (set once in start(), shared across all functions):
   _app            — PTB Application (polling + update dispatcher)
   _chat_id        — TELEGRAM_APPROVAL_CHAT_ID env var value
-  _authorized_ids — set of int user IDs allowed to /pause and /resume
-                    (empty = no restriction; anyone in the chat may use commands)
+  _authorized_ids — set of int user IDs allowed to /pause, /resume, /reject,
+                    and inline Approve/Reject buttons.
+                    (empty = no restriction; anyone in the chat may act)
 
-Concurrent loops in start():
-  ┌──────────────────────────────────────────────────────────────┐
-  │ asyncio event loop                                            │
-  │                                                               │
-  │  PTB updater (background task, non-blocking after await)      │
-  │    polls Telegram API → dispatches to handler closures        │
-  │                                                               │
-  │  _subscriber_loop() (foreground — blocks until cancelled)     │
-  │    redis pub/sub → send_approval_request()                    │
-  └──────────────────────────────────────────────────────────────┘
+Concurrent loops in start() — run together via asyncio.TaskGroup:
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │ asyncio event loop                                                    │
+  │                                                                       │
+  │  PTB updater (background task, non-blocking after await)              │
+  │    polls Telegram API → dispatches to handler closures                │
+  │                                                                       │
+  │  TaskGroup (two tasks run concurrently, cancel together on shutdown): │
+  │    _subscriber_loop()  CHANNEL_TRADE_PROPOSALS → send_approval_request│
+  │    _alert_loop()       CHANNEL_BOT_ALERTS      → send_alert()         │
+  └──────────────────────────────────────────────────────────────────────┘
 
 PTB handler closures (defined in start(), capture redis + config):
-  _cb(update, ctx)      → handle_approval_callback(query, redis, config)
+  _cb(update, ctx)      → auth check → handle_approval_callback(query, redis, config)
   _pause(update, ctx)   → handle_pause_command(redis, config, user_id)
   _resume(update, ctx)  → handle_resume_command(redis, config, user_id)
+  _reject(update, ctx)  → handle_reject_command(redis, config, user_id, args)
 
 Pending proposal lifecycle:
   send_approval_request(proposal, redis, config)
@@ -40,21 +42,35 @@ Pending proposal lifecycle:
     ├── redis.set("proposal:{id}:pending", json, ex=ttl_seconds)
     └── bot.send_message() with InlineKeyboard [Approve] [Reject]
                 │
-           operator clicks
+           operator clicks (or uses /reject {id} {reason})
                 │
-  handle_approval_callback(query, redis, config)
-    ├── redis.get("proposal:{id}:pending")  ← None? → "expired" reply
-    ├── redis.delete(...)                   ← double-click guard (atomic DEL first)
+  handle_approval_callback(query, redis, config)          ← inline button path
+    ├── redis.getdel("proposal:{id}:pending") ← None? → "expired" reply
     ├── action == "approve"
     │     order_router.place() → edit message with result
     └── action == "reject"
-          edit message "REJECTED"
+          log rejection_reason="rejected_via_button" → edit message "REJECTED"
+
+  handle_reject_command(redis, config, user_id, args)     ← /reject command path
+    ├── auth check
+    ├── parse proposal_id + reason from args
+    ├── redis.getdel("proposal:{id}:pending") ← None? → "not found" alert
+    └── log rejection_reason + send confirmation alert
+
+Alert delivery lifecycle:
+  any_layer publishes AlertMessage to CHANNEL_BOT_ALERTS
+    │
+  _alert_loop() receives message
+    ├── parse AlertMessage
+    ├── urgent=True  → prefix with "🚨 URGENT: "
+    └── send_alert(text, config)
 
 Env vars:
   TELEGRAM_BOT_TOKEN             — required; bot API token from @BotFather
   TELEGRAM_APPROVAL_CHAT_ID      — required; chat/channel ID for all messages
   TELEGRAM_AUTHORIZED_USER_IDS   — optional; comma-separated int user IDs for
-                                   /pause and /resume. Empty = no restriction.
+                                   /pause, /resume, /reject, and inline buttons.
+                                   Empty = no restriction.
 """
 from __future__ import annotations
 
@@ -75,7 +91,7 @@ from telegram.ext import (
 
 from meg.core import redis_client as _redis_client
 from meg.core.config_loader import MegConfig
-from meg.core.events import RedisKeys, TradeProposal
+from meg.core.events import AlertMessage, RedisKeys, TradeProposal
 from meg.execution import order_router
 
 logger = structlog.get_logger(__name__)
@@ -88,6 +104,15 @@ _authorized_ids: set[int] = set()
 
 # Reconnect backoff cap for the Redis subscriber loop (seconds).
 _MAX_RECONNECT_SLEEP: Final[int] = 60
+
+
+def _is_authorized(uid: int | None) -> bool:
+    """Return True if uid may take operator actions (approve, reject, pause, resume).
+
+    When _authorized_ids is empty (no restriction configured), everyone is allowed.
+    When non-empty, uid must be present and in the set.
+    """
+    return not _authorized_ids or (uid is not None and uid in _authorized_ids)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -131,6 +156,14 @@ async def start(redis: Redis, config: MegConfig) -> None:
         if q is None:
             return
         await q.answer()
+        # Auth check — effective_user may be None for forwarded messages or
+        # channel posts; _is_authorized() treats None as unauthorized when
+        # _authorized_ids is non-empty.
+        uid = update.effective_user.id if update.effective_user else None
+        if not _is_authorized(uid):
+            logger.warning("bot.callback_unauthorized", user_id=uid)
+            await q.edit_message_text("⛔ Not authorized to approve or reject.")
+            return
         await handle_approval_callback(q, redis, config)
 
     async def _pause(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -141,6 +174,10 @@ async def start(redis: Redis, config: MegConfig) -> None:
         uid = update.effective_user.id if update.effective_user else None
         await handle_resume_command(redis, config, user_id=uid)
 
+    async def _reject(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+        uid = update.effective_user.id if update.effective_user else None
+        await handle_reject_command(redis, config, user_id=uid, args=list(ctx.args or []))
+
     async def _error_handler(
         update: object, ctx: ContextTypes.DEFAULT_TYPE
     ) -> None:
@@ -149,11 +186,15 @@ async def start(redis: Redis, config: MegConfig) -> None:
     _app.add_handler(CallbackQueryHandler(_cb))
     _app.add_handler(CommandHandler("pause", _pause))
     _app.add_handler(CommandHandler("resume", _resume))
+    _app.add_handler(CommandHandler("reject", _reject))
     _app.add_error_handler(_error_handler)
 
     # async with _app calls initialize() on entry and shutdown() on exit.
     # app.start() / app.stop() manage the update processor.
     # updater.start_polling() / updater.stop() manage the Telegram polling task.
+    # TaskGroup runs _subscriber_loop + _alert_loop concurrently; if either
+    # raises (e.g. CancelledError on task cancellation), the other is also
+    # cancelled and the finally block cleans up PTB.
     async with _app:
         await _app.start()
         await _app.updater.start_polling(drop_pending_updates=True)
@@ -163,7 +204,9 @@ async def start(redis: Redis, config: MegConfig) -> None:
             authorized_ids=sorted(_authorized_ids),
         )
         try:
-            await _subscriber_loop(redis, config)
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(_subscriber_loop(redis, config))
+                tg.create_task(_alert_loop(redis, config))
         finally:
             await _app.updater.stop()
             await _app.stop()
@@ -281,6 +324,8 @@ async def handle_approval_callback(
             "bot.proposal_rejected",
             proposal_id=proposal_id,
             market_id=proposal.market_id,
+            rejection_reason="rejected_via_button",
+            via="inline_button",
         )
         await query.edit_message_text("❌ REJECTED by operator.")
     else:
@@ -340,6 +385,59 @@ async def handle_resume_command(
     await send_alert("▶ MEG resumed — proposals will execute normally.", config)
 
 
+async def handle_reject_command(
+    redis: Redis,
+    config: MegConfig,
+    user_id: int | None = None,
+    args: list[str] | None = None,
+) -> None:
+    """
+    Handle the /reject {proposal_id} {reason...} command.
+
+    Usage: /reject abc12345 price moved too far from whale fill
+
+    All text after the proposal_id is joined as the rejection reason.
+    If no reason is given, defaults to "no_reason_given".
+
+    The rejection reason is logged via structlog (log-only in v1; durable storage
+    in signal_outcomes table is a deferred TODO — see TODOS.md).
+
+    Authorized users only (same gate as /pause and /resume).
+    """
+    if not _is_authorized(user_id):
+        logger.warning("bot.reject_unauthorized", user_id=user_id)
+        await send_alert(
+            f"⛔ Unauthorized /reject attempt (user {user_id}).", config
+        )
+        return
+
+    if not args:
+        await send_alert("⚠️ Usage: /reject {proposal_id} {reason}", config)
+        return
+
+    proposal_id = args[0]
+    reason = " ".join(args[1:]) if len(args) > 1 else "no_reason_given"
+
+    raw = await redis.getdel(RedisKeys.pending_proposal(proposal_id))
+    if raw is None:
+        await send_alert(
+            f"⚠️ Proposal {proposal_id[:12]}… not found or already handled.", config
+        )
+        return
+
+    logger.info(
+        "bot.proposal_rejected",
+        proposal_id=proposal_id,
+        rejection_reason=reason,
+        user_id=user_id,
+        via="command",
+    )
+    await send_alert(
+        f"❌ Proposal {proposal_id[:8]}… rejected by operator.\nReason: {reason}",
+        config,
+    )
+
+
 async def send_alert(message: str, config: MegConfig) -> None:
     """
     Send a plain-text alert to the approval chat.
@@ -365,8 +463,13 @@ def _format_proposal(proposal: TradeProposal) -> str:
     """
     Format a TradeProposal as an HTML Telegram message for the approval request.
 
+    Fields shown (PRD §9.6 Trade Approval Queue):
+      market_id, outcome, size, current_price, entry distance from whale fill,
+      composite score + breakdown, estimated slippage, saturation score, trap warning.
+
     Trap warning is displayed prominently at the top when present.
     Sub-scores are shown only when the full scores breakdown is available.
+    entry_distance_pct is computed from existing fields — no schema read needed.
     """
     trap_flag = "🚨 <b>TRAP WARNING</b>\n\n" if proposal.trap_warning else ""
 
@@ -397,17 +500,37 @@ def _format_proposal(proposal: TradeProposal) -> str:
         else "—"
     )
 
+    # Entry distance: how far our proposed entry is from the whale's fill price.
+    # Non-zero only when market moved between whale fill and our proposal build.
+    entry_dist_pct = (
+        abs(proposal.limit_price - proposal.market_price_at_signal)
+        / proposal.market_price_at_signal
+        * 100
+        if proposal.market_price_at_signal > 0
+        else 0.0
+    )
+
+    current_price_str = (
+        f"{proposal.current_price:.4f}" if proposal.current_price > 0 else "—"
+    )
+    slippage_str = (
+        f"{proposal.estimated_slippage:.2%}" if proposal.estimated_slippage > 0 else "—"
+    )
+
     return (
         f"{trap_flag}"
         f"📋 <b>Trade Proposal</b>\n\n"
-        f"Market:     <code>{proposal.market_id}</code>\n"
-        f"Outcome:    <b>{proposal.outcome}</b>\n"
-        f"Size:       <b>{proposal.size_usdc:.2f} USDC</b>\n"
-        f"Entry:      {proposal.limit_price:.4f}\n"
-        f"Whale fill: {proposal.market_price_at_signal:.4f}\n"
-        f"Score:      <b>{proposal.composite_score:.3f}</b>\n"
-        f"Saturation: {proposal.saturation_score:.2f}\n"
-        f"Half-life:  {half_life}\n"
+        f"Market:       <code>{proposal.market_id}</code>\n"
+        f"Outcome:      <b>{proposal.outcome}</b>\n"
+        f"Size:         <b>{proposal.size_usdc:.2f} USDC</b>\n"
+        f"Current:      {current_price_str}\n"
+        f"Whale fill:   {proposal.market_price_at_signal:.4f}\n"
+        f"Entry:        {proposal.limit_price:.4f} "
+        f"(<b>{entry_dist_pct:.1f}%</b> from fill)\n"
+        f"Est. slip:    {slippage_str}\n"
+        f"Score:        <b>{proposal.composite_score:.3f}</b>\n"
+        f"Saturation:   {proposal.saturation_score:.2f}\n"
+        f"Half-life:    {half_life}\n"
         f"\n<b>Sub-scores:</b>\n{score_lines}"
         f"Whales: {wallets_str}\n"
         f"\n<i>Proposal {proposal.proposal_id[:8]}…</i>"
@@ -469,6 +592,54 @@ async def _execute_approved_proposal(
         )
 
     await query.edit_message_text(text, parse_mode="HTML")
+
+
+async def _alert_loop(redis: Redis, config: MegConfig) -> None:
+    """
+    Subscribe to CHANNEL_BOT_ALERTS and forward AlertMessages to send_alert().
+
+    Publishers: trap_detector, position_manager, decision_agent (circuit breaker).
+    urgent=True alerts are prefixed with "🚨 URGENT:" in the Telegram message.
+
+    Reconnect loop: mirrors _subscriber_loop reconnect pattern.
+      - ConnectionError: log warning, exponential backoff (cap 60s), retry
+      - ValidationError / bad JSON: log error, skip message, continue (loop never crashes)
+      - asyncio.CancelledError: re-raise (clean shutdown signal from TaskGroup)
+    """
+    from redis.exceptions import ConnectionError as RedisConnectionError
+
+    attempt = 0
+    while True:
+        try:
+            async for message in _redis_client.subscribe(
+                redis, RedisKeys.CHANNEL_BOT_ALERTS
+            ):
+                attempt = 0  # reset backoff on successful delivery
+                try:
+                    alert = AlertMessage.model_validate_json(message)
+                except (ValidationError, ValueError) as exc:
+                    logger.error(
+                        "bot.invalid_alert_message",
+                        error=str(exc),
+                        raw=message[:200] if isinstance(message, str) else repr(message[:200]),
+                    )
+                    continue
+
+                prefix = "🚨 URGENT: " if alert.urgent else ""
+                await send_alert(f"{prefix}{alert.message}", config)
+
+        except asyncio.CancelledError:
+            raise
+        except RedisConnectionError as exc:
+            delay = min(2 ** attempt, _MAX_RECONNECT_SLEEP)
+            logger.warning(
+                "bot.alert_subscriber_disconnected",
+                error=str(exc),
+                reconnect_in_seconds=delay,
+                attempt=attempt,
+            )
+            await asyncio.sleep(delay)
+            attempt += 1
 
 
 async def _subscriber_loop(redis: Redis, config: MegConfig) -> None:

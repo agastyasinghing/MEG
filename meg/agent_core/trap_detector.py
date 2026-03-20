@@ -36,7 +36,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.config_loader import MegConfig
-from meg.core.events import RedisKeys, SignalEvent
+from meg.core.events import AlertMessage, RedisKeys, SignalEvent
 from meg.db.models import Trade, WhaleTrapEvent
 
 logger = structlog.get_logger(__name__)
@@ -172,6 +172,27 @@ async def _detect_trap(
         total_sold=total_sold,
         confidence=confidence,
     )
+
+    # Alert operators — trap warning is URGENT (PRD §9.6: alert #2)
+    try:
+        await redis.publish(
+            RedisKeys.CHANNEL_BOT_ALERTS,
+            AlertMessage(
+                alert_type="trap",
+                message=(
+                    f"🪤 Whale trap detected on signal {signal.signal_id[:8]}…\n"
+                    f"Market: {market_id}\n"
+                    f"Wallet: {wallet[:10]}…\n"
+                    f"Sold {total_sold:.0f} USDC ({confidence:.0%} of entry) "
+                    f"within {agent_cfg.trap_window_minutes}min.\n"
+                    f"Proposal still sent — operator decides (PRD §9.4.2)."
+                ),
+                urgent=True,
+            ).model_dump_json(),
+        )
+    except Exception:
+        logger.error("trap_detector.alert_publish_failed", exc_info=True)
+
     return True, reason
 
 

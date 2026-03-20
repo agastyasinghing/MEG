@@ -95,6 +95,8 @@ def make_proposal(
     trap_warning: bool = False,
     contributing_wallets: list[str] | None = None,
     estimated_half_life_minutes: float = 30.0,
+    current_price: float = 0.44,
+    estimated_slippage: float = 0.02,
 ) -> TradeProposal:
     return TradeProposal(
         proposal_id=proposal_id or f"prop_{uuid.uuid4().hex[:8]}",
@@ -111,6 +113,8 @@ def make_proposal(
         trap_warning=trap_warning,
         contributing_wallets=contributing_wallets or ["0xWHALE001", "0xWHALE002"],
         estimated_half_life_minutes=estimated_half_life_minutes,
+        current_price=current_price,
+        estimated_slippage=estimated_slippage,
     )
 
 

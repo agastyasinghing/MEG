@@ -38,7 +38,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.config_loader import MegConfig
-from meg.core.events import PositionState, RedisKeys
+from meg.core.events import AlertMessage, PositionState, RedisKeys
 from meg.db.models import Position, PositionStatus, Trade
 
 logger = structlog.get_logger(__name__)
@@ -221,6 +221,30 @@ async def close_position(
         "realized_pnl_pct": realized_pnl_pct,
     }
     logger.info("position_manager.closed", **summary)
+
+    # Alert operators with P&L result (PRD §9.6: alert #6)
+    pnl_sign = "+" if realized_pnl_usdc >= 0 else ""
+    try:
+        await redis.publish(
+            RedisKeys.CHANNEL_BOT_ALERTS,
+            AlertMessage(
+                alert_type="position_closed",
+                message=(
+                    f"📊 Position closed: {pos.market_id}\n"
+                    f"Outcome: {pos.outcome} | Size: {pos.size_usdc:.0f} USDC\n"
+                    f"P&L: {pnl_sign}{realized_pnl_usdc:.2f} USDC "
+                    f"({pnl_sign}{realized_pnl_pct:.1%})"
+                ),
+                urgent=False,
+            ).model_dump_json(),
+        )
+    except Exception:
+        logger.error(
+            "position_manager.close_alert_failed",
+            position_id=position_id,
+            exc_info=True,
+        )
+
     return summary
 
 
@@ -433,6 +457,29 @@ async def _check_single_position(
                 contributing_wallets=pos.contributing_wallets,
                 unrealized_pnl_usdc=unrealized_pnl_usdc,
             )
+            # Alert operators — whale exit is ACTION REQUIRED (PRD §9.6: alert #7)
+            pnl_sign = "+" if unrealized_pnl_usdc >= 0 else ""
+            try:
+                await redis.publish(
+                    RedisKeys.CHANNEL_BOT_ALERTS,
+                    AlertMessage(
+                        alert_type="whale_exit",
+                        message=(
+                            f"🐋 Whale exit detected: {pos.market_id}\n"
+                            f"Position: {pos.outcome} {pos.size_usdc:.0f} USDC\n"
+                            f"Unrealized P&L: {pnl_sign}{unrealized_pnl_usdc:.2f} USDC\n"
+                            f"Whales: {', '.join(w[:10] + '…' for w in pos.contributing_wallets[:3])}\n"
+                            f"Consider exiting — information edge may be dissipating."
+                        ),
+                        urgent=False,
+                    ).model_dump_json(),
+                )
+            except Exception:
+                logger.error(
+                    "position_manager.whale_exit_alert_failed",
+                    position_id=pos.position_id,
+                    exc_info=True,
+                )
 
     # Write updated state back to Redis
     updated_json = pos_updated.model_dump_json()

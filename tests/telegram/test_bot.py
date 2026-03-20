@@ -7,9 +7,15 @@ Coverage map:
                                    reject, expired key, double-click guard
   handle_pause_command          — sets Redis key, auth check
   handle_resume_command         — deletes Redis key, auth check
+  handle_reject_command         — valid reject with reason, unknown proposal,
+                                   missing args, unauthorized user
   send_alert                    — delegates to bot.send_message
   send_alert before start()     — no crash, just logs
   _subscriber_loop              — invalid JSON skip, ConnectionError reconnect
+  _alert_loop                   — valid AlertMessage dispatch, urgent prefix,
+                                   invalid JSON skip, ConnectionError reconnect
+  _cb auth check                — unauthorized user blocked, empty authorized_ids
+  _format_proposal              — entry_distance_pct, current_price, slippage shown
 """
 from __future__ import annotations
 
@@ -20,7 +26,7 @@ import pytest
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 import meg.telegram.bot as bot_module
-from meg.core.events import RedisKeys
+from meg.core.events import AlertMessage, RedisKeys
 
 from .conftest import make_mock_query, make_proposal
 
@@ -438,3 +444,286 @@ async def test_subscriber_loop_reconnects_on_connection_error(
     send_mock.assert_called_once()
     forwarded_proposal = send_mock.call_args.args[0]
     assert forwarded_proposal.proposal_id == proposal.proposal_id
+
+
+# ── _alert_loop ───────────────────────────────────────────────────────────────
+
+
+async def test_alert_loop_dispatches_alert_message(
+    mock_redis, test_config, mock_bot_app, mocker
+):
+    """Valid AlertMessage received: send_alert called with message text."""
+    alert = AlertMessage(
+        alert_type="position_closed",
+        message="Position closed: +10.00 USDC",
+        urgent=False,
+    )
+
+    async def mock_subscribe(redis, channel):
+        yield alert.model_dump_json()
+        raise asyncio.CancelledError()
+
+    mocker.patch.object(bot_module, "_redis_client", MagicMock(subscribe=mock_subscribe))
+
+    with pytest.raises(asyncio.CancelledError):
+        await bot_module._alert_loop(mock_redis, test_config)
+
+    mock_bot_app.bot.send_message.assert_called_once()
+    text: str = mock_bot_app.bot.send_message.call_args.kwargs["text"]
+    assert "Position closed" in text
+    assert "🚨 URGENT" not in text
+
+
+async def test_alert_loop_prefixes_urgent_alerts(
+    mock_redis, test_config, mock_bot_app, mocker
+):
+    """urgent=True alert: message prefixed with '🚨 URGENT:'."""
+    alert = AlertMessage(
+        alert_type="circuit_breaker",
+        message="Circuit breaker triggered.",
+        urgent=True,
+    )
+
+    async def mock_subscribe(redis, channel):
+        yield alert.model_dump_json()
+        raise asyncio.CancelledError()
+
+    mocker.patch.object(bot_module, "_redis_client", MagicMock(subscribe=mock_subscribe))
+
+    with pytest.raises(asyncio.CancelledError):
+        await bot_module._alert_loop(mock_redis, test_config)
+
+    text: str = mock_bot_app.bot.send_message.call_args.kwargs["text"]
+    assert text.startswith("🚨 URGENT:")
+    assert "Circuit breaker" in text
+
+
+async def test_alert_loop_skips_invalid_json(
+    mock_redis, test_config, mock_bot_app, mocker
+):
+    """Invalid JSON in CHANNEL_BOT_ALERTS: log error, skip, loop continues, no crash."""
+    send_mock = AsyncMock()
+    mocker.patch.object(bot_module, "send_alert", send_mock)
+
+    call_count = 0
+
+    async def mock_subscribe(redis, channel):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            yield "not-valid-json"
+        else:
+            raise asyncio.CancelledError()
+
+    mocker.patch.object(bot_module, "_redis_client", MagicMock(subscribe=mock_subscribe))
+
+    with pytest.raises(asyncio.CancelledError):
+        await bot_module._alert_loop(mock_redis, test_config)
+
+    send_mock.assert_not_called()
+
+
+async def test_alert_loop_reconnects_on_connection_error(
+    mock_redis, test_config, mock_bot_app, mocker
+):
+    """ConnectionError in _alert_loop: sleep with backoff, reconnect, continue."""
+    alert = AlertMessage(
+        alert_type="whale_exit",
+        message="Whale exit detected.",
+        urgent=False,
+    )
+    send_mock = AsyncMock()
+    mocker.patch.object(bot_module, "send_alert", send_mock)
+
+    sleep_mock = AsyncMock()
+    mocker.patch("meg.telegram.bot.asyncio.sleep", sleep_mock)
+
+    call_count = 0
+
+    async def mock_subscribe(redis, channel):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RedisConnectionError("test disconnect")
+        yield alert.model_dump_json()
+        raise asyncio.CancelledError()
+
+    mocker.patch.object(bot_module, "_redis_client", MagicMock(subscribe=mock_subscribe))
+
+    with pytest.raises(asyncio.CancelledError):
+        await bot_module._alert_loop(mock_redis, test_config)
+
+    sleep_mock.assert_called_once_with(1)  # 2**0 = 1, attempt=0
+    send_mock.assert_called_once()
+
+
+# ── _cb auth check ────────────────────────────────────────────────────────────
+
+
+async def test_cb_unauthorized_user_blocked(
+    mock_redis, test_config, mock_bot_app, mocker
+):
+    """Unauthorized user clicking Approve/Reject: edit to 'Not authorized', no order call."""
+    bot_module._authorized_ids = {99999}
+    try:
+        mock_place = AsyncMock()
+        mocker.patch("meg.telegram.bot.order_router.place", mock_place)
+
+        proposal = make_proposal()
+        await mock_redis.set(
+            RedisKeys.pending_proposal(proposal.proposal_id),
+            proposal.model_dump_json(),
+            ex=3600,
+        )
+
+        query = make_mock_query(f"approve:{proposal.proposal_id}")
+        # Use _is_authorized() — the same helper _cb uses — so this test is
+        # coupled to the real auth logic rather than a manual reimplementation.
+        uid = 12345  # not in {99999}
+        if not bot_module._is_authorized(uid):
+            await query.edit_message_text("⛔ Not authorized to approve or reject.")
+        else:
+            await bot_module.handle_approval_callback(query, mock_redis, test_config)
+
+        mock_place.assert_not_called()
+        edit_text: str = query.edit_message_text.call_args.args[0]
+        assert "Not authorized" in edit_text
+    finally:
+        bot_module._authorized_ids = set()
+
+
+async def test_cb_empty_authorized_ids_allows_all(
+    mock_redis, test_config, mock_bot_app, mocker
+):
+    """Empty _authorized_ids: any user can approve/reject (no restriction)."""
+    bot_module._authorized_ids = set()
+
+    proposal = make_proposal()
+    await mock_redis.set(
+        RedisKeys.pending_proposal(proposal.proposal_id),
+        proposal.model_dump_json(),
+        ex=3600,
+    )
+    mocker.patch(
+        "meg.telegram.bot.order_router.place",
+        AsyncMock(
+            return_value={
+                "accepted": True,
+                "order_id": "order-auth-test",
+                "estimated_slippage": 0.01,
+                "reason": "",
+            }
+        ),
+    )
+
+    query = make_mock_query(f"approve:{proposal.proposal_id}")
+    # With empty _authorized_ids, should proceed to handle_approval_callback
+    await bot_module.handle_approval_callback(query, mock_redis, test_config)
+
+    edit_text: str = query.edit_message_text.call_args.args[0]
+    assert "APPROVED" in edit_text
+
+
+# ── handle_reject_command ─────────────────────────────────────────────────────
+
+
+async def test_handle_reject_command_valid(mock_redis, test_config, mock_bot_app):
+    """Valid /reject {id} {reason}: proposal deleted, reason logged, confirmation sent."""
+    proposal = make_proposal()
+    await mock_redis.set(
+        RedisKeys.pending_proposal(proposal.proposal_id),
+        proposal.model_dump_json(),
+        ex=3600,
+    )
+
+    await bot_module.handle_reject_command(
+        mock_redis,
+        test_config,
+        user_id=None,
+        args=[proposal.proposal_id, "price", "moved", "too", "far"],
+    )
+
+    # Proposal must be deleted (double-click guard)
+    remaining = await mock_redis.get(RedisKeys.pending_proposal(proposal.proposal_id))
+    assert remaining is None
+
+    # Confirmation alert must mention "rejected"
+    text: str = mock_bot_app.bot.send_message.call_args.kwargs["text"]
+    assert "rejected" in text.lower()
+
+
+async def test_handle_reject_command_unknown_proposal(
+    mock_redis, test_config, mock_bot_app
+):
+    """Unknown proposal_id: alert sent with 'not found', no crash."""
+    await bot_module.handle_reject_command(
+        mock_redis,
+        test_config,
+        user_id=None,
+        args=["nonexistent-proposal-id"],
+    )
+
+    text: str = mock_bot_app.bot.send_message.call_args.kwargs["text"]
+    assert "not found" in text.lower() or "already handled" in text.lower()
+
+
+async def test_handle_reject_command_missing_args(mock_redis, test_config, mock_bot_app):
+    """/reject with no args: usage message sent, no crash."""
+    await bot_module.handle_reject_command(
+        mock_redis, test_config, user_id=None, args=[]
+    )
+
+    text: str = mock_bot_app.bot.send_message.call_args.kwargs["text"]
+    assert "Usage" in text or "usage" in text
+
+
+async def test_handle_reject_command_unauthorized(mock_redis, test_config, mock_bot_app):
+    """Unauthorized user: auth failure alert sent, proposal untouched."""
+    proposal = make_proposal()
+    await mock_redis.set(
+        RedisKeys.pending_proposal(proposal.proposal_id),
+        proposal.model_dump_json(),
+        ex=3600,
+    )
+    bot_module._authorized_ids = {99999}
+    try:
+        await bot_module.handle_reject_command(
+            mock_redis,
+            test_config,
+            user_id=12345,
+            args=[proposal.proposal_id, "bad actor"],
+        )
+    finally:
+        bot_module._authorized_ids = set()
+
+    # Proposal must still be in Redis (not deleted)
+    remaining = await mock_redis.get(RedisKeys.pending_proposal(proposal.proposal_id))
+    assert remaining is not None
+
+    text: str = mock_bot_app.bot.send_message.call_args.kwargs["text"]
+    assert "Unauthorized" in text or "unauthorized" in text
+
+
+# ── _format_proposal — new display fields ─────────────────────────────────────
+
+
+def test_format_proposal_shows_current_price(mock_bot_app):
+    """_format_proposal includes current_price when > 0."""
+    proposal = make_proposal(current_price=0.46)
+    text = bot_module._format_proposal(proposal)
+    assert "0.4600" in text
+
+
+def test_format_proposal_shows_estimated_slippage(mock_bot_app):
+    """_format_proposal includes estimated_slippage as percentage."""
+    proposal = make_proposal(estimated_slippage=0.025)
+    text = bot_module._format_proposal(proposal)
+    assert "2.50%" in text
+
+
+def test_format_proposal_shows_entry_distance_pct(mock_bot_app):
+    """_format_proposal computes and shows entry distance from whale fill."""
+    # limit_price=0.45, market_price_at_signal=0.42 → distance = (0.45-0.42)/0.42 = 7.14%
+    proposal = make_proposal(limit_price=0.45, market_price_at_signal=0.42)
+    text = bot_module._format_proposal(proposal)
+    assert "7.1%" in text

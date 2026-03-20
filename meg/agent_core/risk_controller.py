@@ -36,11 +36,17 @@ from __future__ import annotations
 
 import structlog
 from redis.asyncio import Redis
+from typing import Final
 
 from meg.core.config_loader import MegConfig
 from meg.core.events import RedisKeys, SignalEvent
 
 logger = structlog.get_logger(__name__)
+
+# Prefix of the reason string returned by _check_daily_loss on circuit breaker trigger.
+# decision_agent uses this to identify circuit breaker rejections and publish an urgent alert.
+# Keep in sync with the f-string in _check_daily_loss.
+CIRCUIT_BREAKER_REASON_PREFIX: Final[str] = "circuit_breaker_triggered"
 
 
 async def check(
