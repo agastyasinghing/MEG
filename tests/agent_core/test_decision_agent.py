@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from meg.agent_core import decision_agent
-from meg.core.events import RedisKeys
+from meg.core.events import AlertMessage, RedisKeys
 
 from .conftest import (
     add_position_to_redis,
@@ -333,3 +333,62 @@ async def test_status_updated_to_blocked_on_pause(mock_redis, test_config, db_se
     )
     status = result.scalar_one()
     assert status == "BLOCKED"
+
+
+# ── Circuit breaker alert + proposal enrichment ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_circuit_breaker_publishes_urgent_alert(mock_redis, test_config, db_session):
+    """Circuit breaker trigger → urgent AlertMessage published to CHANNEL_BOT_ALERTS."""
+    # Set daily PnL below the max_daily_loss_usdc threshold to trigger circuit breaker
+    max_loss = test_config.risk.max_daily_loss_usdc  # e.g. 200.0
+    await mock_redis.set(RedisKeys.daily_pnl_usdc(), str(-(max_loss + 1)))
+
+    pubsub = mock_redis.pubsub()
+    await pubsub.subscribe(RedisKeys.CHANNEL_BOT_ALERTS)
+    await pubsub.get_message(timeout=1)  # subscription confirmation
+
+    signal = make_signal_event(signal_id="sig_cb_alert")
+    await insert_signal_outcome(db_session, signal_id="sig_cb_alert")
+    await mock_redis.set(RedisKeys.portfolio_value_usdc(), "10000")
+
+    with patch(
+        "meg.agent_core.trap_detector.check",
+        new_callable=AsyncMock,
+        return_value=(False, ""),
+    ):
+        result = await decision_agent.evaluate(signal, mock_redis, test_config, db_session)
+
+    assert result is None  # circuit breaker blocked it
+
+    msg = await pubsub.get_message(timeout=1)
+    assert msg is not None
+    alert = AlertMessage.model_validate_json(msg["data"])
+    assert alert.alert_type == "circuit_breaker"
+    assert alert.urgent is True
+    await pubsub.unsubscribe()
+
+
+@pytest.mark.asyncio
+async def test_proposal_enriched_with_redis_miss_fallback(mock_redis, test_config, db_session):
+    """When Redis has no mid_price or liquidity, proposal uses fallback values (0.0 / 1.0)."""
+    signal = make_signal_event(
+        signal_id="sig_redis_miss",
+        recommended_size_usdc=50.0,
+        market_price_at_signal=0.55,
+    )
+    await insert_signal_outcome(db_session, signal_id="sig_redis_miss")
+    await mock_redis.set(RedisKeys.portfolio_value_usdc(), "10000")
+    # Deliberately NOT setting market mid_price or liquidity keys
+
+    with patch(
+        "meg.agent_core.trap_detector.check",
+        new_callable=AsyncMock,
+        return_value=(False, ""),
+    ):
+        result = await decision_agent.evaluate(signal, mock_redis, test_config, db_session)
+
+    assert result is not None
+    assert result.current_price == 0.0       # fallback: Redis miss
+    assert result.estimated_slippage == 1.0  # fail-closed: no liquidity data

@@ -17,7 +17,7 @@ import time
 import pytest
 
 from meg.agent_core import position_manager
-from meg.core.events import PositionState, RedisKeys
+from meg.core.events import AlertMessage, PositionState, RedisKeys
 from meg.db.models import Position
 
 from .conftest import (
@@ -396,3 +396,73 @@ async def test_whale_exit_empty_contributing_wallets(mock_redis, test_config, db
     )
     exiting = await position_manager._detect_whale_exit(pos, db_session)
     assert exiting is False
+
+
+# ── Alert publish ─────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_close_position_publishes_alert(mock_redis, test_config):
+    """Closing a position publishes an AlertMessage to CHANNEL_BOT_ALERTS."""
+    pos = make_position_state(position_id="pos_alert_close")
+    pos_json = pos.model_dump_json()
+    await mock_redis.hset(RedisKeys.open_positions(), pos.position_id, pos_json)
+    await mock_redis.set(RedisKeys.position(pos.position_id), pos_json)
+    await mock_redis.set(
+        RedisKeys.market_exposure_usdc(pos.market_id), str(pos.size_usdc)
+    )
+
+    pubsub = mock_redis.pubsub()
+    await pubsub.subscribe(RedisKeys.CHANNEL_BOT_ALERTS)
+    await pubsub.get_message(timeout=1)  # subscription confirmation
+
+    await position_manager.close_position(pos.position_id, 0.60, mock_redis)
+
+    msg = await pubsub.get_message(timeout=1)
+    assert msg is not None
+    alert = AlertMessage.model_validate_json(msg["data"])
+    assert alert.alert_type == "position_closed"
+    assert alert.urgent is False
+    assert pos.market_id in alert.message
+    await pubsub.unsubscribe()
+
+
+@pytest.mark.asyncio
+async def test_whale_exit_alert_published(mock_redis, test_config, db_session):
+    """Whale exit detected during monitoring → AlertMessage with alert_type='whale_exit' published."""
+    from datetime import datetime, timezone
+
+    now_ms = int(time.time() * 1000)
+    pos = make_position_state(
+        position_id="pos_whale_exit_alert",
+        outcome="YES",
+        contributing_wallets=["0xWHALE001"],
+    )
+    pos = pos.model_copy(update={"opened_at_ms": now_ms - 60_000})  # opened 1min ago
+    await add_position_to_redis(mock_redis, pos)
+    await set_market_redis_data(mock_redis, mid_price=0.55)
+
+    # Whale sells NO (opposite of our YES) after we opened — triggers whale exit
+    await insert_trade_record(
+        db_session,
+        wallet_address="0xWHALE001",
+        market_id="market_001",
+        outcome="NO",
+        traded_at=datetime.now(tz=timezone.utc),
+    )
+
+    pubsub = mock_redis.pubsub()
+    await pubsub.subscribe(RedisKeys.CHANNEL_BOT_ALERTS)
+    await pubsub.get_message(timeout=1)  # subscription confirmation
+
+    await position_manager._check_all_positions(
+        mock_redis, test_config, session=db_session, check_whale_exit=True
+    )
+
+    msg = await pubsub.get_message(timeout=1)
+    assert msg is not None
+    alert = AlertMessage.model_validate_json(msg["data"])
+    assert alert.alert_type == "whale_exit"
+    assert alert.urgent is False
+    assert pos.market_id in alert.message
+    await pubsub.unsubscribe()

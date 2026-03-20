@@ -323,3 +323,45 @@ async def test_db_error_fails_open(mock_redis, test_config):
     )
     assert is_trap is False
     assert reason == ""
+
+
+# ── Alert publish on trap detection ───────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_trap_publishes_alert_to_bot_alerts_channel(mock_redis, test_config, db_session):
+    """Trap detection publishes an urgent AlertMessage to CHANNEL_BOT_ALERTS."""
+    from meg.core.events import AlertMessage
+
+    now = datetime.now(tz=timezone.utc)
+    await insert_trade_record(
+        db_session,
+        wallet_address="0xWHALE001",
+        market_id="market_001",
+        outcome="YES",
+        size_usdc=10_000,
+        traded_at=now,
+    )
+    await insert_trade_record(
+        db_session,
+        wallet_address="0xWHALE001",
+        market_id="market_001",
+        outcome="NO",
+        size_usdc=6_000,
+        traded_at=now + timedelta(minutes=10),
+    )
+
+    pubsub = mock_redis.pubsub()
+    await pubsub.subscribe(RedisKeys.CHANNEL_BOT_ALERTS)
+    await pubsub.get_message(timeout=1)  # subscription confirmation
+
+    signal = make_signal_event(triggering_wallet="0xWHALE001", market_id="market_001")
+    await trap_detector.check(signal, mock_redis, test_config, db_session)
+
+    msg = await pubsub.get_message(timeout=1)
+    assert msg is not None
+    alert = AlertMessage.model_validate_json(msg["data"])
+    assert alert.alert_type == "trap"
+    assert alert.urgent is True
+    assert signal.signal_id[:8] in alert.message or "trap" in alert.message.lower()
+    await pubsub.unsubscribe()
