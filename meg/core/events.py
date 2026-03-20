@@ -10,6 +10,7 @@ Event flow:
   pre_filter    →  QualifiedWhaleTrade   → CHANNEL_QUALIFIED_WHALE_TRADES
   signal_engine →  SignalEvent           → CHANNEL_SIGNAL_EVENTS
   agent_core    →  TradeProposal         → CHANNEL_TRADE_PROPOSALS
+  any_layer     →  AlertMessage          → CHANNEL_BOT_ALERTS (consumed by telegram/bot._alert_loop)
 
 Dependency rule: meg.core imports nothing from meg. It is the base of the
 dependency tree. All other layers import from meg.core; none import each other.
@@ -229,6 +230,29 @@ class TradeProposal(BaseModel):
     contributing_wallets: list[str] = Field(default_factory=list)
     market_price_at_signal: float = 0.0       # whale's fill price; base for entry distance
     estimated_half_life_minutes: float = 0.0  # edge decay estimate shown at approval
+    # Fields populated by decision_agent at proposal-build time for operator display:
+    current_price: float = 0.0        # live market mid-price when proposal was created
+    estimated_slippage: float = 0.0   # proxy: size_usdc / liquidity_usdc (fail-closed at 1.0)
+
+
+class AlertMessage(BaseModel):
+    """
+    Alert published to CHANNEL_BOT_ALERTS by any layer that needs to notify operators.
+    Consumed by telegram/bot._alert_loop() which calls send_alert() on receipt.
+
+    Publishers (all in agent_core — no layer coupling: just a Redis publish to a known channel):
+      decision_agent  → "circuit_breaker"  when daily loss gate fires
+      trap_detector   → "trap"             when a whale trap is detected on a signal
+      position_manager → "position_closed" when a position is closed with P&L result
+      position_manager → "whale_exit"      when a contributing whale starts selling
+
+    urgent: True prefixes the Telegram message with "🚨 URGENT:" — reserved for
+    circuit_breaker and trap (capital at risk). position_closed and whale_exit are INFO.
+    """
+
+    alert_type: Literal["circuit_breaker", "trap", "position_closed", "whale_exit"]
+    message: str
+    urgent: bool = False
 
 
 class PositionState(BaseModel):
@@ -328,6 +352,8 @@ class RedisKeys:
     CHANNEL_SIGNAL_EVENTS: str = "signal_events"
     CHANNEL_TRADE_PROPOSALS: str = "trade_proposals"
     CHANNEL_WALLET_PENALTIES: str = "wallet_penalties"
+    # Operator alert channel: AlertMessage JSON published by any layer, consumed by bot._alert_loop.
+    CHANNEL_BOT_ALERTS: str = "bot_alerts"
 
     # ── Key builders ──────────────────────────────────────────────────────────
     @staticmethod

@@ -50,7 +50,7 @@ from meg.agent_core import (
     trap_detector,
 )
 from meg.core.config_loader import MegConfig
-from meg.core.events import RedisKeys, SignalEvent, TradeProposal
+from meg.core.events import AlertMessage, RedisKeys, SignalEvent, TradeProposal
 from meg.db.models import SignalOutcome
 
 logger = structlog.get_logger(__name__)
@@ -117,6 +117,16 @@ async def evaluate(
             signal_id=signal.signal_id,
             reason=risk_reason,
         )
+        # Circuit breaker fires → alert operators immediately (PRD §10 URGENT)
+        if risk_reason.startswith(risk_controller.CIRCUIT_BREAKER_REASON_PREFIX):
+            await _publish_alert(
+                redis,
+                AlertMessage(
+                    alert_type="circuit_breaker",
+                    message=f"🛑 Circuit breaker triggered. {risk_reason}. All new signals halted. Use /resume to restart.",
+                    urgent=True,
+                ),
+            )
         return None
 
     # ── Trap detector — warn-only (PRD §9.4.2: operator decides) ─────────
@@ -161,7 +171,7 @@ async def evaluate(
 
     # ── All gates passed — build and publish proposal ────────────────────
 
-    proposal = _build_proposal(signal, adjusted_size, sat_score, trap_warning, config)
+    proposal = await _build_proposal(signal, adjusted_size, sat_score, trap_warning, config, redis)
 
     # Update signal_outcomes status — keep TRAP_DETECTED if trap was flagged
     if not trap_warning:
@@ -195,14 +205,43 @@ async def evaluate(
     return proposal
 
 
-def _build_proposal(
+async def _build_proposal(
     signal: SignalEvent,
     adjusted_size_usdc: float,
     saturation_score: float,
     trap_warning: bool,
     config: MegConfig,
+    redis: Redis,
 ) -> TradeProposal:
-    """Construct a TradeProposal from an approved SignalEvent."""
+    """
+    Construct a TradeProposal from an approved SignalEvent.
+
+    Reads two additional Redis keys to populate operator-facing display fields:
+      current_price      — live market mid-price (written by CLOBMarketFeed every 5s)
+      estimated_slippage — proxy: size_usdc / liquidity_usdc, fail-closed at 1.0
+                           (intentional duplication of slippage_guard.estimate_slippage()
+                           formula; importing execution layer here would violate CLAUDE.md
+                           no-layer-coupling rule)
+
+    Both fields default to 0.0 / 1.0 on Redis miss (CLOBMarketFeed may not have
+    polled a new market yet). A warning is logged on mid_price miss.
+    """
+    # Live mid-price for operator display (not used for execution — entry_filter re-checks)
+    mid_raw = await redis.get(RedisKeys.market_mid_price(signal.market_id))
+    if mid_raw is None:
+        logger.warning(
+            "decision_agent.no_mid_price_for_proposal",
+            market_id=signal.market_id,
+        )
+    current_price = float(mid_raw) if mid_raw is not None else 0.0
+
+    # Slippage proxy: size / liquidity (fail-closed at 1.0 when liquidity absent)
+    liq_raw = await redis.get(RedisKeys.market_liquidity(signal.market_id))
+    liquidity = float(liq_raw) if liq_raw else 0.0
+    estimated_slippage = (
+        min(adjusted_size_usdc / liquidity, 1.0) if liquidity > 0 else 1.0
+    )
+
     return TradeProposal(
         proposal_id=f"meg_prop_{uuid.uuid4().hex[:12]}",
         signal_id=signal.signal_id,
@@ -219,7 +258,24 @@ def _build_proposal(
         contributing_wallets=signal.contributing_wallets,
         market_price_at_signal=signal.market_price_at_signal,
         estimated_half_life_minutes=signal.estimated_half_life_minutes,
+        current_price=current_price,
+        estimated_slippage=estimated_slippage,
     )
+
+
+async def _publish_alert(redis: Redis, alert: AlertMessage) -> None:
+    """
+    Publish an AlertMessage to CHANNEL_BOT_ALERTS.
+    Wrapped in try/except — alert delivery failure must never crash the pipeline.
+    """
+    try:
+        await redis.publish(RedisKeys.CHANNEL_BOT_ALERTS, alert.model_dump_json())
+    except Exception:
+        logger.error(
+            "decision_agent.alert_publish_failed",
+            alert_type=alert.alert_type,
+            exc_info=True,
+        )
 
 
 async def _has_duplicate_position(

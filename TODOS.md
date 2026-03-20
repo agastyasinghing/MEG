@@ -732,3 +732,135 @@ Alternatively, call risk_controller's daily loss gate first, then the hard block
 **Effort:** S
 **Priority:** P3
 **Blocked by:** Nothing — but practical impact at v1 is near-zero
+
+---
+
+## [P2] Signal expiry notification mechanism
+
+**What:** Alert operators via Telegram when a pending approval proposal expires before
+it is approved or rejected. Currently the `pending_proposal` Redis key expires silently
+(TTL fires, key is gone, nobody knows).
+
+**Why:** Operators currently have no way to know that a signal fired and its approval
+window closed while they were away. A structlog entry exists, but Telegram is the
+operator's primary interface during paper trading. This gap means MEG may fire
+high-conviction signals that expire without the team ever reviewing them.
+
+**Pros:** Closes the last missing PRD §9.6 alert type (alert #5: "Signal expired before
+approval — INFO"). Enables operators to tune TTL values based on observed expiry frequency.
+
+**Cons:** Requires a non-trivial detection mechanism — Redis pub/sub can't deliver a
+notification for a key expiry with the key's value (the value is gone when the TTL fires).
+Two implementation options:
+
+Option A — Redis keyspace notifications:
+  Enable `notify-keyspace-events KEx` in Redis config (Docker Compose + prod).
+  Subscribe to `__keyevent@0__:expired` in a new bot loop. Filter for `proposal:*:pending`.
+  To recover proposal metadata (needed for the alert message), maintain a shadow hash:
+  `meg:proposal_meta:{id}` storing {market_id, outcome, score, created_at} with TTL+60s.
+  Write the shadow entry in `send_approval_request()`. On expiry event, read shadow hash,
+  send alert, delete shadow hash.
+
+Option B — Bot polling sorted set:
+  In `send_approval_request()`, also add to a ZSET `meg:pending_approvals` with score=expiry_ms.
+  Add a `_expiry_check_loop()` coroutine to `start()` that calls ZRANGEBYSCORE every 60s,
+  identifies expired members (score < now_ms), sends expiry alerts, removes members.
+  No Redis server config change needed. Adds ~30 lines to bot.py.
+
+**Recommendation:** Option B — no server config change, pure application logic.
+Implement after paper trading generates enough signal data to confirm expiry frequency.
+
+**Context:** The `pending_proposal` TTL is `config.signal.ttl_seconds` (default 7200s = 2h).
+`send_approval_request()` in `meg/telegram/bot.py` is the write point for both the pending
+key and any shadow storage. The alert should log `signal_id`, `market_id`, `composite_score`,
+and `estimated_half_life_minutes` so operators can evaluate what they missed.
+
+**Effort:** S (Option B, once design is confirmed)
+**Priority:** P2
+**Blocked by:** Paper trading data to confirm how often proposals expire before approval;
+avoid building before we know if this is a real operator pain point
+
+---
+
+## [P2] System component failure Telegram alerts
+
+**What:** Alert operators via Telegram when critical infrastructure components fail:
+RPC node down (Polygon feed), Postgres unavailable, Redis unavailable.
+
+**Why:** During paper trading and live trading, silent infrastructure failures mean MEG
+stops processing signals without any operator notification. The team may not notice for
+hours. PRD §9.6 lists "System component failure (RPC, Redis, Postgres) — URGENT" as
+alert type #3.
+
+**Pros:** Closes PRD §9.6 alert #3. Enables faster incident response. Operators on mobile
+will know MEG is down without checking logs.
+
+**Cons:** Three distinct failure modes with different constraints:
+  - RPC down: polygon_feed already has exponential backoff loop — publish AlertMessage
+    to CHANNEL_BOT_ALERTS after backoff exhaustion (N failed reconnect attempts).
+    The bot is still running when the RPC is down.
+  - Postgres down: no central failure handler exists. Connection errors surface per-module.
+    Would need a health-check task or per-module catch + publish pattern.
+  - Redis down: if Redis is completely down, CHANNEL_BOT_ALERTS is also down — the alert
+    CANNOT be delivered via pub/sub. Requires an alternative channel (direct Telegram
+    HTTP call bypassing Redis). This is a known inherent limitation of Redis-based alerting.
+
+**Implementation plan (recommended order):**
+  1. RPC alert: add to `polygon_feed._reconnect_loop()` or `PolygonFeed.run()` after
+     `_MAX_RECONNECT_SLEEP` is hit N consecutive times. Publish:
+     `AlertMessage(alert_type="circuit_breaker", message="RPC node down...", urgent=True)`
+     Note: reuse `circuit_breaker` alert_type (no new type needed) or add "system_failure"
+     to the Literal in `AlertMessage` — update all publishers and tests.
+  2. Postgres alert: add a health-check task in agent_core that pings the DB every 60s
+     and publishes on failure.
+  3. Redis fallback: implement a direct `httpx` POST to Telegram Bot API as a last-resort
+     fallback when `redis.publish()` itself raises ConnectionError in `_publish_alert()`.
+     This bypasses pub/sub and reaches the operator even when Redis is down.
+
+**Context:** `CHANNEL_BOT_ALERTS` and `AlertMessage` are now in `meg/core/events.py`.
+The `AlertMessage.alert_type` Literal may need a "system_failure" value added for this.
+`polygon_feed.py` already imports `meg.core.events` — adding a Redis publish there is
+consistent with the no-layer-coupling rule (it's just a publish, not an import from telegram).
+
+**Effort:** S (RPC only) → M (all three, with Redis fallback)
+**Priority:** P2
+**Blocked by:** Paper trading validation — confirm which failure mode is most common first
+
+---
+
+## [P2] rejection_reason durable storage in signal_outcomes
+
+**What:** Add a `rejection_reason VARCHAR` column to the `signal_outcomes` table and write
+the operator's rejection reason when a proposal is rejected via `/reject {id} {reason}` or
+the inline Reject button.
+
+**Why:** Rejection reasons are currently log-only (structlog). Over time, understanding WHY
+operators reject proposals is critical for tuning the signal engine: if operators are always
+rejecting because "entry too far from whale fill", that suggests the entry_distance_pct
+threshold in entry_filter needs tightening. Without durable storage, this data is lost when
+logs are rotated.
+
+**Pros:** Enables rejection analytics via the dashboard (Phase 9). Connects operator feedback
+to signal calibration. Makes signal_outcomes a complete training dataset (EXECUTED, FILTERED,
+BLOCKED, REJECTED with reasons).
+
+**Cons:** Requires an Alembic migration. The outcome-logging pipeline (composite_scorer →
+signal_outcomes INSERT; decision_agent → status UPDATE) must be extended to handle rejection
+from the bot layer — which means bot.py would need to write to signal_outcomes, creating a
+cross-layer DB write from telegram to DB. Options:
+  a) Bot publishes a "proposal_rejected" event to a new Redis channel; agent_core consumes it
+     and writes to signal_outcomes (cleanest, no layer coupling).
+  b) Bot calls a new `signal_outcomes.record_rejection(signal_id, reason, session)` function
+     — requires session injection into the bot layer (complex).
+
+**Context:** Current `rejection_reason` logging location:
+  - Inline button: `bot.proposal_rejected` structlog, `rejection_reason="rejected_via_button"`
+  - /reject command: `bot.proposal_rejected` structlog, `rejection_reason={operator_text}`
+The TradeProposal carries `signal_id` — this is the key for the signal_outcomes UPDATE.
+Option (a) above is the recommended architecture: new `CHANNEL_PROPOSAL_OUTCOMES` Redis
+channel with a `ProposalOutcome` event model in `meg/core/events.py`.
+
+**Effort:** M (migration + channel + consumer)
+**Priority:** P2
+**Blocked by:** Dashboard phase (Phase 9) — rejection analytics are only useful with a UI;
+signal_outcomes write pipeline must be stable first
