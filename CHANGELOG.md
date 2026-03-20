@@ -3,6 +3,51 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.14.0] - 2026-03-20
+
+### Added
+- `meg/telegram/bot.py` — `_alert_loop()` subscribes to `CHANNEL_BOT_ALERTS` and forwards
+  `AlertMessage` JSON to `send_alert()`. `urgent=True` alerts are prefixed with "🚨 URGENT:".
+  Reconnect pattern mirrors `_subscriber_loop` (exponential backoff, cap 60s). Both loops
+  run concurrently via `asyncio.TaskGroup` in `start()`.
+- `meg/telegram/bot.py` — `handle_reject_command()` for `/reject {proposal_id} {reason}` operator
+  command. Auth-gated (same check as `/pause`/`/resume`). Uses `redis.getdel()` atomic get+delete.
+  Logs rejection reason via structlog (durable storage deferred to TODOS.md).
+- `meg/telegram/bot.py` — `_is_authorized(uid)` module-level helper centralises the
+  `_authorized_ids` check used by `_cb` closure and `handle_reject_command()`.
+- `meg/core/events.py` — `AlertMessage` Pydantic model with `alert_type` Literal and `urgent` flag.
+  `CHANNEL_BOT_ALERTS` Redis channel constant. Two new `TradeProposal` display fields:
+  `current_price` and `estimated_slippage`.
+- `meg/agent_core/decision_agent.py` — `_build_proposal()` made async; reads live
+  `market_mid_price` and `market_liquidity` from Redis to populate `current_price` and
+  `estimated_slippage` on every proposal. Circuit breaker rejection now publishes an urgent
+  `AlertMessage` to `CHANNEL_BOT_ALERTS`.
+- `meg/agent_core/trap_detector.py` — publishes urgent `AlertMessage(alert_type="trap")` to
+  `CHANNEL_BOT_ALERTS` on every detected whale trap.
+- `meg/agent_core/position_manager.py` — publishes `AlertMessage(alert_type="position_closed")`
+  on close with P&L result; publishes `AlertMessage(alert_type="whale_exit")` when contributing
+  whale selling is detected in `_check_single_position`.
+- `meg/agent_core/risk_controller.py` — `CIRCUIT_BREAKER_REASON_PREFIX` constant exported for
+  use by `decision_agent` to detect circuit breaker rejections without string guessing.
+- `_format_proposal()` — shows `current_price`, `estimated_slippage`, and `entry_distance_pct`
+  (distance from whale fill price) in the Telegram approval message.
+- Inline button `_cb` closure in `start()` extended with auth check before dispatching to
+  `handle_approval_callback()`.
+
+### Changed
+- `start()` now runs `_subscriber_loop` and `_alert_loop` concurrently via `asyncio.TaskGroup`
+  instead of running only `_subscriber_loop` directly.
+
+### Added (tests)
+- `tests/telegram/test_bot.py` — 13 new tests: `_alert_loop` (valid dispatch, urgent prefix,
+  invalid JSON skip, ConnectionError reconnect), `_cb` auth (unauthorized blocked, empty
+  `_authorized_ids` allows all), `handle_reject_command` (valid, unknown proposal, missing args,
+  unauthorized), `_format_proposal` (current_price, slippage, entry_distance_pct shown).
+- `tests/agent_core/test_decision_agent.py` — circuit breaker alert publish + Redis miss fallback.
+- `tests/agent_core/test_position_manager.py` — `position_closed` alert publish + `whale_exit`
+  alert publish via `_check_all_positions`.
+- `tests/agent_core/test_trap_detector.py` — trap alert publish to `CHANNEL_BOT_ALERTS`.
+
 ## [0.1.13.0] - 2026-03-20
 
 ### Added
