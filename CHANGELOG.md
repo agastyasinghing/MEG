@@ -3,6 +3,21 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.16.0] - 2026-03-20
+
+### Changed
+- `Scene.jsx` — fully scroll-driven architecture: 6-waypoint camera journey (far → jaw → eye → head →
+  dorsal → tail), scroll 0–20% scrubs bite animation time directly (`action.time = offset * duration`),
+  crossfades to swim/circle at 20%. Fog density reduced from 0.02 to 0.004 for visibility at Z=40 start.
+- `Scene.jsx` — fuzzy clip resolution via `findClip()` — keyword list fallback prevents silent miss on
+  non-standard GLB clip names. Action refs (`biteRef`, `swimRef`, `circleRef`) avoid stale closures in
+  `useFrame`. Always starts `swim` in `useEffect` to prevent degenerate bind-pose on initial render.
+- `Scene.jsx` — camera `desiredPos`/`desiredLook` pre-allocated as `useRef` (zero per-frame heap
+  allocations). One-shot guard on `sharkRef` null warning (`warnedRef`). Dead unreachable else branch
+  removed from bite-exit block.
+- `App.jsx` — camera initial position set to `[0, 0, 40]` to match WAYPOINTS[0]. Outer `<Suspense>`
+  wrapper removed (Suspense now lives inside Scene around `<Shark />`).
+
 ## [0.1.15.0] - 2026-03-20
 
 ### Added
