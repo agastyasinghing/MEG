@@ -102,18 +102,56 @@ const MOCK = {
   })(),
 }
 
-// ── SVG P&L line chart — no chart libraries ──────────────────────────────────
+// ── Empty data — shown when API returns no data ──────────────────────────────
+// Set DEMO_EMPTY = true to preview all empty states in the browser.
 
-function PnLChart({ data }) {
+const DEMO_EMPTY = false
+
+const EMPTY = {
+  approvalQueue: [],
+  signalFeed: [],
+  systemStatus: null,
+  positions: [],
+  pnlHistory: [],
+}
+
+const data = DEMO_EMPTY ? EMPTY : MOCK
+
+// ── SVG P&L line chart — handles both live data and empty (flat-zero) state ──
+
+function PnLChart({ data: chartData }) {
   const W = 280
   const H = 80
   const PAD = 4
-  const min = Math.min(...data)
-  const max = Math.max(...data)
+
+  // Empty state: dashed flat line + "No trades yet" overlay
+  if (!chartData || chartData.length === 0) {
+    const midY = (H / 2).toFixed(1)
+    return (
+      <div className="pnl-chart-wrap">
+        <svg viewBox={`0 0 ${W} ${H}`} className="pnl-chart" preserveAspectRatio="none">
+          <line
+            x1={PAD}
+            y1={midY}
+            x2={W - PAD}
+            y2={midY}
+            stroke="rgba(0, 212, 255, 0.18)"
+            strokeWidth="1.5"
+            strokeDasharray="5 5"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="pnl-no-trades">No trades yet</div>
+      </div>
+    )
+  }
+
+  const min = Math.min(...chartData)
+  const max = Math.max(...chartData)
   const range = max - min || 1
 
-  const pts = data.map((v, i) => ({
-    x: PAD + (i / (data.length - 1)) * (W - PAD * 2),
+  const pts = chartData.map((v, i) => ({
+    x: PAD + (i / (chartData.length - 1)) * (W - PAD * 2),
     y: PAD + (1 - (v - min) / range) * (H - PAD * 2),
   }))
 
@@ -125,7 +163,7 @@ function PnLChart({ data }) {
     linePath +
     ` L ${pts[pts.length - 1].x.toFixed(1)} ${H} L ${pts[0].x.toFixed(1)} ${H} Z`
 
-  const finalPnl = data[data.length - 1]
+  const finalPnl = chartData[chartData.length - 1]
   const color = finalPnl >= 0 ? '#00ff88' : '#ff4466'
 
   return (
@@ -156,6 +194,8 @@ export default function App() {
   // PanelController inside the Canvas updates opacity directly — zero re-renders.
   const panelRefs = useRef([null, null, null, null, null])
 
+  const { approvalQueue, signalFeed, systemStatus, positions, pnlHistory } = data
+
   return (
     <div className="app">
       {/* ── Full-screen R3F canvas ── */}
@@ -179,27 +219,31 @@ export default function App() {
           <h2 className="panel-title">Approval Queue</h2>
         </div>
         <div className="panel-body">
-          {MOCK.approvalQueue.map((p) => (
-            <div key={p.market_id} className={`trade-row${p.trap_warning ? ' trap' : ''}`}>
-              <div className="row-head">
-                <span className="market-id">{p.market_id}</span>
-                <span className={`badge outcome-${p.outcome}`}>{p.outcome}</span>
-                {p.trap_warning && <span className="trap-badge">⚠ TRAP</span>}
-              </div>
-              <div className="row-metrics">
-                <div className="metric">
-                  <span className="metric-label">Score</span>
-                  <span className="metric-value accent">
-                    {(p.composite_score * 100).toFixed(0)}
-                  </span>
+          {approvalQueue.length === 0 ? (
+            <div className="empty-state">No pending proposals</div>
+          ) : (
+            approvalQueue.map((p) => (
+              <div key={p.market_id} className={`trade-row${p.trap_warning ? ' trap' : ''}`}>
+                <div className="row-head">
+                  <span className="market-id">{p.market_id}</span>
+                  <span className={`badge outcome-${p.outcome}`}>{p.outcome}</span>
+                  {p.trap_warning && <span className="trap-badge">⚠ TRAP</span>}
                 </div>
-                <div className="metric">
-                  <span className="metric-label">Size</span>
-                  <span className="metric-value">${p.suggested_size_usdc}</span>
+                <div className="row-metrics">
+                  <div className="metric">
+                    <span className="metric-label">Score</span>
+                    <span className="metric-value accent">
+                      {(p.composite_score * 100).toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="metric">
+                    <span className="metric-label">Size</span>
+                    <span className="metric-value">${p.suggested_size_usdc}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
@@ -214,23 +258,30 @@ export default function App() {
           <h2 className="panel-title">Signal Feed</h2>
         </div>
         <div className="panel-body">
-          {MOCK.signalFeed.map((s) => (
-            <div key={s.signal_id} className="signal-row">
-              <div className="row-head">
-                <span className="signal-id">{s.signal_id}</span>
-                <span className={`badge status-${s.status}`}>{s.status}</span>
-              </div>
-              <div className="row-head" style={{ marginTop: 4 }}>
-                <span className="market-id">{s.market_id}</span>
-                <span className="metric-value accent">
-                  {(s.composite_score * 100).toFixed(0)}
-                </span>
-              </div>
-              <div className="signal-time">
-                {new Date(s.fired_at).toLocaleTimeString()}
-              </div>
+          {signalFeed.length === 0 ? (
+            <div className="empty-state">
+              <span className="pulse-dot" />
+              Waiting for signals...
             </div>
-          ))}
+          ) : (
+            signalFeed.map((s) => (
+              <div key={s.signal_id} className="signal-row">
+                <div className="row-head">
+                  <span className="signal-id">{s.signal_id}</span>
+                  <span className={`badge status-${s.status}`}>{s.status}</span>
+                </div>
+                <div className="row-head" style={{ marginTop: 4 }}>
+                  <span className="market-id">{s.market_id}</span>
+                  <span className="metric-value accent">
+                    {(s.composite_score * 100).toFixed(0)}
+                  </span>
+                </div>
+                <div className="signal-time">
+                  {new Date(s.fired_at).toLocaleTimeString()}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -248,30 +299,46 @@ export default function App() {
           <div className="status-grid">
             <div className="status-item">
               <span className="metric-label">Pipeline</span>
-              <span className={`status-val ${MOCK.systemStatus.is_paused ? 'warn' : 'pos'}`}>
-                {MOCK.systemStatus.is_paused ? 'PAUSED' : 'LIVE'}
-              </span>
+              {systemStatus ? (
+                <span className={`status-val ${systemStatus.is_paused ? 'warn' : 'pos'}`}>
+                  {systemStatus.is_paused ? 'PAUSED' : 'LIVE'}
+                </span>
+              ) : (
+                <span className="status-dash">—</span>
+              )}
             </div>
             <div className="status-item">
               <span className="metric-label">Mode</span>
-              <span className="status-val accent">
-                {MOCK.systemStatus.paper_trading ? 'PAPER' : 'LIVE'}
-              </span>
+              {systemStatus ? (
+                <span className="mode-badge">
+                  {systemStatus.paper_trading ? 'PAPER' : 'LIVE'}
+                </span>
+              ) : (
+                <span className="mode-badge">PAPER</span>
+              )}
             </div>
             <div className="status-item">
               <span className="metric-label">Last Block</span>
-              <span className="metric-value">
-                {MOCK.systemStatus.last_block_processed.toLocaleString()}
-              </span>
+              {systemStatus ? (
+                <span className="metric-value">
+                  {systemStatus.last_block_processed.toLocaleString()}
+                </span>
+              ) : (
+                <span className="status-dash">—</span>
+              )}
             </div>
             <div className="status-item">
               <span className="metric-label">Daily P&L</span>
-              <span
-                className={`metric-value ${MOCK.systemStatus.daily_pnl_usdc >= 0 ? 'pos' : 'neg'}`}
-              >
-                {MOCK.systemStatus.daily_pnl_usdc >= 0 ? '+' : ''}$
-                {MOCK.systemStatus.daily_pnl_usdc.toFixed(2)}
-              </span>
+              {systemStatus ? (
+                <span
+                  className={`metric-value ${systemStatus.daily_pnl_usdc >= 0 ? 'pos' : 'neg'}`}
+                >
+                  {systemStatus.daily_pnl_usdc >= 0 ? '+' : ''}$
+                  {systemStatus.daily_pnl_usdc.toFixed(2)}
+                </span>
+              ) : (
+                <span className="status-dash">—</span>
+              )}
             </div>
           </div>
         </div>
@@ -288,33 +355,37 @@ export default function App() {
           <h2 className="panel-title">Open Positions</h2>
         </div>
         <div className="panel-body">
-          {MOCK.positions.map((p) => (
-            <div key={`${p.market_id}-${p.outcome}`} className="position-row">
-              <div className="row-head">
-                <span className="market-id">{p.market_id}</span>
-                <span className={`badge outcome-${p.outcome}`}>{p.outcome}</span>
+          {positions.length === 0 ? (
+            <div className="empty-state">No open positions</div>
+          ) : (
+            positions.map((p) => (
+              <div key={`${p.market_id}-${p.outcome}`} className="position-row">
+                <div className="row-head">
+                  <span className="market-id">{p.market_id}</span>
+                  <span className={`badge outcome-${p.outcome}`}>{p.outcome}</span>
+                </div>
+                <div className="row-metrics">
+                  <div className="metric">
+                    <span className="metric-label">Entry</span>
+                    <span className="metric-value">{p.entry_price.toFixed(2)}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metric-label">Current</span>
+                    <span className="metric-value">{p.current_price.toFixed(2)}</span>
+                  </div>
+                  <div className="metric">
+                    <span className="metric-label">Unrealized</span>
+                    <span
+                      className={`metric-value ${p.unrealized_pnl_pct >= 0 ? 'pos' : 'neg'}`}
+                    >
+                      {p.unrealized_pnl_pct >= 0 ? '+' : ''}
+                      {p.unrealized_pnl_pct.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="row-metrics">
-                <div className="metric">
-                  <span className="metric-label">Entry</span>
-                  <span className="metric-value">{p.entry_price.toFixed(2)}</span>
-                </div>
-                <div className="metric">
-                  <span className="metric-label">Current</span>
-                  <span className="metric-value">{p.current_price.toFixed(2)}</span>
-                </div>
-                <div className="metric">
-                  <span className="metric-label">Unrealized</span>
-                  <span
-                    className={`metric-value ${p.unrealized_pnl_pct >= 0 ? 'pos' : 'neg'}`}
-                  >
-                    {p.unrealized_pnl_pct >= 0 ? '+' : ''}
-                    {p.unrealized_pnl_pct.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
@@ -331,14 +402,20 @@ export default function App() {
         <div className="panel-body">
           <div className="pnl-summary">
             <span className="metric-label">30-Day Cumulative</span>
-            <span
-              className={`metric-value lg ${MOCK.pnlHistory[MOCK.pnlHistory.length - 1] >= 0 ? 'pos' : 'neg'}`}
-            >
-              {MOCK.pnlHistory[MOCK.pnlHistory.length - 1] >= 0 ? '+' : ''}$
-              {MOCK.pnlHistory[MOCK.pnlHistory.length - 1].toFixed(2)}
-            </span>
+            {pnlHistory.length > 0 ? (
+              <span
+                className={`metric-value lg ${pnlHistory[pnlHistory.length - 1] >= 0 ? 'pos' : 'neg'}`}
+              >
+                {pnlHistory[pnlHistory.length - 1] >= 0 ? '+' : ''}$
+                {pnlHistory[pnlHistory.length - 1].toFixed(2)}
+              </span>
+            ) : (
+              <span className="metric-value lg" style={{ color: 'var(--text-dim)' }}>
+                $0.00
+              </span>
+            )}
           </div>
-          <PnLChart data={MOCK.pnlHistory} />
+          <PnLChart data={pnlHistory} />
         </div>
       </div>
     </div>
