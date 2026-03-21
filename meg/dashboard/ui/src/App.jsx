@@ -1,4 +1,4 @@
-import { useRef, Suspense } from 'react'
+import { useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { ScrollControls } from '@react-three/drei'
 import Scene from './Scene'
@@ -161,12 +161,10 @@ export default function App() {
       {/* ── Full-screen R3F canvas ── */}
       <Canvas
         gl={{ antialias: true }}
-        camera={{ fov: 45, near: 0.1, far: 200, position: [0, -0.2, 2.5] }}
+        camera={{ fov: 45, near: 0.1, far: 200, position: [0, 0, 40] }}
       >
         <ScrollControls pages={5} damping={0.25}>
-          <Suspense fallback={null}>
-            <Scene panelRefs={panelRefs} />
-          </Suspense>
+          <Scene panelRefs={panelRefs} />
         </ScrollControls>
       </Canvas>
 
