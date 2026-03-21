@@ -3,6 +3,17 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.17.0] - 2026-03-20
+
+### Added
+- `meg/dashboard/api/main.py` — FastAPI dashboard API: `GET /api/v1/positions` (Redis-first open positions), `GET /api/v1/signals` (last 50 signal outcomes from PostgreSQL), `GET /api/v1/whales` (top 20 qualified wallets by score), `GET /api/v1/markets` (active market state from Redis), `GET /api/v1/status` (system health: paused flag, daily P&L, last block, paper mode), `GET /api/v1/feed/signals` (SSE stream of real-time signal events via Redis pub/sub with 15s heartbeat).
+- `tests/dashboard/test_api.py` — 12 tests for all 6 endpoints (empty states, populated states, partial Redis keys, SSE headers + connection comment); uses FakeRedis + SQLite StaticPool, no real infrastructure required.
+- `tests/dashboard/conftest.py` — `fake_redis`, `db_engine` (SQLite StaticPool + JSONB shim), and `api_client` (httpx AsyncClient with dependency overrides) fixtures.
+
+### Changed
+- `App.jsx` — all 5 HUD panels now handle empty/null data gracefully: Approval Queue shows "No pending proposals", Signal Feed shows pulsing cyan dot + "Waiting for signals…", System Status always renders the grid with `—` for unavailable numeric values and a permanent PAPER mode badge, Open Positions shows "No open positions", P&L History renders a dashed flat line at zero with "No trades yet" overlay. Added `DEMO_EMPTY` flag for local preview.
+- `App.css` — added empty-state styles: `@keyframes pulse-cyan`, `.pulse-dot`, `.empty-state`, `.status-dash`, `.mode-badge`, `.pnl-chart-wrap`, `.pnl-no-trades`.
+
 ## [0.1.16.0] - 2026-03-20
 
 ### Changed
