@@ -3,6 +3,14 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.17.1] - 2026-03-21
+
+### Fixed
+- `App.jsx` — `DashPnLChart`: `todayPnl` now shows the last day's delta (`lastVal - prevVal`) instead of the cumulative total; `totalPnl` correctly shows the cumulative total (`lastVal`).
+- `App.css` — `.dash-pnl-wrap` gets `position: relative` so the `.dash-pnl-empty` absolute overlay anchors to the chart container rather than escaping to a parent.
+- `App.css` — `.db-hero` gets explicit `animation-delay: 0.14s, 0.5s` (two-value, one per animation-name) so the stagger delay from `.db-grid > *:nth-child(3)` no longer bleeds onto the `breathe` keyframe.
+- `Scene.jsx` — stale comment corrected: cutscene trigger is `0.97`, not `0.83`.
+
 ## [0.1.17.0] - 2026-03-20
 
 ### Added
