@@ -24,7 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.pool import StaticPool
 
-from meg.dashboard.api.main import app, db_session, get_redis
+from meg.core.config_loader import MegConfig
+from meg.dashboard.api.main import app, db_session, get_config, get_redis
 from meg.db.models import Base
 
 
@@ -68,6 +69,7 @@ async def api_client(fake_redis, db_engine) -> AsyncGenerator[AsyncClient, None]
       - db_session() → AsyncSession on the test SQLite engine
     """
     app.dependency_overrides[get_redis] = lambda: fake_redis
+    app.dependency_overrides[get_config] = lambda: MegConfig()
 
     async def _db_override() -> AsyncGenerator[AsyncSession, None]:
         async with AsyncSession(db_engine, expire_on_commit=False) as session:

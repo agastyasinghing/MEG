@@ -3,6 +3,34 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.18.0] - 2026-03-22
+
+### Added
+- `meg/dashboard/api/main.py` — 8 new API endpoints completing Phase 10 dashboard:
+  - `GET /api/v1/config` — returns full MegConfig as nested dict; loaded from YAML at startup.
+  - `PATCH /api/v1/config` — deep-merge patch with Pydantic validation, writes YAML for bot watchdog hot-reload, updates in-memory config immediately.
+  - `GET /api/v1/signals/{id}` — full signal detail including `scores_json`, `kelly_fraction`, `contributing_wallets`.
+  - `GET /api/v1/signals/{id}/explain` — human-readable score breakdown with tier labels (STRONG/MODERATE/WEAK) and composite verdict.
+  - `POST /api/v1/signals/{id}/approve` — atomic GETDEL from Redis eliminates double-click/Telegram race; delegates to `order_router.place()`; returns 409 if execution fails post-consume.
+  - `POST /api/v1/signals/{id}/reject` — atomic GETDEL with optional reason body for audit logging.
+  - `POST /api/v1/positions/{id}/exit` — sets `exit_requested` Redis flag consumed by `position_manager` monitoring loop; returns 404 if position not in open hash.
+  - `GET /api/v1/pnl` — `today` from Redis `daily_pnl_usdc`; `week`/`month`/`all_time` from DB aggregation on `positions.resolved_pnl_usdc`.
+- `GET /api/v1/signals` — now supports filter query params: `status`, `score_min`, `score_max`, `market_id`, `date_from`, `date_to`, `limit` (combined with AND).
+- `meg/core/events.py` — `RedisKeys.exit_requested(position_id)` key method.
+- `meg/dashboard/ui/src/App.jsx` — wired to real API: `Promise.allSettled` parallel fetch across 5 endpoints every 10s; `adaptData()` maps API responses onto UI shape with MOCK seed fallback; `handleApprove`/`handleReject` with optimistic UI updates; PAPER TRADING persistent banner (PRD §14).
+- `meg/dashboard/ui/src/App.css` — `.paper-trading-banner` styles (amber, fixed top, `z-index: 100`).
+- `tests/dashboard/test_api.py` — 22 new tests covering all new endpoints; `make_db_position()` and `make_proposal()` helpers added.
+- `tests/dashboard/conftest.py` — `get_config` dependency override added (returns `MegConfig()` defaults).
+- `TODOS.md` — 5 deferred items from plan review: Vitest frontend tests, Redis config store migration, X-MEG-Key auth/rate limiting, PnL equity-curve endpoint, SSE feed endpoints.
+
+### Changed
+- `CORS allow_methods` expanded from `["GET"]` to `["GET", "POST", "PATCH"]`.
+- `GET /api/v1/whales` response now includes `roi_all_time`, `avg_conviction_ratio`, `reputation_decay_factor`, `total_volume_usdc`.
+
+### Fixed
+- `App.jsx adaptData` — `primarySignal` now correctly nulled whenever pending queue is empty (was gated on signalFeed state, causing stale primary signal after external Telegram approval).
+- `reject_signal` endpoint — `body` parameter changed from mutable `dict = {}` to `Optional[dict] = None` for correct FastAPI convention.
+
 ## [0.1.17.1] - 2026-03-21
 
 ### Fixed

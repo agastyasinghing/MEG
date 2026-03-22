@@ -864,3 +864,178 @@ channel with a `ProposalOutcome` event model in `meg/core/events.py`.
 **Priority:** P2
 **Blocked by:** Dashboard phase (Phase 9) — rejection analytics are only useful with a UI;
 signal_outcomes write pipeline must be stable first
+
+---
+
+## [P2] Vitest + React Testing Library for dashboard frontend
+
+**What:** Set up Vitest (or Jest) + React Testing Library in `meg/dashboard/ui/` and write
+tests for the key frontend behaviours added in Phase 10: `adaptData()` shape mapping,
+`handleApprove`/`handleReject` optimistic updates, the paper-trading banner conditional
+render, and `fetchAll` partial-failure tolerance.
+
+**Why:** The frontend has zero automated tests. Any regression in the API wiring or UI
+state logic is only caught manually. `adaptData()` in particular has non-trivial field
+mapping and fallback logic that is easy to silently break.
+
+**Pros:** Catches regressions in the API→UI data mapping without needing a running server.
+RTL `userEvent.click` tests for approve/reject cover the optimistic-update flow that is
+otherwise invisible to the backend test suite.
+
+**Cons:** Vitest needs `jsdom` environment; some React hooks require mocking `fetch`.
+Small upfront setup cost (~1 hr for config + first test file).
+
+**Context:** The five behaviours to test (in priority order):
+1. `adaptData()` — given a signals API response, assert the mapped shape (market_name
+   fallback, urgency threshold, time_ago format, stance default).
+2. Paper-trading banner — renders when `systemStatus === null` or `paper_trading: true`;
+   hidden when `paper_trading: false`.
+3. `handleApprove` — calls `POST /api/v1/signals/{id}/approve`, removes signal from
+   `approvalQueue` on success, reverts on non-2xx.
+4. `handleReject` — same pattern as approve.
+5. `fetchAll` with one failed endpoint — remaining panels still update (Promise.allSettled
+   behaviour).
+Test file target: `meg/dashboard/ui/src/App.test.jsx`.
+
+**Effort:** S (config) + M (test writing)
+**Priority:** P2
+**Blocked by:** None — can be added in any follow-up PR
+
+---
+
+## [P2] Redis config store — align PATCH /api/v1/config with PRD §15
+
+**What:** PRD §15 specifies that hot config changes should be stored in Redis
+(`config:live` key) so all processes read from the same authoritative source, not from
+a YAML file on disk. Currently, `PATCH /api/v1/config` writes to the YAML file only and
+the dashboard's in-memory `_config` is updated immediately, but other processes (e.g.
+signal_engine, agent_core) rely on the ConfigLoader file-watcher to pick up changes —
+creating a propagation window of up to `poll_interval` seconds.
+
+**Why:** In a multi-process deployment (each layer runs in its own container), the YAML
+file may be on a local filesystem that is not shared. Redis is already the shared bus;
+storing config there closes the propagation gap and removes the file-watch dependency.
+
+**Pros:** All processes see config changes within one Redis round-trip. Removes file-system
+coupling between the API container and the worker containers.
+
+**Cons:** Requires updating `ConfigLoader.load()` to check Redis first (fallback to YAML).
+Any process that starts before the dashboard writes the initial Redis key falls back to
+YAML — need a startup bootstrapping step.
+
+**Context:** `meg/core/config_loader.py` already has `MegConfig` with full Pydantic
+validation. The migration path is:
+1. On `PATCH /api/v1/config`, after writing YAML, also `redis.set("config:live", json)`.
+2. In `ConfigLoader.load()`, check `redis.get("config:live")` first; fall back to YAML.
+3. Hot-reload watchdog can watch the Redis key instead of (or in addition to) the file.
+Redis key: `config:live` (string, JSON-serialised MegConfig).
+
+**Effort:** M
+**Priority:** P2
+**Blocked by:** Multi-container deployment setup (currently all processes share one fs)
+
+---
+
+## [P1] X-MEG-Key auth + rate limiting on dashboard API
+
+**What:** Add `X-MEG-Key` header authentication and per-IP rate limiting to all
+`/api/v1/` endpoints, as specified in PRD §13.
+
+**Why:** The dashboard API is currently open — any process that can reach the port can
+call approve/reject/config endpoints. This is acceptable during paper trading on localhost
+but is a hard blocker before any internet-exposed or multi-operator deployment.
+
+**Pros:** Prevents unauthorized signal approvals and config changes. Rate limiting prevents
+accidental DOS from a misbehaving frontend poll loop. PRD §13 specifies this explicitly.
+
+**Cons:** Key rotation requires a config change or restart. Stateless key check (no DB
+lookup) is fast but cannot be revoked without a restart unless keys are stored in Redis.
+
+**Context:** Implementation:
+1. Add `MEG_API_KEY` env var (already in `.env.example` placeholder list).
+2. FastAPI dependency `verify_api_key(x_meg_key: str = Header(...))` — compare with
+   `hmac.compare_digest` to prevent timing attacks.
+3. Add `slowapi` or a custom Redis-backed rate limiter (e.g. 60 req/min per IP).
+4. Apply both to all non-health-check routes via `app.dependency_overrides` or a router
+   dependency.
+5. Update `tests/dashboard/test_api.py` to pass the key header in all client calls, and
+   add a 401 test for missing/wrong key.
+Rate limit target from PRD §13: 120 req/min per IP on read endpoints, 10 req/min on
+approve/reject/config-patch.
+
+**Effort:** S–M
+**Priority:** P1 (before any non-localhost deployment)
+**Blocked by:** None — self-contained change
+
+---
+
+## [P2] GET /api/v1/pnl/equity-curve endpoint
+
+**What:** Add a `GET /api/v1/pnl/equity-curve` endpoint that returns a time-series of
+cumulative PnL (one data point per closed position, sorted by `closed_at`) suitable for
+rendering a chart in the dashboard.
+
+**Why:** The current `GET /api/v1/pnl` returns scalar aggregates (today/week/month/all-time).
+The PRD §9.6 "PnL panel" implies a sparkline/equity-curve view. Without this endpoint,
+the frontend cannot render a chart — it can only show numbers.
+
+**Pros:** Enables the equity-curve chart in the dashboard without any schema changes.
+All data is already in the `positions` table (`resolved_pnl_usdc`, `closed_at`).
+
+**Cons:** For large position histories (>10k rows), a full table scan is slow. Needs a
+`LIMIT` + optional `from_date` param and a covering index on `(closed_at, resolved_pnl_usdc)`.
+
+**Context:** Query sketch:
+```sql
+SELECT closed_at, SUM(resolved_pnl_usdc) OVER (ORDER BY closed_at) AS cumulative_pnl
+FROM positions
+WHERE status IN ('CLOSED', 'EXITED') AND closed_at IS NOT NULL
+ORDER BY closed_at
+LIMIT 500;
+```
+Index needed: `ix_positions_closed_at` on `positions.closed_at`.
+Add endpoint to `meg/dashboard/api/main.py` and a test in `tests/dashboard/test_api.py`.
+
+**Effort:** S
+**Priority:** P2
+**Blocked by:** Sufficient closed positions in paper trading to make the chart useful
+
+---
+
+## [P2] SSE feed endpoints — /api/v1/feed/whales and /api/v1/feed/positions
+
+**What:** Add two Server-Sent Events endpoints:
+- `GET /api/v1/feed/whales` — streams `raw_whale_trade_event` from Redis pub/sub
+- `GET /api/v1/feed/positions` — streams position state changes from Redis pub/sub
+
+**Why:** The dashboard currently polls every 10 seconds. SSE would push updates immediately
+on new whale trades or position changes, making the live-trading view feel real-time.
+PRD §13 lists these as specified endpoints.
+
+**Pros:** Eliminates polling latency for the two highest-frequency data streams.
+FastAPI's `StreamingResponse` + `asyncio` makes SSE straightforward to implement.
+
+**Cons:** Each SSE connection holds an open HTTP connection — needs connection limits.
+SSE doesn't work well behind some reverse proxies without `X-Accel-Buffering: no`.
+Harder to test than REST endpoints (requires async generator testing).
+
+**Context:** Implementation sketch for one endpoint:
+```python
+@app.get("/api/v1/feed/whales")
+async def feed_whales(redis: Redis = Depends(get_redis)):
+    async def event_stream():
+        async with redis.pubsub() as ps:
+            await ps.subscribe(CHANNEL_RAW_WHALE_TRADE)
+            async for msg in ps.listen():
+                if msg["type"] == "message":
+                    yield f"data: {msg['data'].decode()}\n\n"
+    return StreamingResponse(event_stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache",
+                                      "X-Accel-Buffering": "no"})
+```
+Frontend uses `new EventSource('/api/v1/feed/whales')` to replace the polling interval
+for those two panels.
+
+**Effort:** M
+**Priority:** P2
+**Blocked by:** Auth TODO above (SSE connections need the same key check)

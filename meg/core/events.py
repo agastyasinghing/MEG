@@ -513,3 +513,12 @@ class RedisKeys:
     @staticmethod
     def pending_proposal(proposal_id: str) -> str:
         return f"proposal:{proposal_id}:pending"
+
+    # Manual exit request flag. SET by dashboard POST /positions/{id}/exit.
+    # Consumed by position_manager monitoring loop: when present, initiates close
+    # flow on next tick then DELs this key. Using Redis ensures the request survives
+    # an API restart and is processed even if the request arrives between monitor ticks.
+    # TTL: none (persists until position_manager processes it).
+    @staticmethod
+    def exit_requested(position_id: str) -> str:
+        return f"position:{position_id}:exit_requested"
