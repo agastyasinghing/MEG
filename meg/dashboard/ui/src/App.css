@@ -392,6 +392,26 @@ canvas {
   pointer-events: none;
 }
 
+/* ── PAPER TRADING banner — PRD §14 ─────────────────────────── */
+
+.paper-trading-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(255, 170, 0, 0.12);
+  border-bottom: 1px solid rgba(255, 170, 0, 0.4);
+  color: #ffaa00;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 5px 0;
+  text-transform: uppercase;
+}
+
 /* Traditional dashboard outer shell */
 .traditional-dashboard {
   display: none;

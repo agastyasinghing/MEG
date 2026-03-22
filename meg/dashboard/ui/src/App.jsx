@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { ScrollControls } from '@react-three/drei'
 import Scene from './Scene'
@@ -15,7 +15,14 @@ function seededRand(seed) {
   }
 }
 
-// ── Mock data — shapes match MEG PRD §13 API contracts ──────────────────────
+// ── API base ─────────────────────────────────────────────────────────────────
+
+const API = '/api/v1'
+
+// ── Mock / seed data — used as initial state before first API response ───────
+// Shapes match MEG PRD §13 API contracts. Real API responses override these.
+// Fields with no API equivalent (latency_ms, markets_active, telegram,
+// systemState, pnlHistory) keep their mock values until backend endpoints exist.
 
 const MOCK = {
   topBar: {
@@ -157,22 +164,124 @@ const MOCK = {
   })(),
 }
 
-// ── Empty data — shown when API returns no data ──────────────────────────────
+// ── API → UI data adapter ────────────────────────────────────────────────────
+// Maps raw API responses onto the shape the component tree expects.
+// Real values take precedence; MOCK values fill in fields with no API equivalent.
+//
+// API responses:
+//   status   → GET /api/v1/status
+//   signals  → GET /api/v1/signals   (last 50, newest first)
+//   pending  → GET /api/v1/signals?status=PENDING
+//   positions→ GET /api/v1/positions
+//   pnl      → GET /api/v1/pnl
+//
+// Data flow:
+//   Promise.allSettled([status, signals, pending, positions, pnl])
+//       │
+//   ┌───┴─────────────────────────────────────────────┐
+//   │ fulfilled → merge into liveData                 │
+//   │ rejected  → keep prior value for that section   │
+//   └─────────────────────────────────────────────────┘
+//       │
+//   setLiveData(adapted) → re-render
 
-const DEMO_EMPTY = false
+function adaptData(prev, { status, signals, pending, positions, pnl }) {
+  const next = { ...prev }
 
-const EMPTY = {
-  topBar:         MOCK.topBar,
-  primarySignal:  null,
-  approvalQueue:  [],
-  signalFeed:     [],
-  systemStatus:   null,
-  systemState:    MOCK.systemState,
-  positions:      [],
-  pnlHistory:     [],
+  // systemStatus — from GET /api/v1/status
+  if (status) {
+    next.systemStatus = {
+      is_paused:            status.is_paused,
+      paper_trading:        status.paper_trading,
+      last_block_processed: status.last_block_processed,
+      daily_pnl_usdc:       status.daily_pnl_usdc,
+    }
+    // topBar: derive LIVE/PAUSED from is_paused; keep mock for latency/markets/telegram
+    next.topBar = {
+      ...prev.topBar,
+      status: status.is_paused ? 'PAUSED' : 'LIVE',
+    }
+  }
+
+  // signalFeed — from GET /api/v1/signals
+  if (signals && Array.isArray(signals.signals)) {
+    next.signalFeed = signals.signals.map(s => ({
+      signal_id:       s.signal_id,
+      market_id:       s.market_id,
+      market_name:     s.market_id,   // market_name not yet in API; use market_id
+      outcome:         s.outcome,
+      composite_score: s.composite_score,
+      status:          s.status,
+      fired_at:        s.fired_at,
+    }))
+  }
+
+  // approvalQueue — from GET /api/v1/signals?status=PENDING
+  if (pending && Array.isArray(pending.signals)) {
+    next.approvalQueue = pending.signals.map(s => {
+      const minsAgo = Math.round((Date.now() - new Date(s.fired_at).getTime()) / 60_000)
+      const timeAgo = minsAgo < 60 ? `${minsAgo}m` : `${Math.round(minsAgo / 60)}h`
+      return {
+        market_id:           s.market_id,
+        market_name:         s.market_id,
+        outcome:             s.outcome,
+        composite_score:     s.composite_score,
+        suggested_size_usdc: s.recommended_size_usdc,
+        trap_warning:        s.trap_warning,
+        urgency:             s.composite_score >= 0.65 ? 'high' : 'normal',
+        status:              s.trap_warning ? 'TRAP' : 'TRACKING',
+        time_ago:            timeAgo,
+        signal_id:           s.signal_id,   // retained for approve/reject calls
+      }
+    })
+
+    // primarySignal — first PENDING item with full context
+    if (pending.signals.length > 0) {
+      const s = pending.signals[0]
+      next.primarySignal = {
+        market_id:           s.market_id,
+        market_name:         s.market_id,
+        outcome:             s.outcome,
+        composite_score:     s.composite_score,
+        confidence_pct:      Math.round(s.composite_score * 100),
+        edge_pct:            parseFloat(((s.composite_score - 0.5) * 100).toFixed(1)),
+        suggested_size_usdc: s.recommended_size_usdc,
+        fired_at:            s.fired_at,
+        lead_lag_hrs:        s.scores_json?.lead_lag != null
+                               ? parseFloat((s.scores_json.lead_lag * 10).toFixed(1))
+                               : 0,
+        consensus:           s.whale_count >= 3 ? 'STRONG' : s.whale_count >= 2 ? 'MODERATE' : 'WEAK',
+        trap_risk:           s.trap_warning ? 'HIGH' : s.saturation_score > 0.6 ? 'MED' : 'LOW',
+        whale_align:         s.composite_score >= 0.7 ? 'HIGH' : 'MODERATE',
+        whale_count:         s.whale_count,
+        trap_warning:        s.trap_warning,
+        signal_id:           s.signal_id,
+      }
+    } else {
+      next.primarySignal = null
+    }
+  }
+
+  // positions — from GET /api/v1/positions
+  if (positions && Array.isArray(positions.positions)) {
+    next.positions = positions.positions.map(p => ({
+      market_id:           p.market_id,
+      market_name:         p.market_id,
+      outcome:             p.outcome,
+      entry_price:         p.entry_price,
+      current_price:       p.current_price,
+      unrealized_pnl_pct:  p.unrealized_pnl_pct,
+      unrealized_pnl_usdc: p.unrealized_pnl_usdc,
+      stance:              'HOLD',          // v1: always HOLD (auto-exit not implemented)
+      position_id:         p.position_id,  // retained for exit calls
+    }))
+  }
+
+  // pnlHistory — equity curve endpoint not yet implemented; keep mock seed
+  // pnl summary from GET /api/v1/pnl is available but not rendered in pnlHistory array yet
+
+  return next
 }
-
-const data = DEMO_EMPTY ? EMPTY : MOCK
 
 // ── SVG P&L chart for HUD panel (original, unchanged) ────────────────────────
 
@@ -350,10 +459,85 @@ export default function App() {
   const canvasWrapperRef = useRef(null)
   const dashboardRef     = useRef(null)
 
+  // ── Live data state — seeded from MOCK so panels are never empty on first render
+  const [liveData, setLiveData] = useState(MOCK)
+
+  // ── API fetch + 10s poll ──────────────────────────────────────────────────
+  const fetchAll = useCallback(async () => {
+    const [statusRes, signalsRes, pendingRes, positionsRes, pnlRes] =
+      await Promise.allSettled([
+        fetch(`${API}/status`).then(r => r.ok ? r.json() : null),
+        fetch(`${API}/signals`).then(r => r.ok ? r.json() : null),
+        fetch(`${API}/signals?status=PENDING`).then(r => r.ok ? r.json() : null),
+        fetch(`${API}/positions`).then(r => r.ok ? r.json() : null),
+        fetch(`${API}/pnl`).then(r => r.ok ? r.json() : null),
+      ])
+
+    const get = res => res.status === 'fulfilled' ? res.value : null
+
+    setLiveData(prev => adaptData(prev, {
+      status:    get(statusRes),
+      signals:   get(signalsRes),
+      pending:   get(pendingRes),
+      positions: get(positionsRes),
+      pnl:       get(pnlRes),
+    }))
+  }, [])
+
+  useEffect(() => {
+    fetchAll()
+    const id = setInterval(fetchAll, 10_000)
+    return () => clearInterval(id)
+  }, [fetchAll])
+
+  // ── Approve / Reject handlers ─────────────────────────────────────────────
+  const handleApprove = useCallback(async (signalId) => {
+    if (!signalId) return
+    try {
+      const res = await fetch(`${API}/signals/${signalId}/approve`, { method: 'POST' })
+      if (res.ok) {
+        // Optimistic: remove from approval queue and clear primary signal
+        setLiveData(prev => ({
+          ...prev,
+          approvalQueue: prev.approvalQueue.filter(p => p.signal_id !== signalId),
+          primarySignal: prev.primarySignal?.signal_id === signalId ? null : prev.primarySignal,
+        }))
+      } else {
+        const err = await res.json().catch(() => ({}))
+        console.error('Approve failed:', res.status, err.detail ?? err)
+      }
+    } catch (e) {
+      console.error('Approve request error:', e)
+    }
+  }, [])
+
+  const handleReject = useCallback(async (signalId) => {
+    if (!signalId) return
+    try {
+      const res = await fetch(`${API}/signals/${signalId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'rejected_via_dashboard' }),
+      })
+      if (res.ok) {
+        setLiveData(prev => ({
+          ...prev,
+          approvalQueue: prev.approvalQueue.filter(p => p.signal_id !== signalId),
+          primarySignal: prev.primarySignal?.signal_id === signalId ? null : prev.primarySignal,
+        }))
+      } else {
+        const err = await res.json().catch(() => ({}))
+        console.error('Reject failed:', res.status, err.detail ?? err)
+      }
+    } catch (e) {
+      console.error('Reject request error:', e)
+    }
+  }, [])
+
   const {
     topBar, primarySignal, approvalQueue, signalFeed,
     systemStatus, systemState, positions, pnlHistory,
-  } = data
+  } = liveData
 
   return (
     <div className="app">
@@ -586,6 +770,16 @@ export default function App() {
       {/* ── Traditional dashboard — hidden until cutscene completes ── */}
       {/* meg-logo img is spawned dynamically by spawnAndFlyLogo in Scene.jsx */}
       <div className="traditional-dashboard" ref={dashboardRef}>
+
+        {/* ── PAPER TRADING persistent banner — PRD §14 ── */}
+        {/* Visible whenever paper_trading=true in system status.
+            Defaults to shown (systemStatus may be null before first fetch). */}
+        {(systemStatus === null || systemStatus.paper_trading) && (
+          <div className="paper-trading-banner">
+            ● PAPER TRADING — no real capital at risk
+          </div>
+        )}
+
         <div className="db-grid">
 
           {/* ── TOP BAR ── */}
@@ -735,8 +929,14 @@ export default function App() {
                 <div className="db-hero-divider" />
 
                 <div className="db-hero-actions">
-                  <button className="db-btn db-btn-approve">APPROVE</button>
-                  <button className="db-btn db-btn-reject">REJECT</button>
+                  <button
+                    className="db-btn db-btn-approve"
+                    onClick={() => handleApprove(primarySignal.signal_id)}
+                  >APPROVE</button>
+                  <button
+                    className="db-btn db-btn-reject"
+                    onClick={() => handleReject(primarySignal.signal_id)}
+                  >REJECT</button>
                 </div>
               </>
             ) : (
