@@ -3,6 +3,11 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.20.5] - 2026-04-12
+
+### Fixed
+- `meg/core/redis_client.py` — added `socket_connect_timeout=5` and `socket_timeout=5` to `RedisCluster.from_url()`, and wrapped `cluster.ping()` in `asyncio.wait_for(..., timeout=10.0)` to prevent the cluster connection from hanging indefinitely on AWS ElastiCache.
+
 ## [0.1.20.4] - 2026-04-12
 
 ### Added
