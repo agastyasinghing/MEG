@@ -114,9 +114,9 @@ class Web3RPCConnection(PolygonRPCConnection):
     async def connect(self) -> None:
         """Establish the RPC connection. Call before run()."""
         from web3 import AsyncWeb3
-        from web3.providers import WebsocketProviderV2
+        from web3.providers import WebSocketProvider
 
-        self._w3 = AsyncWeb3(WebsocketProviderV2(self._url))
+        self._w3 = AsyncWeb3(WebSocketProvider(self._url))
         if not await self._w3.is_connected():
             raise ConnectionError(f"Failed to connect to Polygon RPC: {self._url}")
         logger.info("polygon_rpc.connected", url=self._url)

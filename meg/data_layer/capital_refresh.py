@@ -104,9 +104,9 @@ class CapitalRefreshJob:
 
         # Create one connection for the whole sweep; reused by _get_usdc_balance.
         from web3 import AsyncWeb3
-        from web3.providers import WebsocketProviderV2
+        from web3.providers import WebSocketProvider
 
-        self._w3 = AsyncWeb3(WebsocketProviderV2(self._rpc_url))
+        self._w3 = AsyncWeb3(WebSocketProvider(self._rpc_url))
 
         success_count = 0
         error_count = 0
