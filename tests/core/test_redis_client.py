@@ -12,6 +12,7 @@ No real Redis process required.
 """
 from __future__ import annotations
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -32,7 +33,7 @@ async def test_create_redis_client_succeeds_on_first_ping():
 
     with patch("meg.core.redis_client.Redis") as MockRedis:
         MockRedis.from_url.return_value = mock_client
-        client = await create_redis_client("redis://localhost:6379/0")
+        client = await create_redis_client(os.environ.get("REDIS_URL", "redis://redis:6379/0"))
 
     assert client is mock_client
     mock_client.ping.assert_awaited_once()
@@ -48,7 +49,7 @@ async def test_create_redis_client_retries_on_connection_error():
         MockRedis.from_url.return_value = mock_client
         with patch("asyncio.sleep", new_callable=AsyncMock):
             with pytest.raises(RedisConnectionError):
-                await create_redis_client("redis://localhost:6379/0")
+                await create_redis_client(os.environ.get("REDIS_URL", "redis://redis:6379/0"))
 
     # 4 attempts: initial + 3 backoff retries
     assert mock_client.ping.await_count == 4
@@ -64,7 +65,7 @@ async def test_create_redis_client_raises_immediately_on_auth_error():
         MockRedis.from_url.return_value = mock_client
         with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
             with pytest.raises(AuthenticationError):
-                await create_redis_client("redis://localhost:6379/0")
+                await create_redis_client(os.environ.get("REDIS_URL", "redis://redis:6379/0"))
 
     # No sleep between attempts — raised immediately
     mock_sleep.assert_not_awaited()
@@ -82,7 +83,7 @@ async def test_create_redis_client_succeeds_after_one_retry():
     with patch("meg.core.redis_client.Redis") as MockRedis:
         MockRedis.from_url.return_value = mock_client
         with patch("asyncio.sleep", new_callable=AsyncMock):
-            client = await create_redis_client("redis://localhost:6379/0")
+            client = await create_redis_client(os.environ.get("REDIS_URL", "redis://redis:6379/0"))
 
     assert client is mock_client
     assert mock_client.ping.await_count == 2
