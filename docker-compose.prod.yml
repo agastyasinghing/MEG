@@ -1,0 +1,22 @@
+# EC2 production overlay — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bot up -d
+#
+# Overrides DATABASE_URL and REDIS_URL with the values from .env on the EC2
+# host, so containers connect to external RDS and ElastiCache instead of the
+# local Docker services defined in docker-compose.yml.
+#
+# Prerequisites on EC2:
+#   - .env contains DATABASE_URL pointing to RDS (postgresql+asyncpg://...)
+#   - .env contains REDIS_URL pointing to ElastiCache (redis://...)
+#   - Alembic migrations have been run: docker compose run --rm bot alembic upgrade head
+
+services:
+  bot:
+    environment:
+      DATABASE_URL: "${DATABASE_URL}"
+      REDIS_URL: "${REDIS_URL}"
+
+  dashboard:
+    environment:
+      DATABASE_URL: "${DATABASE_URL}"
+      REDIS_URL: "${REDIS_URL}"
