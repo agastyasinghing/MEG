@@ -9,7 +9,7 @@ Usage:
     from meg.core.redis_client import create_redis_client, publish, subscribe
     from meg.core.events import RedisKeys, RawWhaleTrade
 
-    redis = await create_redis_client(url="redis://localhost:6379/0")
+    redis = await create_redis_client(url=os.environ.get("REDIS_URL", "redis://redis:6379/0"))
 
     # Publisher (data_layer):
     await publish(redis, RedisKeys.CHANNEL_RAW_WHALE_TRADES, event.model_dump_json())

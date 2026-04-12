@@ -3,6 +3,11 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.20.2] - 2026-04-12
+
+### Fixed
+- `meg/dashboard/api/main.py` — replaced hardcoded `"redis://localhost:6379/0"` fallback (two occurrences: lifespan startup and SSE subscriber) with `"redis://redis:6379/0"`. The `localhost` fallback was silently overriding `REDIS_URL` on EC2 whenever the env var was not found, causing the dashboard to connect to a non-existent local Redis instead of ElastiCache.
+
 ## [0.1.20.1] - 2026-04-12
 
 ### Fixed
