@@ -3,6 +3,12 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.20.1] - 2026-04-12
+
+### Fixed
+- `Dockerfile` — replaced `ENV PYTHONPATH=/app` with `pip install setuptools && pip install -e .`; setuptools must be installed explicitly in `python:3.11-slim` before editable installs work, which resolves the persistent "No module named meg.main" crash on EC2.
+- `docker-compose.prod.yml` — updated header comment to document the `--profile dashboard` invocation command, making clear that the dashboard service also gets `DATABASE_URL`/`REDIS_URL` overridden from the EC2 `.env` when the prod overlay is used.
+
 ## [0.1.20.0] - 2026-04-12
 
 ### Added
