@@ -73,10 +73,13 @@ async def create_redis_client(url: str) -> Redis | RedisCluster:
                     url,
                     decode_responses=False,
                     skip_full_coverage_check=True,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
                 )
+                await asyncio.wait_for(client.ping(), timeout=10.0)
             else:
                 client = Redis.from_url(url, decode_responses=True)
-            await client.ping()
+                await client.ping()
             logger.info(
                 "redis.connected",
                 url=_redact_url(url),
