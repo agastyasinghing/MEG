@@ -24,6 +24,8 @@ Design constraints:
     in the pub/sub pipeline is a critical failure mode.
   - create_redis_client() retries 3x with exponential backoff before raising.
   - All functions use redis.asyncio (never the sync redis client).
+  - AWS ElastiCache cluster mode: URLs containing "clustercfg" or using the
+    "rediss://" scheme are routed to RedisCluster instead of Redis.
 """
 from __future__ import annotations
 
@@ -32,6 +34,7 @@ from collections.abc import AsyncIterator
 
 import structlog
 from redis.asyncio import Redis
+from redis.cluster import RedisCluster
 from redis.exceptions import AuthenticationError
 from redis.exceptions import ConnectionError as RedisConnectionError
 
@@ -41,23 +44,45 @@ logger = structlog.get_logger(__name__)
 _CONNECT_BACKOFFS = [1.0, 2.0, 4.0]
 
 
-async def create_redis_client(url: str) -> Redis:
+def _is_cluster_url(url: str) -> bool:
+    """Return True for AWS ElastiCache cluster config endpoints."""
+    return url.startswith("rediss://") or "clustercfg" in url
+
+
+async def create_redis_client(url: str) -> Redis | RedisCluster:
     """
     Create and return a connected async Redis client.
+
+    Uses RedisCluster for AWS ElastiCache cluster endpoints (URLs containing
+    "clustercfg" or using the "rediss://" scheme). Uses standard Redis otherwise.
+
     Retries up to 3 times with exponential backoff on ConnectionError.
     Raises redis.exceptions.ConnectionError if all retries are exhausted.
     Raises redis.exceptions.AuthenticationError immediately on auth failure (no retry).
     """
     last_exc: Exception | None = None
     attempts = [0.0] + _CONNECT_BACKOFFS  # first attempt: no wait
+    cluster_mode = _is_cluster_url(url)
 
     for attempt, backoff in enumerate(attempts):
         if backoff:
             await asyncio.sleep(backoff)
         try:
-            client: Redis = Redis.from_url(url, decode_responses=True)
+            if cluster_mode:
+                client: Redis | RedisCluster = RedisCluster.from_url(
+                    url,
+                    decode_responses=False,
+                    skip_full_coverage_check=True,
+                )
+            else:
+                client = Redis.from_url(url, decode_responses=True)
             await client.ping()
-            logger.info("redis.connected", url=_redact_url(url), attempt=attempt)
+            logger.info(
+                "redis.connected",
+                url=_redact_url(url),
+                attempt=attempt,
+                cluster=cluster_mode,
+            )
             return client
         except AuthenticationError:
             # Never retry auth failures — misconfiguration, not a transient error.
