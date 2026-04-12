@@ -7,12 +7,14 @@ COPY requirements.txt pyproject.toml ./
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Add /app to sys.path so `python -m meg.*` resolves meg/ without an editable install
-ENV PYTHONPATH=/app
-
 # Copy the package and runtime config
 COPY meg/ ./meg/
 COPY config/ ./config/
+
+# setuptools is needed for editable installs in slim images; install it explicitly
+# then install meg as an editable package so `python -m meg.*` resolves correctly
+RUN pip install --no-cache-dir setuptools
+RUN pip install --no-cache-dir -e .
 
 # Verify the entry point is importable at build time
 RUN python -c "import meg.main"
