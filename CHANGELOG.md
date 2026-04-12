@@ -3,6 +3,12 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.18.2] - 2026-04-11
+
+### Fixed
+- `requirements.txt` — upgraded `web3==6.15.1` → `web3==7.15.0` and `py-clob-client==0.14.0` → `py-clob-client==0.34.6` to resolve `hexbytes` version conflict (`web3` 6.x pins `hexbytes<0.4.0`; `eth-account>=0.13` requires `hexbytes>=1.2.0`).
+- `meg/data_layer/polygon_feed.py`, `meg/data_layer/capital_refresh.py` — renamed `WebsocketProviderV2` → `WebSocketProvider` to match the web3 7.x provider API (the provisional v2 name was removed in the 7.0 release).
+
 ## [0.1.18.1] - 2026-04-11
 
 ### Added
