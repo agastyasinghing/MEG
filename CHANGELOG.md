@@ -3,6 +3,14 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.19.0] - 2026-04-11
+
+### Added
+- `meg/main.py` — bot process entry point; starts all five pipeline tasks concurrently in an `asyncio.TaskGroup`: `polygon_feed`, `pre_filter_pipeline`, `signal_aggregator`, `position_monitor`, and `telegram_bot`. Handles SIGTERM/SIGINT gracefully (cancels TaskGroup, closes Redis/DB/ConfigLoader in `finally`). Fails fast with a clear message on missing `DATABASE_URL`, `REDIS_URL`, or `POLYGON_RPC_URL`.
+
+### Changed
+- `docker-compose.yml` — added `environment: REDIS_URL: redis://redis:6379/0` to both `bot` and `dashboard` services so containers always connect to the internal Redis service, overriding any localhost URL from `.env`.
+
 ## [0.1.18.2] - 2026-04-11
 
 ### Fixed

@@ -37,6 +37,8 @@ services:
       dockerfile: Dockerfile
     command: python -m meg.main
     env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
     volumes:
       - ./config:/app/config:ro
     depends_on:
@@ -53,6 +55,8 @@ services:
       dockerfile: Dockerfile
     command: uvicorn meg.dashboard.api.main:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     volumes:
