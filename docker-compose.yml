@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Usage:
 #   docker compose --profile infra up      # Postgres + Redis only (dev default)
 #   docker compose --profile bot up        # infra + trading bot
