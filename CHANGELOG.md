@@ -3,6 +3,17 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.18.1] - 2026-04-11
+
+### Added
+- `Dockerfile` — Python 3.11-slim image for the bot/backend; installs `requirements.txt`, copies `meg/` package and `config/`, installs as editable package, defaults to `python -m meg.main`.
+- `meg/dashboard/ui/Dockerfile` — multi-stage React build: `node:20-alpine` builds Vite app, `nginx:1.27-alpine` serves static assets.
+- `meg/dashboard/ui/nginx.conf` — nginx SPA config with `try_files` fallback, `/api/` and `/ws/` proxy_pass to `dashboard:8000`.
+
+### Fixed
+- `docker-compose.yml` — removed obsolete top-level `version: "3.9"` field (deprecated in Docker Compose v2+).
+- `.env.example` — reverted real production credentials (RDS hostname/password, ElastiCache endpoint) to placeholder values; fixed duplicate `DATABASE_URL=` prefix; added `redis://` scheme to `REDIS_URL`.
+
 ## [0.1.18.0] - 2026-03-22
 
 ### Added
