@@ -3,6 +3,12 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.20.4] - 2026-04-12
+
+### Added
+- `meg/core/redis_client.py` — AWS ElastiCache cluster mode support. URLs containing `clustercfg` or using the `rediss://` scheme now use `RedisCluster.from_url(url, decode_responses=False, skip_full_coverage_check=True)` instead of the standard `Redis` client. Cluster detection is handled by `_is_cluster_url()`. All existing retry logic and error handling applies to both paths.
+- `requirements.txt` — upgraded `redis==5.0.1` to `redis[hiredis]==5.0.1` to enable the hiredis C extension parser (required for cluster mode and improves throughput for standard mode).
+
 ## [0.1.20.3] - 2026-04-12
 
 ### Fixed
