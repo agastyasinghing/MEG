@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _redis, _config, _config_path
 
     db_url = os.environ["DATABASE_URL"]
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    redis_url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
     config_file = os.environ.get("MEG_CONFIG_PATH", "config/config.yaml")
 
     await init_db(db_url)
@@ -802,7 +802,7 @@ async def feed_signals() -> StreamingResponse:
     the module-level client. A fresh connection is created per SSE subscriber and
     closed when the client disconnects.
     """
-    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    redis_url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 
     async def event_stream() -> AsyncGenerator[str, None]:
         yield ": connected\n\n"

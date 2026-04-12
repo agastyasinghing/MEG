@@ -2,9 +2,16 @@
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bot up -d
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile dashboard up -d
 #
-# Overrides DATABASE_URL and REDIS_URL for BOTH bot and dashboard services with
-# the values from .env on the EC2 host, so containers connect to external RDS
-# and ElastiCache instead of the local Docker services defined in docker-compose.yml.
+# Overrides DATABASE_URL and REDIS_URL for BOTH bot and dashboard services.
+# ${DATABASE_URL} and ${REDIS_URL} are resolved from the .env file in the
+# project directory at compose-parse time (Docker Compose reads .env
+# automatically for variable substitution in all -f files).
+#
+# If these still resolve to localhost values, verify:
+#   1. .env on EC2 has the real RDS/ElastiCache URLs (not placeholders)
+#   2. Run from the directory containing .env
+#   3. Run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config
+#      and check the resolved DATABASE_URL/REDIS_URL values before starting
 #
 # Prerequisites on EC2:
 #   - .env contains DATABASE_URL pointing to RDS (postgresql+asyncpg://...)
