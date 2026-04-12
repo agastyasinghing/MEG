@@ -1,8 +1,18 @@
 # Usage:
-#   docker compose --profile infra up      # Postgres + Redis only (dev default)
-#   docker compose --profile bot up        # infra + trading bot
-#   docker compose --profile dashboard up  # infra + dashboard API
-#   docker compose --profile all up        # everything
+#   Local dev  (all services):
+#     docker compose --profile infra --profile bot up
+#     docker compose --profile infra --profile dashboard up
+#     docker compose --profile infra --profile all up
+#
+#   Local dev  (infra only — Postgres + Redis):
+#     docker compose --profile infra up
+#
+#   EC2 prod (external RDS + ElastiCache, no local infra):
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile bot up -d
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile dashboard up -d
+#
+# NOTE: docker-compose.prod.yml overrides DATABASE_URL and REDIS_URL with the
+# values from .env on the host so containers connect to RDS and ElastiCache.
 
 services:
   postgres:
@@ -20,6 +30,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    profiles: [infra]
 
   redis:
     image: redis:7-alpine
@@ -30,6 +41,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    profiles: [infra]
 
   bot:
     build:
@@ -38,14 +50,20 @@ services:
     command: python -m meg.main
     env_file: .env
     environment:
+      # Use Docker service names — overrides the localhost values in .env for
+      # local dev. docker-compose.prod.yml replaces these with the real RDS /
+      # ElastiCache URLs for EC2 deployment.
+      DATABASE_URL: postgresql+asyncpg://meg:changeme@postgres:5432/meg
       REDIS_URL: redis://redis:6379/0
     volumes:
       - ./config:/app/config:ro
     depends_on:
       postgres:
         condition: service_healthy
+        required: false  # bot starts without local PG when deploying to EC2
       redis:
         condition: service_healthy
+        required: false  # bot starts without local Redis when deploying to EC2
     restart: unless-stopped
     profiles: [bot, all]
 
@@ -56,6 +74,7 @@ services:
     command: uvicorn meg.dashboard.api.main:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
     environment:
+      DATABASE_URL: postgresql+asyncpg://meg:changeme@postgres:5432/meg
       REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
@@ -64,8 +83,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
+        required: false
     profiles: [dashboard, all]
 
 volumes:

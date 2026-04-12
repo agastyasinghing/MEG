@@ -1,0 +1,37 @@
+# Git
+.git/
+.gitignore
+
+# Claude / editor
+.claude/
+.env*
+!.env.example
+
+# Tests and dev-only files
+tests/
+requirements-dev.txt
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# Untracked dashboard build artifacts not needed in bot image
+dashboard/
+meg/dashboard/ui/src/assets/
+meg/dashboard/ui/src/shaders/
+meg/dashboard/ui/node_modules/
+meg/dashboard/ui/dist/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
