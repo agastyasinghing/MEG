@@ -3,6 +3,17 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.20.0] - 2026-04-12
+
+### Added
+- `docker-compose.prod.yml` — EC2 production overlay; overrides `DATABASE_URL` and `REDIS_URL` with host `.env` values so containers connect to external RDS and ElastiCache instead of local Docker services.
+- `.dockerignore` — excludes `.git/`, `.claude/`, `tests/`, docs, dashboard build artifacts, and Python cache from the image context, reducing build size and preventing credential leakage.
+- `Dockerfile` — `HEALTHCHECK` using `os.kill(1, 0)` to report unhealthy when PID 1 has exited; `RUN python -c "import meg.main"` build-time importability check.
+
+### Changed
+- `Dockerfile` — replaced `pip install -e .` (editable install, unreliable in slim Docker images) with `ENV PYTHONPATH=/app`; this is the root-cause fix for "No module named meg.main" on EC2.
+- `docker-compose.yml` — added `profiles: [infra]` to `postgres` and `redis` services so local infra containers are opt-in and never start during EC2 prod deployment. Added `DATABASE_URL` to `bot` and `dashboard` environment blocks (Docker service-name URL for local dev). Added `required: false` to all `depends_on` conditions so the bot and dashboard start without local infra present (required for EC2 where RDS/ElastiCache are external). Updated header comments with correct local dev and EC2 prod invocation commands.
+
 ## [0.1.19.0] - 2026-04-11
 
 ### Added
