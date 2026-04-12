@@ -3,6 +3,11 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.20.3] - 2026-04-12
+
+### Fixed
+- `tests/core/test_redis_client.py` — replaced 4 hardcoded `"redis://localhost:6379/0"` literals with `os.environ.get("REDIS_URL", "redis://redis:6379/0")`, eliminating the last remaining `localhost:6379` references in the codebase. All 4 call sites are fully mocked so no real connection is made.
+
 ## [0.1.20.2] - 2026-04-12
 
 ### Fixed
