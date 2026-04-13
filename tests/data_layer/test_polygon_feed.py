@@ -396,16 +396,37 @@ async def test_connect_succeeds_on_first_attempt():
     conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
 
     mock_w3 = AsyncMock()
-    mock_w3.provider.connect = AsyncMock()  # succeeds silently
+    mock_w3.provider.connect = AsyncMock()
+    mock_w3.middleware_onion.inject = MagicMock()  # inject is sync, not async
 
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
             with patch("web3.providers.WebSocketProvider"):
-                await conn.connect()
+                with patch("web3.middleware.ExtraDataToPOAMiddleware"):
+                    await conn.connect()
 
     mock_sleep.assert_not_called()
     mock_w3.provider.connect.assert_called_once()
     assert conn._w3 is mock_w3
+
+
+@pytest.mark.asyncio
+async def test_connect_injects_poa_middleware():
+    """connect() injects ExtraDataToPOAMiddleware at layer=0 after connecting."""
+    conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
+
+    mock_w3 = AsyncMock()
+    mock_w3.provider.connect = AsyncMock()
+    mock_w3.middleware_onion.inject = MagicMock()  # inject is sync, not async
+
+    mock_middleware = MagicMock()
+
+    with patch("web3.AsyncWeb3", return_value=mock_w3):
+        with patch("web3.providers.WebSocketProvider"):
+            with patch("web3.middleware.ExtraDataToPOAMiddleware", mock_middleware):
+                await conn.connect()
+
+    mock_w3.middleware_onion.inject.assert_called_once_with(mock_middleware, layer=0)
 
 
 @pytest.mark.asyncio
@@ -415,6 +436,7 @@ async def test_connect_retries_when_provider_connect_raises():
 
     call_count = 0
     mock_w3 = AsyncMock()
+    mock_w3.middleware_onion.inject = MagicMock()  # inject is sync, not async
 
     async def flaky_connect():
         nonlocal call_count
@@ -427,7 +449,8 @@ async def test_connect_retries_when_provider_connect_raises():
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
             with patch("web3.providers.WebSocketProvider"):
-                await conn.connect()
+                with patch("web3.middleware.ExtraDataToPOAMiddleware"):
+                    await conn.connect()
 
     assert call_count == 3
     assert mock_sleep.call_count == 2  # slept after attempt 1 and 2
@@ -462,6 +485,7 @@ async def test_connect_retries_on_provider_connection_error():
 
     call_count = 0
     mock_w3 = AsyncMock()
+    mock_w3.middleware_onion.inject = MagicMock()  # inject is sync, not async
 
     async def raise_then_succeed():
         nonlocal call_count
@@ -474,7 +498,8 @@ async def test_connect_retries_on_provider_connection_error():
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
             with patch("web3.providers.WebSocketProvider"):
-                await conn.connect()
+                with patch("web3.middleware.ExtraDataToPOAMiddleware"):
+                    await conn.connect()
 
     assert call_count == 2
     assert mock_sleep.call_count == 1
