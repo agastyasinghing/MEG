@@ -3,6 +3,12 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.21.3] - 2026-04-12
+
+### Fixed
+- `meg/data_layer/polygon_feed.py` — pass `websocket_kwargs={"max_size": 10 * 1024 * 1024}` (10MB) to `WebSocketProvider`. Polygon POA blocks carry large `extraData` fields that exceed the websockets default 1MB limit, causing `"sent 1009 (message too big)"` disconnects. Added `_WS_MAX_SIZE` module constant.
+- `tests/data_layer/test_polygon_feed.py` — added `test_connect_sets_websocket_max_size` asserting `WebSocketProvider` is constructed with `websocket_kwargs={"max_size": _WS_MAX_SIZE}`; imported `_WS_MAX_SIZE` for assertion.
+
 ## [0.1.21.2] - 2026-04-12
 
 ### Fixed
