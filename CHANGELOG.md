@@ -3,6 +3,12 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.21.2] - 2026-04-12
+
+### Fixed
+- `meg/data_layer/polygon_feed.py` — inject `ExtraDataToPOAMiddleware` at `layer=0` immediately after `provider.connect()`. Polygon is a POA chain whose block headers carry an oversized `extraData` field (97 bytes vs the standard 32); without this middleware, `eth.get_block()` raises `"extraData is X bytes, but should be 32"`.
+- `tests/data_layer/test_polygon_feed.py` — added `test_connect_injects_poa_middleware` asserting `middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)`; patched `web3.middleware.ExtraDataToPOAMiddleware` (lazy import, not a module-level name); fixed `middleware_onion.inject` to `MagicMock()` on all success-path tests (it is synchronous in production, not a coroutine).
+
 ## [0.1.21.1] - 2026-04-12
 
 ### Fixed
