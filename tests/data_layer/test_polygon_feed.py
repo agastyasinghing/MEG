@@ -392,11 +392,11 @@ async def test_process_block_emits_event_without_category_when_not_in_redis(
 
 @pytest.mark.asyncio
 async def test_connect_succeeds_on_first_attempt():
-    """connect() returns immediately when is_connected() is True."""
+    """connect() returns immediately when provider.connect() succeeds."""
     conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
 
     mock_w3 = AsyncMock()
-    mock_w3.is_connected = AsyncMock(return_value=True)
+    mock_w3.provider.connect = AsyncMock()  # succeeds silently
 
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
@@ -404,24 +404,25 @@ async def test_connect_succeeds_on_first_attempt():
                 await conn.connect()
 
     mock_sleep.assert_not_called()
+    mock_w3.provider.connect.assert_called_once()
     assert conn._w3 is mock_w3
 
 
 @pytest.mark.asyncio
-async def test_connect_retries_on_is_connected_false():
-    """connect() retries when is_connected() returns False, succeeds on 3rd attempt."""
+async def test_connect_retries_when_provider_connect_raises():
+    """connect() retries when provider.connect() raises, succeeds on 3rd attempt."""
     conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
 
     call_count = 0
-
     mock_w3 = AsyncMock()
 
-    async def flaky_is_connected():
+    async def flaky_connect():
         nonlocal call_count
         call_count += 1
-        return call_count >= 3  # fails on attempts 1+2, succeeds on 3
+        if call_count < 3:
+            raise OSError("connection refused")
 
-    mock_w3.is_connected = flaky_is_connected
+    mock_w3.provider.connect = flaky_connect
 
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
@@ -430,7 +431,6 @@ async def test_connect_retries_on_is_connected_false():
 
     assert call_count == 3
     assert mock_sleep.call_count == 2  # slept after attempt 1 and 2
-    # Delays: 2^1=2, 2^2=4
     mock_sleep.assert_any_call(2.0)
     mock_sleep.assert_any_call(4.0)
 
@@ -441,7 +441,7 @@ async def test_connect_raises_after_all_retries_exhausted():
     conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
 
     mock_w3 = AsyncMock()
-    mock_w3.is_connected = AsyncMock(return_value=False)
+    mock_w3.provider.connect = AsyncMock(side_effect=OSError("refused"))
 
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
@@ -449,14 +449,15 @@ async def test_connect_raises_after_all_retries_exhausted():
                 with pytest.raises(ConnectionError, match="Failed to connect"):
                     await conn.connect()
 
-    # _CONNECT_MAX_RETRIES attempts get a sleep; final attempt raises immediately
     assert mock_sleep.call_count == _CONNECT_MAX_RETRIES
-    assert mock_w3.is_connected.call_count == _CONNECT_MAX_RETRIES + 1
+    assert mock_w3.provider.connect.call_count == _CONNECT_MAX_RETRIES + 1
 
 
 @pytest.mark.asyncio
-async def test_connect_retries_on_exception_from_is_connected():
-    """connect() retries when is_connected() raises (e.g. network error)."""
+async def test_connect_retries_on_provider_connection_error():
+    """connect() retries on ProviderConnectionError (web3 exhausted its own retries)."""
+    from web3.exceptions import ProviderConnectionError
+
     conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
 
     call_count = 0
@@ -466,10 +467,9 @@ async def test_connect_retries_on_exception_from_is_connected():
         nonlocal call_count
         call_count += 1
         if call_count < 2:
-            raise OSError("connection refused")
-        return True
+            raise ProviderConnectionError("Could not connect: retries exceeded")
 
-    mock_w3.is_connected = raise_then_succeed
+    mock_w3.provider.connect = raise_then_succeed
 
     with patch("meg.data_layer.polygon_feed.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
         with patch("web3.AsyncWeb3", return_value=mock_w3):
@@ -487,7 +487,7 @@ async def test_connect_exponential_backoff_delays():
     conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
 
     mock_w3 = AsyncMock()
-    mock_w3.is_connected = AsyncMock(return_value=False)
+    mock_w3.provider.connect = AsyncMock(side_effect=OSError("refused"))
 
     sleep_delays: list[float] = []
 

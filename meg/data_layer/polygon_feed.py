@@ -133,8 +133,11 @@ class Web3RPCConnection(PolygonRPCConnection):
         for attempt in range(1, _CONNECT_MAX_RETRIES + 2):
             try:
                 self._w3 = AsyncWeb3(WebSocketProvider(self._url))
-                if not await self._w3.is_connected():
-                    raise ConnectionError(f"Failed to connect to Polygon RPC: {self._url}")
+                # web3 7.x: WebSocketProvider is a PersistentConnectionProvider.
+                # provider.connect() is the call that actually opens the WebSocket
+                # and populates provider._ws. Without it, is_connected() always
+                # returns False because _ws is None after construction.
+                await self._w3.provider.connect()
                 logger.info("polygon_rpc.connected", url=self._url, attempt=attempt)
                 return
             except Exception as exc:

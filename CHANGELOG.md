@@ -3,6 +3,11 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.21.1] - 2026-04-12
+
+### Fixed
+- `meg/data_layer/polygon_feed.py` — `Web3RPCConnection.connect()` now calls `await self._w3.provider.connect()` to actually establish the WebSocket. In web3 7.x, `WebSocketProvider` is a `PersistentConnectionProvider` whose `is_connected()` always returned `False` immediately after construction (because `provider._ws` is only populated by `provider.connect()`). This caused every startup attempt to raise `ConnectionError` before any network call was made. Tests updated to mock `provider.connect` instead of `is_connected`.
+
 ## [0.1.21.0] - 2026-04-12
 
 ### Fixed
