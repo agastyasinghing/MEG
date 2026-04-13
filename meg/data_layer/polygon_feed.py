@@ -126,6 +126,7 @@ class Web3RPCConnection(PolygonRPCConnection):
         URL format: wss://polygon-mainnet.g.alchemy.com/v2/<API_KEY>
         """
         from web3 import AsyncWeb3
+        from web3.middleware import ExtraDataToPOAMiddleware
         from web3.providers import WebSocketProvider
 
         last_exc: Exception | None = None
@@ -138,6 +139,10 @@ class Web3RPCConnection(PolygonRPCConnection):
                 # and populates provider._ws. Without it, is_connected() always
                 # returns False because _ws is None after construction.
                 await self._w3.provider.connect()
+                # Polygon is a POA chain — its blocks carry an oversized extraData
+                # field (97 bytes vs the standard 32). Without this middleware,
+                # eth.get_block() raises "extraData is X bytes, but should be 32".
+                self._w3.middleware_onion.inject(ExtraDataToPOAMiddleware, layer=0)
                 logger.info("polygon_rpc.connected", url=self._url, attempt=attempt)
                 return
             except Exception as exc:
