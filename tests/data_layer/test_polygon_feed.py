@@ -33,6 +33,7 @@ from meg.data_layer.polygon_feed import (
     PolygonRPCConnection,
     Web3RPCConnection,
     _CONNECT_MAX_RETRIES,
+    _WS_MAX_SIZE,
     _emit_event,
     _filter_whale_transaction,
 )
@@ -427,6 +428,29 @@ async def test_connect_injects_poa_middleware():
                 await conn.connect()
 
     mock_w3.middleware_onion.inject.assert_called_once_with(mock_middleware, layer=0)
+
+
+@pytest.mark.asyncio
+async def test_connect_sets_websocket_max_size():
+    """WebSocketProvider is constructed with max_size=_WS_MAX_SIZE to handle
+    Polygon POA blocks (large extraData causes 1009 'message too big' otherwise)."""
+    conn = Web3RPCConnection("wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY")
+
+    mock_w3 = AsyncMock()
+    mock_w3.provider.connect = AsyncMock()
+    mock_w3.middleware_onion.inject = MagicMock()
+
+    mock_provider_cls = MagicMock()
+
+    with patch("web3.AsyncWeb3", return_value=mock_w3):
+        with patch("web3.providers.WebSocketProvider", mock_provider_cls):
+            with patch("web3.middleware.ExtraDataToPOAMiddleware"):
+                await conn.connect()
+
+    mock_provider_cls.assert_called_once_with(
+        "wss://polygon-mainnet.g.alchemy.com/v2/TESTKEY",
+        websocket_kwargs={"max_size": _WS_MAX_SIZE},
+    )
 
 
 @pytest.mark.asyncio
