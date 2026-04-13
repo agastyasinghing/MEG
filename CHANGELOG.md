@@ -3,6 +3,15 @@
 All notable changes to MEG (Megalodon) are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.1.21.0] - 2026-04-12
+
+### Fixed
+- `meg/data_layer/polygon_feed.py` — `Web3RPCConnection.connect()` now retries up to 5 times with exponential backoff (2s, 4s, 8s, 16s, 32s) instead of raising `ConnectionError` immediately on the first failure. Each retry attempt is logged via structlog (`polygon_rpc.connect_retry`) with `attempt`, `retry_in_seconds`, and `error` fields. `ConnectionError` is only raised after all retries are exhausted.
+- Added two module-level constants (`_CONNECT_MAX_RETRIES = 5`, `_CONNECT_RETRY_BASE = 2.0`) to make retry parameters explicit and testable.
+
+### Added
+- `tests/data_layer/test_polygon_feed.py` — 5 new tests covering `Web3RPCConnection.connect()` retry behavior: first-attempt success, mid-retry success, full exhaustion, exception from `is_connected()`, and exact delay sequence verification.
+
 ## [0.1.20.5] - 2026-04-12
 
 ### Fixed

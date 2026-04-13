@@ -60,6 +60,10 @@ _MIN_TRADE_SIZE_USDC = 500.0
 _RECONNECT_BASE = 1.0
 _RECONNECT_MAX = 60.0
 
+# connect() retry parameters
+_CONNECT_MAX_RETRIES = 5  # retries after initial attempt; delays: 2s, 4s, 8s, 16s, 32s
+_CONNECT_RETRY_BASE = 2.0
+
 
 # ── Testability shim: injectable RPC connection ────────────────────────────────
 
@@ -112,14 +116,44 @@ class Web3RPCConnection(PolygonRPCConnection):
         self._w3: Any = None  # AsyncWeb3 — imported lazily to avoid import at module load
 
     async def connect(self) -> None:
-        """Establish the RPC connection. Call before run()."""
+        """
+        Establish the RPC connection. Call before run().
+
+        Retries up to _CONNECT_MAX_RETRIES times with exponential backoff
+        (2s, 4s, 8s, 16s, 32s). Raises ConnectionError only after all
+        retries are exhausted.
+
+        URL format: wss://polygon-mainnet.g.alchemy.com/v2/<API_KEY>
+        """
         from web3 import AsyncWeb3
         from web3.providers import WebSocketProvider
 
-        self._w3 = AsyncWeb3(WebSocketProvider(self._url))
-        if not await self._w3.is_connected():
-            raise ConnectionError(f"Failed to connect to Polygon RPC: {self._url}")
-        logger.info("polygon_rpc.connected", url=self._url)
+        last_exc: Exception | None = None
+        # Attempts 1..(max_retries+1): first is the initial try, rest are retries.
+        for attempt in range(1, _CONNECT_MAX_RETRIES + 2):
+            try:
+                self._w3 = AsyncWeb3(WebSocketProvider(self._url))
+                if not await self._w3.is_connected():
+                    raise ConnectionError(f"Failed to connect to Polygon RPC: {self._url}")
+                logger.info("polygon_rpc.connected", url=self._url, attempt=attempt)
+                return
+            except Exception as exc:
+                last_exc = exc
+                if attempt <= _CONNECT_MAX_RETRIES:
+                    delay = _CONNECT_RETRY_BASE ** attempt  # 2, 4, 8, 16, 32
+                    logger.warning(
+                        "polygon_rpc.connect_retry",
+                        attempt=attempt,
+                        max_retries=_CONNECT_MAX_RETRIES,
+                        retry_in_seconds=delay,
+                        error=str(exc),
+                        url=self._url,
+                    )
+                    await asyncio.sleep(delay)
+
+        raise ConnectionError(
+            f"Failed to connect to Polygon RPC after {_CONNECT_MAX_RETRIES + 1} attempts: {self._url}"
+        ) from last_exc
 
     async def get_block_number(self) -> int:
         return await self._w3.eth.block_number
