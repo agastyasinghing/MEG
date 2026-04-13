@@ -64,6 +64,10 @@ _RECONNECT_MAX = 60.0
 _CONNECT_MAX_RETRIES = 5  # retries after initial attempt; delays: 2s, 4s, 8s, 16s, 32s
 _CONNECT_RETRY_BASE = 2.0
 
+# Polygon POA blocks have large extraData fields that exceed the default websocket
+# max_size (1MB), causing "sent 1009 (message too big)" disconnects.
+_WS_MAX_SIZE = 10 * 1024 * 1024  # 10MB
+
 
 # ── Testability shim: injectable RPC connection ────────────────────────────────
 
@@ -133,7 +137,12 @@ class Web3RPCConnection(PolygonRPCConnection):
         # Attempts 1..(max_retries+1): first is the initial try, rest are retries.
         for attempt in range(1, _CONNECT_MAX_RETRIES + 2):
             try:
-                self._w3 = AsyncWeb3(WebSocketProvider(self._url))
+                self._w3 = AsyncWeb3(
+                    WebSocketProvider(
+                        self._url,
+                        websocket_kwargs={"max_size": _WS_MAX_SIZE},
+                    )
+                )
                 # web3 7.x: WebSocketProvider is a PersistentConnectionProvider.
                 # provider.connect() is the call that actually opens the WebSocket
                 # and populates provider._ws. Without it, is_connected() always
