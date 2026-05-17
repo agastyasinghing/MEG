@@ -51,6 +51,7 @@ NOTE — approve/reject path parameter:
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -68,6 +69,7 @@ from redis.asyncio import Redis
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from meg.core.canonical_ids import normalize_boundary_payload
 from meg.core.config_loader import MegConfig
 from meg.core.events import PositionState, RedisKeys, TradeProposal
 from meg.core.redis_client import close as close_redis
@@ -782,6 +784,46 @@ async def get_markets(redis: Redis = Depends(get_redis)) -> dict:
     return {"markets": markets}
 
 
+def _normalize_signal_feed_data(data: Any) -> str:
+    """Normalize dashboard signal SSE payloads when canonical IDs are explicit.
+
+    The dashboard feed is display-only and must remain compatible with legacy
+    publishers. Payloads without an explicit condition_id/token_id/outcome
+    triple are forwarded unchanged; legacy route fields and display slugs are
+    never used to derive canonical identity.
+    """
+    raw_data = data.decode("utf-8") if isinstance(data, bytes) else str(data)
+
+    try:
+        payload = json.loads(raw_data)
+    except json.JSONDecodeError:
+        return raw_data
+
+    if not isinstance(payload, dict):
+        return raw_data
+
+    canonical_fields = ("condition_id", "token_id", "outcome")
+    if not all(payload.get(field) is not None for field in canonical_fields):
+        return raw_data
+
+    try:
+        normalized = normalize_boundary_payload(
+            payload,
+            condition_id=payload["condition_id"],
+            token_id=payload["token_id"],
+            outcome=payload["outcome"],
+            market_slug=payload.get("market_slug"),
+            context="dashboard.signal_feed",
+        )
+    except ValueError as exc:
+        logger.warning(
+            "dashboard.feed.signals.canonical_normalization_failed",
+            error=str(exc),
+        )
+        return raw_data
+
+    return json.dumps(normalized, separators=(",", ":"))
+
 # ── GET /api/v1/feed/signals (SSE) ───────────────────────────────────────────
 
 
@@ -828,7 +870,7 @@ async def feed_signals() -> StreamingResponse:
                 if msg is None:
                     pass  # no message available right now — loop back
                 elif msg["type"] == "message":
-                    yield f"data: {msg['data']}\n\n"
+                    yield f"data: {_normalize_signal_feed_data(msg['data'])}\n\n"
                 else:
                     logger.debug(
                         "dashboard.feed.signals.unexpected_msg_type",
