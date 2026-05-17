@@ -602,7 +602,7 @@ async def get_positions(redis: Redis = Depends(get_redis)) -> dict:
     for position_json in raw.values():
         try:
             state = PositionState.model_validate_json(position_json)
-            positions.append(state.model_dump())
+            positions.append(_normalize_position_response(state.model_dump()))
         except Exception as exc:
             logger.warning(
                 "dashboard.positions.parse_error",
@@ -610,6 +610,35 @@ async def get_positions(redis: Redis = Depends(get_redis)) -> dict:
                 snippet=position_json[:80],
             )
     return {"positions": positions}
+
+
+def _normalize_position_response(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize dashboard position payloads when canonical IDs are explicit.
+
+    The open positions endpoint is read-only display state. Legacy position
+    payloads remain compatible: without an explicit condition_id/token_id/outcome
+    triple, the response is forwarded unchanged and no legacy display or route
+    field is used to derive canonical identity.
+    """
+    canonical_fields = ("condition_id", "token_id", "outcome")
+    if not all(payload.get(field) is not None for field in canonical_fields):
+        return payload
+
+    try:
+        return normalize_boundary_payload(
+            payload,
+            condition_id=payload["condition_id"],
+            token_id=payload["token_id"],
+            outcome=payload["outcome"],
+            market_slug=payload.get("market_slug"),
+            context="dashboard.positions",
+        )
+    except ValueError as exc:
+        logger.warning(
+            "dashboard.positions.canonical_normalization_failed",
+            error=str(exc),
+        )
+        return payload
 
 
 # ── POST /api/v1/positions/{position_id}/exit ─────────────────────────────────

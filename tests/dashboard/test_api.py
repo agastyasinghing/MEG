@@ -37,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.events import PositionState, RedisKeys, TradeProposal
 from meg.dashboard.api.main import (
+    _normalize_position_response,
     _normalize_signal_feed_data,
     app,
     db_session,
@@ -192,6 +193,79 @@ async def test_get_positions_returns_open_positions(api_client, fake_redis):
     assert positions[0]["market_id"] == "MKT-777"
     assert positions[0]["outcome"] == "YES"
     assert positions[0]["entry_price"] == pytest.approx(0.55)
+
+
+async def test_get_positions_normalizes_explicit_canonical_fields(api_client, fake_redis):
+    """Open positions preserve canonical IDs, display slug, and legacy fields."""
+    pos = make_position("MKT-CANON")
+    pos.condition_id = "0xpositioncondition"
+    pos.token_id = "987654321"
+    pos.market_slug = "optional-display-slug"
+    await fake_redis.hset(RedisKeys.open_positions(), pos.position_id, pos.model_dump_json())
+
+    response = await api_client.get("/api/v1/positions")
+
+    assert response.status_code == 200
+    position = response.json()["positions"][0]
+    assert position["condition_id"] == "0xpositioncondition"
+    assert position["token_id"] == "987654321"
+    assert position["outcome"] == "YES"
+    assert position["market_slug"] == "optional-display-slug"
+    assert position[LEGACY_ROUTE_FIELD] == "MKT-CANON"
+    assert position["position_id"] == pos.position_id
+
+
+def test_position_response_does_not_derive_canonical_fields_from_legacy_route():
+    payload = {
+        "position_id": "pos-legacy",
+        LEGACY_ROUTE_FIELD: "0xderived:111:NO",
+        "outcome": "NO",
+        "size_usdc": 25.0,
+    }
+
+    with patch("meg.dashboard.api.main.normalize_boundary_payload") as normalize_mock:
+        normalized = _normalize_position_response(payload.copy())
+
+    normalize_mock.assert_not_called()
+    assert normalized == payload
+    assert "condition_id" not in normalized
+    assert "token_id" not in normalized
+
+
+def test_position_response_waits_for_complete_canonical_tuple():
+    payload = {
+        "position_id": "pos-partial",
+        LEGACY_ROUTE_FIELD: "MKT-PARTIAL",
+        "condition_id": "0xpartialcondition",
+        "outcome": "YES",
+    }
+
+    with patch("meg.dashboard.api.main.normalize_boundary_payload") as normalize_mock:
+        normalized = _normalize_position_response(payload.copy())
+
+    normalize_mock.assert_not_called()
+    assert normalized == payload
+    assert normalized["condition_id"] == "0xpartialcondition"
+    assert "token_id" not in normalized
+
+
+def test_position_response_keeps_optional_display_slug_out_of_identity():
+    payload = {
+        "position_id": "pos-display",
+        LEGACY_ROUTE_FIELD: "MKT-DISPLAY",
+        "condition_id": "0xdisplaycondition",
+        "token_id": "222333444",
+        "outcome": "NO",
+        "market_slug": "display-only-slug",
+    }
+
+    normalized = _normalize_position_response(payload)
+
+    assert normalized["condition_id"] == "0xdisplaycondition"
+    assert normalized["token_id"] == "222333444"
+    assert normalized["outcome"] == "NO"
+    assert normalized["market_slug"] == "display-only-slug"
+    assert normalized[LEGACY_ROUTE_FIELD] == "MKT-DISPLAY"
 
 
 # ═══════════════════════════════════════════════════════════════════════
