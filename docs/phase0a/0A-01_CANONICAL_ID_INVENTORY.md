@@ -175,6 +175,12 @@ Recommended files: `tests/data_layer/test_clob_client.py`, `tests/data_layer/tes
 
 Acceptance expectation: a boundary may receive legacy `market_id` from an external API/client only if a deterministic mapping exists and the object published to Redis or written to Postgres contains canonical IDs and no internal `market_id` field.
 
+#### Dashboard strictness follow-up
+
+Current dashboard position and signal-feed normalization is compatibility-mode only: if a payload includes `condition_id`, `token_id`, and `outcome` but the tuple fails canonical validation, the helper logs a warning and forwards the raw display payload unchanged. This ticket does not change that runtime behavior.
+
+Future strict mode should turn invalid explicit canonical tuples into visible API/data-quality errors once canonical IDs are required, rather than silently passing them through. Candidate follow-up tests: invalid explicit tuples on `/api/v1/positions` produce a data-quality/API error, invalid explicit tuples on `/api/v1/feed/signals` are surfaced instead of forwarded, incomplete canonical tuples still follow the documented boundary policy, and warning logs/metrics identify the rejected payload context.
+
 ### 5. Static/search contract checks
 
 Recommended file: `tests/test_static_canonical_ids.py`
