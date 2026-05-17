@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import inspect
 
-import pytest
-
 from meg.core.events import RedisKeys
 
 CONDITION_ID = "0xcondition000000000000000000000000000000000000000000000000000000000001"
@@ -27,11 +25,7 @@ def test_redis_key_builders_do_not_route_on_market_slug() -> None:
         assert "slug" not in signature.parameters, name
 
 
-@pytest.mark.xfail(
-    reason="RedisKeys still exposes market_id-scoped market-state builders until the 0A-03 migration.",
-    strict=True,
-)
-def test_market_state_keys_are_token_scoped_after_migration() -> None:
+def test_market_state_keys_are_token_scoped() -> None:
     """Target market-state keys are token scoped, not market:{market_id}:..."""
     assert RedisKeys.market_state(TOKEN_ID) == f"market:{TOKEN_ID}:state"
     assert RedisKeys.market_book(TOKEN_ID) == f"market:{TOKEN_ID}:book"
@@ -40,13 +34,12 @@ def test_market_state_keys_are_token_scoped_after_migration() -> None:
     assert RedisKeys.market_state(TOKEN_ID) != forbidden_key
 
 
-@pytest.mark.xfail(
-    reason="Consensus windows currently accept market_id; target contract scopes them by condition_id and outcome.",
-    strict=True,
-)
-def test_consensus_window_uses_condition_id_and_outcome_after_migration() -> None:
+def test_consensus_window_uses_condition_id_and_outcome() -> None:
     """Cross-token consensus semantics should be keyed by condition and outcome."""
-    key = RedisKeys.consensus_window(condition_id=CONDITION_ID, outcome=OUTCOME)
+    key = RedisKeys.condition_outcome_consensus_window(
+        condition_id=CONDITION_ID,
+        outcome=OUTCOME,
+    )
 
     assert CONDITION_ID in key
     assert OUTCOME in key
@@ -55,11 +48,7 @@ def test_consensus_window_uses_condition_id_and_outcome_after_migration() -> Non
     assert MARKET_SLUG not in key
 
 
-@pytest.mark.xfail(
-    reason="Market exposure keys currently accept market_id; target contract uses condition/token/outcome semantics.",
-    strict=True,
-)
-def test_exposure_keys_use_canonical_identity_after_migration() -> None:
+def test_exposure_keys_use_canonical_identity() -> None:
     """Exposure must use explicit canonical granularity instead of market_id."""
     token_key = RedisKeys.token_exposure_usdc(TOKEN_ID)
     outcome_key = RedisKeys.outcome_exposure_usdc(CONDITION_ID, OUTCOME)
