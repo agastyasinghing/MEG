@@ -43,6 +43,47 @@ Future CI jobs should state their dependency boundary explicitly in the workflow
 - full `requirements-dev.txt`; or
 - external service/integration dependencies, if those jobs are introduced later.
 
+
+## Future full-dev CI proposal
+
+TEST-04 proposes a separate full-dev CI job for Redis-backed fixture coverage, dashboard API coverage, full local fixture paths, and Phase 0A contract tests that require development-only dependencies. This proposal is documentation-only and does not change the existing no-fakeredis smoke workflow or any CI behavior.
+
+The proposed dependency boundary is the complete developer environment:
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+That boundary intentionally includes `fakeredis` from `requirements-dev.txt` so tests that request the `mock_redis` fixture exercise the in-memory Redis path instead of taking the no-fakeredis skip path. The job should also include an explicit import check, such as `python -c "import fakeredis"`, before pytest runs so a dependency-resolution issue fails early.
+
+Suggested initial command group for the future job:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -c "import fakeredis"
+python -m pytest -q tests/core
+python -m pytest -q tests/dashboard/test_api.py
+```
+
+Broader layer tests should be added only after this initial group has measured runtime in CI. The expected runtime and cost should remain low enough for normal PR gating because the initial target uses in-memory fixtures and focused core/dashboard tests rather than external service containers. If measured runtime becomes too high for routine pull requests, the job should be made non-blocking, scheduled, or manually triggered before it is broadened.
+
+Acceptance criteria for adding the future full-dev CI job:
+
+- `requirements-dev.txt` installs successfully.
+- `fakeredis` imports successfully before pytest runs.
+- Redis fixture tests, dashboard API tests, full local fixture tests, and Phase 0A contract tests that need dev dependencies collect and run without collection errors.
+- The job fails on real test failures.
+- Redis fixture tests are not silently skipped when `fakeredis` should be installed.
+- Runtime stays low enough for PR gating, or the job is explicitly marked non-blocking/manual if runtime is too high.
+
+Non-goals for TEST-04:
+
+- Do not add the full-dev CI workflow in this ticket.
+- Do not change `.github/workflows/phase0a-smoke.yml`.
+- Do not change `requirements.txt` or `requirements-dev.txt`.
+- Do not change pytest fixtures.
+- Do not broaden the existing no-fakeredis smoke job.
+
 ## Troubleshooting
 
 `tests/conftest.py` imports `fakeredis.aioredis` lazily inside the `mock_redis` fixture, so non-Redis tests can still collect and run if `fakeredis` is missing. Tests that request `mock_redis` are skipped with a fixture-level setup message until the development dependencies are installed. Re-run:
