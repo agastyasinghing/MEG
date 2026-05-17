@@ -42,3 +42,29 @@ jobs:
           python -m pytest -q tests/core/test_event_schema_versioning.py
           python -m pytest -q tests/core/test_canonical_id_normalization.py
           python -m pytest -q tests/core/test_redis_key_contract.py
+
+  full-dev-phase0a-tests:
+    name: Full-dev Phase 0A tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Verify fakeredis is available
+        run: python -c "import fakeredis; import fakeredis.aioredis"
+
+      - name: Run focused full-dev Phase 0A tests
+        run: |
+          python -m pytest -q tests/core
+          python -m pytest -q tests/dashboard/test_api.py
