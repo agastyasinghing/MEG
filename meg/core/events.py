@@ -23,7 +23,7 @@ with a comment explaining why).
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal, Mapping
 
 from pydantic import BaseModel, Field
 
@@ -346,6 +346,50 @@ class MarketState(CanonicalIdentifiers):
     # None when market has no end date (indefinite) or date parse fails.
     # Gate 1 skips the days_to_resolution check when None.
     days_to_resolution: int | None = None
+
+
+# ── Shared event dispatch validation ─────────────────────────────────────────
+
+
+SUPPORTED_EVENT_SCHEMA_VERSION = 1
+
+SHARED_EVENT_MODEL_REGISTRY: dict[str, type[BaseModel]] = {
+    RawWhaleTrade.model_fields["event_type"].default: RawWhaleTrade,
+    QualifiedWhaleTrade.model_fields["event_type"].default: QualifiedWhaleTrade,
+    SignalEvent.model_fields["event_type"].default: SignalEvent,
+    TradeProposal.model_fields["event_type"].default: TradeProposal,
+}
+
+if len(SHARED_EVENT_MODEL_REGISTRY) != 4:
+    raise RuntimeError("Shared event model event_type values must be unique")
+
+
+def get_event_model_for_type(
+    event_type: str, schema_version: int = SUPPORTED_EVENT_SCHEMA_VERSION
+) -> type[BaseModel]:
+    """Return the shared event model for a supported event type/version pair."""
+    if schema_version != SUPPORTED_EVENT_SCHEMA_VERSION:
+        raise ValueError(f"Unsupported event schema_version: {schema_version}")
+
+    try:
+        return SHARED_EVENT_MODEL_REGISTRY[event_type]
+    except KeyError as exc:
+        raise ValueError(f"Unknown event_type: {event_type}") from exc
+
+
+def validate_shared_event_payload(payload: Mapping[str, Any]) -> BaseModel:
+    """Validate a raw shared event payload using event_type + schema_version."""
+    if "event_type" not in payload:
+        raise ValueError("Shared event payload missing event_type")
+
+    payload_for_validation = dict(payload)
+    schema_version = payload_for_validation.setdefault(
+        "schema_version", SUPPORTED_EVENT_SCHEMA_VERSION
+    )
+    event_model = get_event_model_for_type(
+        str(payload_for_validation["event_type"]), schema_version=schema_version
+    )
+    return event_model.model_validate(payload_for_validation)
 
 
 # ── Redis key patterns ────────────────────────────────────────────────────────
