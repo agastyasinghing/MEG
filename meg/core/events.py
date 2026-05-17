@@ -90,6 +90,8 @@ class CanonicalIdentifiers(BaseModel):
     market_slug is display metadata only and must not be used for routing.
     """
 
+    # Runtime contract metadata only; intentionally excluded from ORM models.
+    schema_version: int = 1
     condition_id: str | None = None
     token_id: str | None = None
     market_slug: str | None = None
@@ -264,6 +266,8 @@ class AlertMessage(BaseModel):
     circuit_breaker and trap (capital at risk). position_closed and whale_exit are INFO.
     """
 
+    # Runtime contract metadata only; intentionally excluded from ORM models.
+    schema_version: int = 1
     alert_type: Literal["circuit_breaker", "trap", "position_closed", "whale_exit"]
     message: str
     urgent: bool = False
