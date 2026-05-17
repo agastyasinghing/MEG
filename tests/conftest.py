@@ -12,10 +12,9 @@ Add layer-specific fixtures in tests/<layer>/conftest.py, not here.
 """
 from __future__ import annotations
 
-from pathlib import Path
+import importlib.util
 
 import pytest
-import fakeredis.aioredis
 from redis.asyncio import Redis
 
 from meg.core.config_loader import MegConfig
@@ -28,7 +27,15 @@ async def mock_redis() -> Redis:
     Backed by an in-memory store — no real Redis required.
     Supports pub/sub, key-value ops, and TTLs.
     """
-    client = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    if importlib.util.find_spec("fakeredis") is None:
+        pytest.skip(
+            "fakeredis is not installed; install requirements-dev.txt to use the "
+            "mock_redis fixture"
+        )
+
+    import fakeredis.aioredis as fakeredis_aioredis
+
+    client = fakeredis_aioredis.FakeRedis(decode_responses=True)
     yield client
     await client.aclose()
 

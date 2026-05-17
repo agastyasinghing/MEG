@@ -20,16 +20,10 @@ The targeted test file is intentionally narrow: it exercises the Phase 0A canoni
 
 ## Troubleshooting
 
-Repo-level pytest collection imports `fakeredis.aioredis` through `tests/conftest.py`. If pytest fails during collection with:
-
-```text
-ModuleNotFoundError: No module named 'fakeredis'
-```
-
-then the development dependencies were not installed successfully. Re-run:
+`tests/conftest.py` imports `fakeredis.aioredis` lazily inside the `mock_redis` fixture, so non-Redis tests can still collect and run if `fakeredis` is missing. Tests that request `mock_redis` are skipped with a fixture-level setup message until the development dependencies are installed. Re-run:
 
 ```bash
 python -m pip install -r requirements-dev.txt
 ```
 
-`requirements-dev.txt` already includes `fakeredis`, so do not change dependency versions unless a future incompatibility is proven. This collection failure can occur before the targeted test body runs, which makes it an environment/setup issue rather than necessarily a failure in `tests/core/test_canonical_id_contract.py`.
+`requirements-dev.txt` already includes `fakeredis`, so do not change dependency versions unless a future incompatibility is proven.
