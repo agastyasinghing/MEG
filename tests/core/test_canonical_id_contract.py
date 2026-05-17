@@ -1,10 +1,10 @@
 """
 Phase 0A canonical identifier contract tests for shared event models.
 
-These tests intentionally describe the target contract before production models are
-migrated away from legacy ``market_id`` routing. Tests marked xfail should become
-passing tests in the migration ticket that adds ``condition_id``, ``token_id``,
-and display-only ``market_slug`` fields to the shared rail models.
+These tests cover the compatibility contract where production models still accept
+legacy ``market_id`` routing while also carrying optional canonical identifiers.
+Tests marked xfail describe the future target contract where ``condition_id``,
+``token_id``, and ``outcome`` are required and market_id-only routing is rejected.
 """
 from __future__ import annotations
 
@@ -15,7 +15,15 @@ import pytest
 from pydantic import ValidationError
 
 import meg.core.events as events
-from meg.core.events import QualifiedWhaleTrade, RawWhaleTrade, SignalEvent, SignalScores, TradeProposal
+from meg.core.events import (
+    MarketState,
+    PositionState,
+    QualifiedWhaleTrade,
+    RawWhaleTrade,
+    SignalEvent,
+    SignalScores,
+    TradeProposal,
+)
 
 
 CANONICAL_IDS = {
@@ -96,6 +104,37 @@ def _base_trade_proposal_payload() -> dict[str, Any]:
     }
 
 
+def _base_position_state_payload() -> dict[str, Any]:
+    return {
+        "position_id": "position-1",
+        "market_id": LEGACY_MARKET_ID,
+        "outcome": "YES",
+        "entry_price": 0.62,
+        "current_price": 0.65,
+        "size_usdc": 25.0,
+        "shares": 40.32,
+        "entry_signal_id": "sig-1",
+        "opened_at_ms": 1762819210000,
+        "take_profit_price": 0.74,
+        "stop_loss_price": 0.54,
+    }
+
+
+def _base_market_state_payload() -> dict[str, Any]:
+    return {
+        "market_id": LEGACY_MARKET_ID,
+        "outcome": "YES",
+        "bid": 0.62,
+        "ask": 0.64,
+        "mid_price": 0.63,
+        "spread": 0.02,
+        "liquidity_usdc": 2500.0,
+        "volume_24h_usdc": 12500.0,
+        "participants": 85,
+        "last_updated_at": "2026-05-17T12:00:00Z",
+    }
+
+
 MODEL_CASES = [
     pytest.param(RawWhaleTrade, _base_raw_whale_fill_payload, id="raw_whale_fill_equivalent"),
     pytest.param(QualifiedWhaleTrade, _base_qualified_whale_fill_payload, id="qualified_whale_fill_equivalent"),
@@ -104,10 +143,60 @@ MODEL_CASES = [
 ]
 
 
+CANONICAL_COMPAT_MODEL_CASES = [
+    *MODEL_CASES,
+    pytest.param(PositionState, _base_position_state_payload, id="position_state"),
+    pytest.param(MarketState, _base_market_state_payload, id="market_state"),
+]
+
+
+@pytest.mark.parametrize("model,payload_factory", CANONICAL_COMPAT_MODEL_CASES)
+def test_shared_event_models_accept_and_round_trip_optional_canonical_fields(
+    model: type[Any], payload_factory: Any
+) -> None:
+    """Compatibility models carry canonical IDs and display slug when supplied."""
+    payload = payload_factory()
+    payload.update(CANONICAL_IDS)
+    payload["market_slug"] = DISPLAY_MARKET_SLUG
+
+    event = model.model_validate(payload)
+    dumped = event.model_dump()
+
+    assert dumped["condition_id"] == CANONICAL_IDS["condition_id"]
+    assert dumped["token_id"] == CANONICAL_IDS["token_id"]
+    assert dumped["outcome"] == CANONICAL_IDS["outcome"]
+    assert dumped["market_slug"] == DISPLAY_MARKET_SLUG
+
+
+@pytest.mark.parametrize("model,payload_factory", CANONICAL_COMPAT_MODEL_CASES)
+def test_market_slug_remains_optional_display_metadata(model: type[Any], payload_factory: Any) -> None:
+    """Canonical-capable models do not require market_slug for construction."""
+    payload = payload_factory()
+    payload.update(CANONICAL_IDS)
+
+    event = model.model_validate(payload)
+
+    assert event.condition_id == CANONICAL_IDS["condition_id"]
+    assert event.token_id == CANONICAL_IDS["token_id"]
+    assert event.market_slug is None
+
+
+@pytest.mark.parametrize("model,payload_factory", CANONICAL_COMPAT_MODEL_CASES)
+def test_legacy_market_id_payloads_remain_accepted_during_compatibility_window(
+    model: type[Any], payload_factory: Any
+) -> None:
+    """Current producers can still construct models without canonical IDs."""
+    event = model.model_validate(payload_factory())
+
+    assert event.market_id == LEGACY_MARKET_ID
+    assert event.condition_id is None
+    assert event.token_id is None
+
+
 @pytest.mark.parametrize("model,payload_factory", MODEL_CASES)
 @pytest.mark.parametrize("field", ["condition_id", "token_id"])
 @pytest.mark.xfail(
-    reason="Ticket 0A-01B documents target contract before production models replace market_id with canonical IDs.",
+    reason="Future migration target: shared event models eventually require canonical IDs without legacy market_id.",
     strict=True,
 )
 def test_shared_event_models_reject_missing_condition_id_or_token_id(

@@ -81,7 +81,21 @@ class SignalDroppedError(Exception):
 # ── Event schemas ─────────────────────────────────────────────────────────────
 
 
-class RawWhaleTrade(BaseModel):
+class CanonicalIdentifiers(BaseModel):
+    """Optional Phase 0A canonical identifiers carried alongside legacy IDs.
+
+    These fields are optional during the compatibility window so current
+    producers can continue sending legacy payloads while new shared-rail
+    producers begin forwarding canonical Polymarket identity.
+    market_slug is display metadata only and must not be used for routing.
+    """
+
+    condition_id: str | None = None
+    token_id: str | None = None
+    market_slug: str | None = None
+
+
+class RawWhaleTrade(CanonicalIdentifiers):
     """
     Emitted by data_layer when a whale wallet executes a trade on Polymarket.
     Published to: RedisKeys.CHANNEL_RAW_WHALE_TRADES
@@ -104,7 +118,7 @@ class RawWhaleTrade(BaseModel):
     market_category: str = ""  # e.g. "politics", "crypto", "sports"; "" = unknown
 
 
-class QualifiedWhaleTrade(BaseModel):
+class QualifiedWhaleTrade(CanonicalIdentifiers):
     """
     Emitted by pre_filter after a RawWhaleTrade passes all three gates:
       Gate 1: market quality check
@@ -149,7 +163,7 @@ class SignalScores(BaseModel):
     ladder_multiplier: float = Field(ge=1, le=2)
 
 
-class SignalEvent(BaseModel):
+class SignalEvent(CanonicalIdentifiers):
     """
     Emitted by signal_engine after composite scoring.
     Only events with composite_score >= config.signal.composite_score_threshold
@@ -196,7 +210,7 @@ class SignalEvent(BaseModel):
     market_category: str = ""
 
 
-class TradeProposal(BaseModel):
+class TradeProposal(CanonicalIdentifiers):
     """
     Emitted by agent_core after a SignalEvent passes all risk gates.
     In v1, all proposals require human approval via Telegram before execution.
@@ -255,7 +269,7 @@ class AlertMessage(BaseModel):
     urgent: bool = False
 
 
-class PositionState(BaseModel):
+class PositionState(CanonicalIdentifiers):
     """
     Runtime position state stored in Redis (meg:open_positions hash).
 
@@ -296,7 +310,7 @@ class PositionState(BaseModel):
 # ── Market state model ────────────────────────────────────────────────────────
 
 
-class MarketState(BaseModel):
+class MarketState(CanonicalIdentifiers):
     """
     Current market state as cached by CLOBMarketFeed in Redis.
 
@@ -316,6 +330,7 @@ class MarketState(BaseModel):
     """
 
     market_id: str
+    outcome: Outcome | None = None
     bid: float  # best bid price (0.0–1.0)
     ask: float  # best ask price (0.0–1.0)
     mid_price: float  # (bid + ask) / 2

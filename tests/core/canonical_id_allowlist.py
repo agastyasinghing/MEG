@@ -59,7 +59,7 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     "tests/agent_core/test_position_manager.py": 13,
     "tests/agent_core/test_risk_controller.py": 1,
     "tests/agent_core/test_trap_detector.py": 27,
-    "tests/core/test_canonical_id_contract.py": 14,
+    "tests/core/test_canonical_id_contract.py": 19,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
