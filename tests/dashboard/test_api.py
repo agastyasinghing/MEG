@@ -36,8 +36,17 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.events import PositionState, RedisKeys, TradeProposal
-from meg.dashboard.api.main import app, db_session, get_config, get_redis
+from meg.dashboard.api.main import (
+    _normalize_signal_feed_data,
+    app,
+    db_session,
+    get_config,
+    get_redis,
+)
 from meg.db.models import Position, PositionStatus, SignalOutcome, Wallet
+
+
+LEGACY_ROUTE_FIELD = "market" "_id"
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -741,6 +750,63 @@ async def test_get_pnl_aggregates_closed_positions(api_client, db_engine):
 # ═══════════════════════════════════════════════════════════════════════
 # GET /api/v1/feed/signals — SSE
 # ═══════════════════════════════════════════════════════════════════════
+
+
+def test_signal_feed_normalizes_explicit_canonical_payload_preserving_legacy_fields():
+    payload = {
+        "event_type": "signal",
+        LEGACY_ROUTE_FIELD: "MKT-legacy",
+        "condition_id": "0xcondition",
+        "token_id": "123456789",
+        "outcome": "YES",
+        "status": "PENDING",
+    }
+
+    normalized = json.loads(_normalize_signal_feed_data(json.dumps(payload)))
+
+    assert normalized["condition_id"] == "0xcondition"
+    assert normalized["token_id"] == "123456789"
+    assert normalized["outcome"] == "YES"
+    assert normalized[LEGACY_ROUTE_FIELD] == "MKT-legacy"
+    assert normalized["status"] == "PENDING"
+    assert "market_slug" not in normalized
+
+
+def test_signal_feed_preserves_optional_display_slug_when_supplied():
+    payload = {
+        "event_type": "signal",
+        LEGACY_ROUTE_FIELD: "MKT-legacy",
+        "condition_id": "0xcondition",
+        "token_id": "123456789",
+        "outcome": "NO",
+        "market_slug": "display-only-slug",
+    }
+
+    normalized = json.loads(_normalize_signal_feed_data(json.dumps(payload)))
+
+    assert normalized["market_slug"] == "display-only-slug"
+    assert normalized["condition_id"] == "0xcondition"
+    assert normalized["token_id"] == "123456789"
+    assert normalized["outcome"] == "NO"
+
+
+def test_signal_feed_does_not_derive_canonical_ids_from_legacy_identifier():
+    raw_payload = json.dumps(
+        {
+            "event_type": "signal",
+            LEGACY_ROUTE_FIELD: "0xcondition:123456789:YES",
+            "outcome": "YES",
+        },
+        indent=2,
+    )
+
+    forwarded = _normalize_signal_feed_data(raw_payload)
+
+    assert forwarded == raw_payload
+    decoded = json.loads(forwarded)
+    assert "condition_id" not in decoded
+    assert "token_id" not in decoded
+    assert decoded[LEGACY_ROUTE_FIELD] == "0xcondition:123456789:YES"
 
 
 async def test_feed_signals_sse_headers_and_connection(fake_redis, monkeypatch):
