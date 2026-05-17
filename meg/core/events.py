@@ -390,6 +390,26 @@ class RedisKeys:
     def signal_ttl(signal_id: str) -> str:
         return f"signal:{signal_id}:ttl"
 
+    @staticmethod
+    def market_state(token_id: str) -> str:
+        return f"market:{token_id}:state"
+
+    @staticmethod
+    def market_book(token_id: str) -> str:
+        return f"market:{token_id}:book"
+
+    @staticmethod
+    def condition_outcome_consensus_window(condition_id: str, outcome: str) -> str:
+        return f"condition:{condition_id}:outcome:{outcome}:consensus"
+
+    @staticmethod
+    def token_exposure_usdc(token_id: str) -> str:
+        return f"token:{token_id}:exposure_usdc"
+
+    @staticmethod
+    def outcome_exposure_usdc(condition_id: str, outcome: str) -> str:
+        return f"condition:{condition_id}:outcome:{outcome}:exposure_usdc"
+
     # ── Market CLOB state keys (written by CLOBMarketFeed) ────────────────────
     @staticmethod
     def market_bid(market_id: str) -> str:
