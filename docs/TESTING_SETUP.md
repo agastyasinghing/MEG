@@ -79,6 +79,17 @@ Current acceptance criteria for the full-dev CI job:
 - Redis fixture tests are not silently skipped when `fakeredis` should be installed.
 - Runtime is measured by the first GitHub Actions run before broadening coverage.
 
+## Observed Phase 0A CI profile
+
+After adding and stabilizing the full-dev job, the Phase 0A CI profile is:
+
+- **No-fakeredis smoke job:** protects the runtime-only boundary by installing `requirements.txt` plus pinned pytest tooling, asserting `fakeredis` is absent, and proving core Phase 0A contract tests still collect and run while Redis fixture users skip cleanly.
+- **Full-dev job:** protects the developer-dependency boundary by installing `requirements-dev.txt`, importing `fakeredis`/`fakeredis.aioredis`, then running the focused `tests/core` and `tests/dashboard/test_api.py` groups with in-memory Redis and SQLite fixtures.
+- **Observed successful dependency boundary:** GitHub Actions proved that `requirements-dev.txt` can install successfully in CI, `fakeredis` can import, and `tests/core` passes under the full-dev job.
+- **Prior failure profile and fixes:** dashboard API coverage initially exposed two missing stabilization items: `aiosqlite` was required for the `sqlite+aiosqlite` dashboard fixture path, and fake Redis state had to be isolated between dashboard tests to prevent leaked positions, markets, and daily P&L from affecting later tests.
+- **Runtime record:** runtime should be recorded from the GitHub Actions UI after each major CI change.
+- **Broadening rule:** do not broaden full-dev CI beyond the current focused Phase 0A core/dashboard target until runtime remains acceptable over a few PRs.
+
 Non-goals for TEST-05:
 
 - Do not change `requirements.txt` or `requirements-dev.txt`.
