@@ -42,8 +42,12 @@ def _compile_jsonb_sqlite(type_, compiler, **kw):
 @pytest_asyncio.fixture
 async def fake_redis() -> AsyncGenerator[Redis, None]:
     client = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    yield client
-    await client.aclose()
+    await client.flushall()
+    try:
+        yield client
+    finally:
+        await client.flushall()
+        await client.aclose()
 
 
 @pytest_asyncio.fixture
