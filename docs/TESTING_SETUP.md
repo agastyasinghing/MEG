@@ -23,8 +23,8 @@ The targeted test file is intentionally narrow: it exercises the Phase 0A canoni
 | Target | Workflow or command | Dependency boundary | Use when |
 | --- | --- | --- | --- |
 | No-fakeredis core smoke | `.github/workflows/phase0a-smoke.yml` (`Phase 0A no-fakeredis smoke`) | Runtime dependencies from `requirements.txt` plus pinned `pytest==8.1.0` and `pytest-asyncio==0.23.5`; intentionally does **not** install `requirements-dev.txt` or `fakeredis`. | Validating that Phase 0A core contracts collect and run in a runtime-only CI environment, and that Redis fixture users skip cleanly when `fakeredis` is absent. |
-| Full-dev Phase 0A CI | `.github/workflows/phase0a-smoke.yml` (`Full-dev Phase 0A tests`) | Full development dependencies from `requirements-dev.txt`, including `fakeredis`, pytest plugins, formatters, type checks, and audit tooling. | Running the focused full-dev Phase 0A core group and dashboard API test file in CI with in-memory Redis fixtures available. |
-| Full local/dev path | `python -m pip install -r requirements-dev.txt` | Full development dependencies, including `fakeredis`, pytest plugins, formatters, type checks, and audit tooling. | Running Redis-backed fixture tests, dashboard/full local test passes, and checks that need the complete developer toolchain beyond the focused CI group. |
+| Full-dev Phase 0A CI | `.github/workflows/phase0a-smoke.yml` (`Full-dev Phase 0A tests`) | Full development dependencies from `requirements-dev.txt`, including `fakeredis`, `aiosqlite`, pytest plugins, formatters, type checks, and audit tooling. | Running the focused full-dev Phase 0A core group and dashboard API test file in CI with in-memory Redis fixtures available. |
+| Full local/dev path | `python -m pip install -r requirements-dev.txt` | Full development dependencies, including `fakeredis`, `aiosqlite`, pytest plugins, formatters, type checks, and audit tooling. | Running Redis-backed fixture tests, dashboard/full local test passes, and checks that need the complete developer toolchain beyond the focused CI group. |
 | Future integration jobs | To be defined with the job | Explicit external service boundary, such as real Redis, Postgres, dashboard services, or other integration infrastructure. | Adding tests that intentionally depend on live services or service containers rather than in-memory fixtures. |
 
 The current no-fakeredis smoke workflow first asserts that `fakeredis` is absent, then runs this narrow core smoke group:
@@ -55,7 +55,7 @@ The dependency boundary is the complete developer environment:
 python -m pip install -r requirements-dev.txt
 ```
 
-That boundary intentionally includes `fakeredis` from `requirements-dev.txt` so tests that request the `mock_redis` fixture exercise the in-memory Redis path instead of taking the no-fakeredis skip path. The job includes this explicit import check before pytest runs so dependency-resolution issues fail early:
+That boundary intentionally includes `fakeredis` from `requirements-dev.txt` so tests that request the `mock_redis` fixture exercise the in-memory Redis path instead of taking the no-fakeredis skip path. It also includes `aiosqlite` for dashboard API tests that create an async in-memory SQLite engine via SQLAlchemy. The job includes this explicit import check before pytest runs so dependency-resolution issues fail early:
 
 ```bash
 python -c "import fakeredis; import fakeredis.aioredis"
