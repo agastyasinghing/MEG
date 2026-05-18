@@ -9,6 +9,8 @@ from meg.core.events import (
     SUPPORTED_EVENT_SCHEMA_VERSION,
     RawWhaleTrade,
     SignalEvent,
+    validate_raw_whale_trade_channel_payload,
+    validate_shared_event_json,
 )
 from tests.core.event_fixture_boundary import (
     serialize_test_event_boundary_payload,
@@ -213,3 +215,37 @@ def test_json_boundary_keeps_canonical_identifiers_optional() -> None:
     assert event.token_id is None
     assert event.market_slug is None
     assert getattr(event, LEGACY_ID_FIELD) == LEGACY_ID_VALUE
+
+
+def test_production_shared_event_json_helper_matches_test_boundary_behavior() -> None:
+    payload_json = serialize_test_event_boundary_payload(_raw_whale_trade_payload())
+
+    event = validate_shared_event_json(payload_json)
+
+    assert isinstance(event, RawWhaleTrade)
+    assert event.condition_id == CONDITION_ID_VALUE
+    assert event.token_id == TOKEN_ID_VALUE
+
+
+def test_production_raw_whale_trade_helper_accepts_missing_schema_version() -> None:
+    payload = _raw_whale_trade_payload()
+    payload.pop("schema_version", None)
+
+    event = validate_raw_whale_trade_channel_payload(
+        serialize_test_event_boundary_payload(payload)
+    )
+
+    assert event.schema_version == SUPPORTED_EVENT_SCHEMA_VERSION
+    assert event.event_type == "raw_whale_trade"
+
+
+def test_production_raw_whale_trade_helper_rejects_wrong_supported_event_type() -> None:
+    with pytest.raises(ValueError, match="expects event_type=raw_whale_trade"):
+        validate_raw_whale_trade_channel_payload(
+            serialize_test_event_boundary_payload(_signal_payload())
+        )
+
+
+def test_production_shared_event_json_helper_rejects_non_object_json() -> None:
+    with pytest.raises(ValueError, match="must decode to an object"):
+        validate_shared_event_json("[]")

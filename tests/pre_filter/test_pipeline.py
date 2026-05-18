@@ -291,3 +291,182 @@ async def test_pipeline_gate2_exception_fails_closed(
 
     gate3.assert_not_called()
     pub.assert_not_called()
+
+
+# ── Raw Redis consumer boundary validation ────────────────────────────────────
+
+LEGACY_ID_FIELD = "market" + "_id"
+LEGACY_ID_VALUE = "legacy-prefilter-market"
+CONDITION_ID_VALUE = "0xconditionphase0a03b"
+TOKEN_ID_VALUE = "1234567890123456789003"
+MARKET_SLUG_VALUE = "phase0a-prefilter-boundary"
+
+
+class _SessionContext:
+    async def __aenter__(self):
+        return object()
+
+    async def __aexit__(self, exc_type, exc, tb) -> bool:
+        return False
+
+
+def _raw_boundary_payload() -> dict:
+    payload = make_raw_trade().model_dump()
+    payload[LEGACY_ID_FIELD] = LEGACY_ID_VALUE
+    return payload
+
+
+def _signal_boundary_payload() -> dict:
+    return {
+        "event_type": "signal",
+        "signal_id": "sig-phase0a-03b-wrong-boundary",
+        LEGACY_ID_FIELD: LEGACY_ID_VALUE,
+        "outcome": "YES",
+        "composite_score": 0.78,
+        "scores": {
+            "lead_lag": 0.8,
+            "consensus": 0.7,
+            "kelly_confidence": 0.6,
+            "divergence": 0.4,
+            "conviction_ratio": 0.5,
+            "archetype_multiplier": 1.1,
+            "ladder_multiplier": 1.0,
+        },
+        "recommended_size_usdc": 25.0,
+        "kelly_fraction": 0.05,
+        "ttl_expires_at_ms": 1762819510000,
+        "triggering_wallet": "0xwallet",
+    }
+
+
+def _patch_pipeline_boundary_dependencies(mocker, payloads: list[str]) -> AsyncMock:
+    async def finite_subscribe(_redis, channel):
+        from meg.core.events import RedisKeys
+
+        assert channel == RedisKeys.CHANNEL_RAW_WHALE_TRADES
+        for payload in payloads:
+            yield payload
+
+    mocker.patch("meg.pre_filter.pipeline.subscribe", new=finite_subscribe)
+    mocker.patch("meg.db.session.get_session", new=MagicMock(return_value=_SessionContext()))
+    return mocker.patch("meg.pre_filter.pipeline._process_event", new=AsyncMock())
+
+
+async def test_run_valid_current_legacy_raw_trade_calls_process_once(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    payload = _raw_boundary_payload()
+    process_event = _patch_pipeline_boundary_dependencies(mocker, [json.dumps(payload)])
+
+    await pipeline.run(mock_redis, test_config)
+
+    process_event.assert_called_once()
+    trade = process_event.call_args.args[0]
+    assert isinstance(trade, RawWhaleTrade)
+    assert trade.event_type == "raw_whale_trade"
+    assert getattr(trade, LEGACY_ID_FIELD) == LEGACY_ID_VALUE
+
+
+async def test_run_missing_schema_version_defaults_and_calls_process_once(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    payload = _raw_boundary_payload()
+    payload.pop("schema_version", None)
+    process_event = _patch_pipeline_boundary_dependencies(mocker, [json.dumps(payload)])
+
+    await pipeline.run(mock_redis, test_config)
+
+    process_event.assert_called_once()
+    trade = process_event.call_args.args[0]
+    assert trade.schema_version == 1
+
+
+async def test_run_preserves_optional_canonical_identifiers(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    payload = _raw_boundary_payload()
+    payload.update(
+        {
+            "condition_id": CONDITION_ID_VALUE,
+            "token_id": TOKEN_ID_VALUE,
+            "market_slug": MARKET_SLUG_VALUE,
+        }
+    )
+    process_event = _patch_pipeline_boundary_dependencies(mocker, [json.dumps(payload)])
+
+    await pipeline.run(mock_redis, test_config)
+
+    process_event.assert_called_once()
+    trade = process_event.call_args.args[0]
+    assert trade.condition_id == CONDITION_ID_VALUE
+    assert trade.token_id == TOKEN_ID_VALUE
+    assert trade.market_slug == MARKET_SLUG_VALUE
+
+
+async def test_run_legacy_payload_without_canonical_identifiers_still_calls_process_once(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    payload = _raw_boundary_payload()
+    payload.pop("condition_id", None)
+    payload.pop("token_id", None)
+    payload.pop("market_slug", None)
+    process_event = _patch_pipeline_boundary_dependencies(mocker, [json.dumps(payload)])
+
+    await pipeline.run(mock_redis, test_config)
+
+    process_event.assert_called_once()
+    trade = process_event.call_args.args[0]
+    assert trade.condition_id is None
+    assert trade.token_id is None
+    assert trade.market_slug is None
+
+
+@pytest.mark.parametrize(
+    "payload_json",
+    [
+        pytest.param(
+            json.dumps({**_raw_boundary_payload(), "schema_version": 2}),
+            id="unsupported_schema_version",
+        ),
+        pytest.param(json.dumps(_signal_boundary_payload()), id="wrong_event_type"),
+        pytest.param(
+            json.dumps(
+                {
+                    key: value
+                    for key, value in _raw_boundary_payload().items()
+                    if key != "event_type"
+                }
+            ),
+            id="missing_event_type",
+        ),
+        pytest.param('{"event_type": "raw_whale_trade",', id="malformed_json"),
+        pytest.param(json.dumps([_raw_boundary_payload()]), id="non_object_json"),
+    ],
+)
+async def test_run_rejects_malformed_boundary_payloads_without_processing(
+    mock_redis: Redis, test_config: MegConfig, mocker, payload_json: str
+) -> None:
+    process_event = _patch_pipeline_boundary_dependencies(mocker, [payload_json])
+
+    await pipeline.run(mock_redis, test_config)
+
+    process_event.assert_not_called()
+
+
+async def test_run_preserves_redis_disconnect_propagation(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    from redis.exceptions import ConnectionError as RedisConnectionError
+
+    async def disconnecting_subscribe(_redis, _channel):
+        if False:
+            yield ""
+        raise RedisConnectionError("simulated disconnect")
+
+    mocker.patch("meg.pre_filter.pipeline.subscribe", new=disconnecting_subscribe)
+    process_event = mocker.patch("meg.pre_filter.pipeline._process_event", new=AsyncMock())
+
+    with pytest.raises(RedisConnectionError, match="simulated disconnect"):
+        await pipeline.run(mock_redis, test_config)
+
+    process_event.assert_not_called()
