@@ -22,7 +22,9 @@ with a comment explaining why).
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime
+from json import JSONDecodeError
 from typing import Any, Literal, Mapping
 
 from pydantic import BaseModel, Field
@@ -390,6 +392,31 @@ def validate_shared_event_payload(payload: Mapping[str, Any]) -> BaseModel:
         str(payload_for_validation["event_type"]), schema_version=schema_version
     )
     return event_model.model_validate(payload_for_validation)
+
+
+def validate_shared_event_json(payload_json: str) -> BaseModel:
+    """Decode shared-event JSON and validate it via event_type dispatch."""
+    try:
+        payload = json.loads(payload_json)
+    except JSONDecodeError as exc:
+        raise ValueError("Invalid shared event JSON payload") from exc
+
+    if not isinstance(payload, dict):
+        raise ValueError("Shared event JSON payload must decode to an object")
+
+    return validate_shared_event_payload(payload)
+
+
+def validate_raw_whale_trade_channel_payload(payload_json: str) -> RawWhaleTrade:
+    """Validate a raw whale trade consumer payload from the shared event rail."""
+    event = validate_shared_event_json(payload_json)
+    if not isinstance(event, RawWhaleTrade):
+        raise ValueError(
+            "Raw whale trade channel expects event_type=raw_whale_trade, "
+            f"got {getattr(event, 'event_type', None)}"
+        )
+
+    return event
 
 
 # ── Redis key patterns ────────────────────────────────────────────────────────

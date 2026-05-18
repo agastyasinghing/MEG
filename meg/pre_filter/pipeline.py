@@ -39,14 +39,16 @@ Session lifecycle:
 """
 from __future__ import annotations
 
-import json
-
 import structlog
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.config_loader import MegConfig
-from meg.core.events import RawWhaleTrade, RedisKeys
+from meg.core.events import (
+    RawWhaleTrade,
+    RedisKeys,
+    validate_raw_whale_trade_channel_payload,
+)
 from meg.core.redis_client import publish, subscribe
 from meg.pre_filter import arbitrage_exclusion, intent_classifier, market_quality
 
@@ -73,8 +75,7 @@ async def run(redis: Redis, config: MegConfig) -> None:
 
     async for raw in subscribe(redis, RedisKeys.CHANNEL_RAW_WHALE_TRADES):
         try:
-            data = json.loads(raw)
-            trade = RawWhaleTrade.model_validate(data)
+            trade = validate_raw_whale_trade_channel_payload(raw)
         except Exception as exc:
             logger.warning(
                 "pipeline.malformed_event",
