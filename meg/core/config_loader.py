@@ -367,7 +367,7 @@ class ConfigLoader:
             self._observer = None
         logger.info("config_loader.stopped")
 
-    def _load_and_validate(self, path: Path) -> MegConfig:
+    def _load_and_validate(self, path: Path, *, allow_empty: bool = True) -> MegConfig:
         """
         Read YAML from path and return a validated MegConfig.
         Raises yaml.YAMLError on malformed YAML (e.g. partial writes).
@@ -377,8 +377,12 @@ class ConfigLoader:
         """
         with open(path) as f:
             raw: Any = yaml.safe_load(f)
-        # safe_load returns None for an empty file — treat as empty config
-        return MegConfig(**(raw or {}))
+        if raw is None:
+            if not allow_empty:
+                raise yaml.YAMLError("empty config read during hot reload")
+            # safe_load returns None for an empty file — treat as empty config
+            raw = {}
+        return MegConfig(**raw)
 
     def _on_config_changed(self, path: Path) -> None:
         """
@@ -387,7 +391,7 @@ class ConfigLoader:
         Never raises — must not crash the watchdog observer thread.
         """
         try:
-            new_config = self._load_and_validate(path)
+            new_config = self._load_and_validate(path, allow_empty=False)
             with self._lock:
                 self._config = new_config
             logger.info("config_loader.hot_reloaded", path=str(path))
