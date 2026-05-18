@@ -195,6 +195,25 @@ async def test_on_config_changed_invalid_yaml_keeps_last_good(tmp_path: Path) ->
 
 
 @pytest.mark.asyncio
+async def test_on_config_changed_empty_file_keeps_last_good(tmp_path: Path) -> None:
+    """_on_config_changed() treats an empty hot-reload read as transient."""
+    cfg_path = tmp_path / "config.yaml"
+    _write_yaml(cfg_path, {"risk": {"max_daily_loss_usdc": 100.0}})
+
+    loader = ConfigLoader()
+    await loader.start(cfg_path)
+    try:
+        assert loader.get().risk.max_daily_loss_usdc == 100.0
+
+        cfg_path.write_text("")
+        loader._on_config_changed(cfg_path)  # must not raise
+
+        assert loader.get().risk.max_daily_loss_usdc == 100.0
+    finally:
+        await loader.stop()
+
+
+@pytest.mark.asyncio
 async def test_on_config_changed_pydantic_error_keeps_last_good(tmp_path: Path) -> None:
     """_on_config_changed() with a schema violation keeps the previous config."""
     cfg_path = tmp_path / "config.yaml"
