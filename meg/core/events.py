@@ -407,9 +407,8 @@ def validate_shared_event_json(payload_json: str) -> BaseModel:
     return validate_shared_event_payload(payload)
 
 
-def validate_raw_whale_trade_channel_payload(payload_json: str) -> RawWhaleTrade:
-    """Validate a raw whale trade consumer payload from the shared event rail."""
-    event = validate_shared_event_json(payload_json)
+def _ensure_raw_whale_trade(event: BaseModel) -> RawWhaleTrade:
+    """Return a RawWhaleTrade or raise when shared-event dispatch found another type."""
     if not isinstance(event, RawWhaleTrade):
         raise ValueError(
             "Raw whale trade channel expects event_type=raw_whale_trade, "
@@ -417,6 +416,30 @@ def validate_raw_whale_trade_channel_payload(payload_json: str) -> RawWhaleTrade
         )
 
     return event
+
+
+def validate_raw_whale_trade_channel_payload(payload_json: str) -> RawWhaleTrade:
+    """Validate a raw whale trade consumer payload from the shared event rail."""
+    return _ensure_raw_whale_trade(validate_shared_event_json(payload_json))
+
+
+def validate_raw_whale_trade_for_publish(
+    event_or_payload: RawWhaleTrade | Mapping[str, Any]
+) -> RawWhaleTrade:
+    """Validate the data-layer raw whale publisher payload before Redis publish.
+
+    The publisher boundary uses the same shared event dispatch as consumers so
+    event_type/schema_version mismatches fail before reaching Redis. Missing
+    schema_version defaults through validate_shared_event_payload(), while the
+    legacy identifier and optional canonical identifiers are preserved by the
+    RawWhaleTrade model.
+    """
+    payload = (
+        event_or_payload.model_dump()
+        if isinstance(event_or_payload, RawWhaleTrade)
+        else event_or_payload
+    )
+    return _ensure_raw_whale_trade(validate_shared_event_payload(payload))
 
 
 # ── Redis key patterns ────────────────────────────────────────────────────────

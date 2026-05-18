@@ -43,7 +43,11 @@ import structlog
 from redis.asyncio import Redis
 
 from meg.core.config_loader import MegConfig
-from meg.core.events import RawWhaleTrade, RedisKeys
+from meg.core.events import (
+    RawWhaleTrade,
+    RedisKeys,
+    validate_raw_whale_trade_for_publish,
+)
 from meg.core.redis_client import publish
 
 logger = structlog.get_logger(__name__)
@@ -429,8 +433,11 @@ async def _filter_whale_transaction(
 
 
 async def _emit_event(redis: Redis, event: RawWhaleTrade) -> None:
-    """Publish a RawWhaleTrade to the Redis CHANNEL_RAW_WHALE_TRADES channel."""
-    await publish(redis, RedisKeys.CHANNEL_RAW_WHALE_TRADES, event.model_dump_json())
+    """Validate and publish a RawWhaleTrade to the Redis raw-whale channel."""
+    publish_event = validate_raw_whale_trade_for_publish(event)
+    await publish(
+        redis, RedisKeys.CHANNEL_RAW_WHALE_TRADES, publish_event.model_dump_json()
+    )
 
 
 def _safe_hash(tx: dict[str, Any]) -> str:

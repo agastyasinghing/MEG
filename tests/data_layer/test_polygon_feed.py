@@ -47,6 +47,11 @@ def config() -> MegConfig:
     return MegConfig()
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _clean_redis_between_tests(mock_redis: Redis) -> None:
+    await mock_redis.flushdb()
+
+
 class MockRPCConnection(PolygonRPCConnection):
     """Minimal mock RPC connection for testing."""
 
