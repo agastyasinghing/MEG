@@ -13,6 +13,7 @@ from .loader import (
     validate_normalized_fills_ingest,
 )
 from .queries import lead_lag_summary, market_price_after_trades, wallet_forward_returns
+from .reports import build_fixture_lead_lag_report, write_report_json
 
 __all__ = [
     "connect_duckdb",
@@ -28,4 +29,6 @@ __all__ = [
     "lead_lag_summary",
     "NORMALIZED_FILLS_COLUMNS",
     "PRICE_SNAPSHOTS_COLUMNS",
+    "build_fixture_lead_lag_report",
+    "write_report_json",
 ]
