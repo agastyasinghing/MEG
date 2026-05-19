@@ -883,6 +883,62 @@ def test_signal_feed_does_not_derive_canonical_ids_from_legacy_identifier():
     assert decoded[LEGACY_ROUTE_FIELD] == "0xcondition:123456789:YES"
 
 
+
+
+def test_signal_feed_defaults_schema_version_for_legacy_signal_payload():
+    payload = {
+        "event_type": "signal",
+        "signal_id": "sig-schema-default",
+        LEGACY_ROUTE_FIELD: "MKT-legacy",
+        "outcome": "YES",
+        "composite_score": 0.88,
+        "scores": {
+            "lead_lag": 0.9,
+            "consensus": 0.8,
+            "kelly_confidence": 0.7,
+            "divergence": 0.6,
+            "conviction_ratio": 0.5,
+            "archetype_multiplier": 1.0,
+            "ladder_multiplier": 1.0,
+        },
+        "recommended_size_usdc": 100.0,
+        "kelly_fraction": 0.1,
+        "ttl_expires_at_ms": 1730000000000,
+        "status": "PENDING",
+        "triggering_wallet": "0x" + "e" * 40,
+    }
+
+    normalized = json.loads(_normalize_signal_feed_data(json.dumps(payload)))
+
+    assert normalized["schema_version"] == 1
+    assert "condition_id" in normalized and normalized["condition_id"] is None
+    assert "token_id" in normalized and normalized["token_id"] is None
+
+
+def test_signal_feed_invalid_json_is_forwarded_without_crashing():
+    raw_payload = "{this is not json"
+    assert _normalize_signal_feed_data(raw_payload) == raw_payload
+
+
+def test_signal_feed_wrong_event_type_is_forwarded_without_crashing():
+    payload = {
+        "event_type": "not_signal",
+        "signal_id": "sig-wrong-type",
+    }
+    raw_payload = json.dumps(payload, separators=(",", ":"))
+
+    assert _normalize_signal_feed_data(raw_payload) == raw_payload
+
+
+def test_signal_feed_unsupported_schema_version_is_forwarded_without_crashing():
+    payload = {
+        "event_type": "signal",
+        "schema_version": 99,
+        "signal_id": "sig-unsupported-schema",
+    }
+    raw_payload = json.dumps(payload, separators=(",", ":"))
+
+    assert _normalize_signal_feed_data(raw_payload) == raw_payload
 async def test_feed_signals_sse_headers_and_connection(fake_redis, monkeypatch):
     """
     SSE endpoint returns text/event-stream, no-cache header, and sends the
