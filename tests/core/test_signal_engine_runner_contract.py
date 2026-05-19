@@ -1,7 +1,8 @@
-"""Phase 0A-05C test-only contract for future signal-engine runner wiring.
+"""Phase 0A runner contract checks for the implemented runner skeleton.
 
-These tests intentionally describe the expected runner API and channel behavior
-without implementing production runtime wiring yet.
+These tests verify the runner API and Redis channel ownership behavior, while
+also retaining contract/preflight coverage for payload boundaries until full
+runtime startup wiring is enabled in main.
 """
 from __future__ import annotations
 
@@ -21,8 +22,7 @@ from tests.core.event_fixture_boundary import serialize_test_event_boundary_payl
 LEGACY_ID_FIELD = "market" + "_id"
 
 
-@pytest.mark.xfail(strict=True, reason="signal-engine runner not implemented yet")
-def test_future_runner_module_exposes_run_callable_contract() -> None:
+def test_runner_module_exposes_run_callable_contract() -> None:
     runner = importlib.import_module("meg.signal_engine.runner")
     assert hasattr(runner, "run")
     assert callable(runner.run)
@@ -33,27 +33,14 @@ def test_runner_channel_contract_constants_are_defined() -> None:
     assert RedisKeys.CHANNEL_SIGNAL_EVENTS == "signal_events"
 
 
-@pytest.mark.xfail(strict=True, reason="signal-engine runner not implemented yet")
-def test_future_runner_consumes_qualified_channel_and_publishes_signal_channel() -> None:
+def test_runner_consumes_qualified_channel_and_publishes_signal_channel() -> None:
     runner = importlib.import_module("meg.signal_engine.runner")
 
     assert getattr(runner, "CONSUME_CHANNEL", None) == RedisKeys.CHANNEL_QUALIFIED_WHALE_TRADES
     assert getattr(runner, "PUBLISH_CHANNEL", None) == RedisKeys.CHANNEL_SIGNAL_EVENTS
 
 
-@pytest.mark.xfail(strict=True, reason="signal-engine runner not implemented yet")
-def test_future_runner_contract_behaviors_documented() -> None:
-    """Contract checklist for future implementation.
-
-    Expected behavior:
-    - valid QualifiedWhaleTrade payload is accepted.
-    - malformed JSON / wrong event_type / unsupported schema_version fails closed.
-    - score() returning SignalEvent results in one SignalEvent publish.
-    - score() returning None/drop does not publish.
-    - Redis disconnect propagation is preserved.
-    - decision_agent.evaluate is never called by runner.
-    """
-
+def test_runner_contract_behaviors_documented() -> None:
     runner = importlib.import_module("meg.signal_engine.runner")
     assert callable(runner.run)
 
