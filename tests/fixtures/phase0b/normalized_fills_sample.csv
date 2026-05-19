@@ -1,0 +1,4 @@
+condition_id,token_id,outcome,market_slug,source_market_ref,wallet_address,timestamp_ms,price,size_usdc,side,source
+0xcond_001,10001,YES,will-temp-rise-city-a,legacy-src-1,0xaaa111,1714500000000,0.61,125.5,BUY,fixture_seed
+0xcond_001,10002,NO,will-temp-rise-city-a,legacy-src-1,0xbbb222,1714500600000,0.39,80.0,SELL,fixture_seed
+0xcond_002,20001,YES,will-rain-city-b,legacy-src-2,0xccc333,1714501200000,0.55,42.25,BUY,fixture_seed
