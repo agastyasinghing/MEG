@@ -7,21 +7,21 @@ sources:
   - source_id: "jon_becker_prediction_market_analysis_snapshot"
     source_name: "Jon-Becker/prediction-market-analysis"
     source_type: "repo_snapshot"
-    origin_url_or_path: "https://github.com/Jon-Becker/prediction-market-analysis"
-    acquisition_method: "manual_source_review_placeholder"
-    acquired_at: "TODO_ACQUIRED_AT_UTC_REPLACE_BEFORE_IMPORT"
+    origin_url_or_path: "https://github.com/Jon-Becker/prediction-market-analysis.git"
+    acquisition_method: "operator_local_read_only_git_clone"
+    acquired_at: "2026-05-19"
     snapshot_date_range:
       start_utc: "TODO_START_UTC_REPLACE_BEFORE_IMPORT"
       end_utc: "TODO_END_UTC_REPLACE_BEFORE_IMPORT"
     expected_format: "repo_files_mixed"
-    expected_size_bytes: 0
+    expected_size_bytes: 2097152
     checksum_strategy: "TODO_SHA256_REPLACE_BEFORE_IMPORT"
-    license_or_terms_status: "pending_review"
-    allowed_use: "local_inspection_only_until_terms_reviewed"
+    license_or_terms_status: "repo_code_license_reviewed_acceptable_dataset_terms_pending_review"
+    allowed_use: "research_planning_and_local_inspection_only"
     refresh_policy: "one_off_snapshot_until_review_complete"
     owner_reviewer: "TODO_OWNER_AND_REVIEWER"
     import_priority: "P0"
-    notes: "Example placeholder only. No license approval asserted by this template."
+    notes: "Repository code/docs manually reviewed from remote git snapshot (inspected commit: f3ab641264d9acbedb72b5db9040bc9d078d5ff0; shallow clone size approx 2.0M; file count 110). docs/ANALYSIS.md and docs/SCHEMAS.md were found. No committed parquet/csv/json/jsonl dataset payload files were found in the shallow clone. The downloaded ~36 GiB local archive was not inspected in 0B-14. No fixture derivation, import, or loader implementation is approved yet; planning-only posture remains in effect."
 
   - source_id: "local_poly_kalshi_historical_archive_placeholder"
     source_name: "Local Polymarket/Kalshi historical archive"
@@ -40,7 +40,7 @@ sources:
     refresh_policy: "snapshot_with_manual_refresh_decision"
     owner_reviewer: "TODO_OWNER_AND_REVIEWER"
     import_priority: "P0"
-    notes: "May include legacy market identifier fields for compatibility reference only; canonical mapping must use condition_id/token_id/outcome."
+    notes: "Pending review placeholder remains intentionally conservative. The local ~36 GiB archive was not inspected in 0B-14; provenance, checksums, and dataset/archive terms are still unresolved. Keep local inspection only until provenance and terms review are complete. May include legacy market identifier fields for compatibility reference only; canonical mapping must use condition_id/token_id/outcome."
 
   - source_id: "polymarket_market_metadata_placeholder"
     source_name: "Polymarket market metadata"
@@ -80,7 +80,7 @@ fixtures:
     expected_test_modules:
       - "tests/research/test_duckdb_loader.py"
       - "tests/core/test_static_canonical_ids.py"
-    regeneration_instructions: "Document deterministic source subset extraction and normalization steps before updating this fixture."
+    regeneration_instructions: "Document deterministic source subset extraction and normalization steps before updating this fixture. Current fixture is a synthetic/tiny planning artifact and not an approved source-derived artifact from Jon-Becker data."
 
   - fixture_id: "phase0b_price_snapshots_sample"
     fixture_path: "tests/fixtures/phase0b/price_snapshots_sample.csv"
