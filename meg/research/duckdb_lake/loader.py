@@ -17,6 +17,15 @@ NORMALIZED_FILLS_COLUMNS: tuple[str, ...] = (
     "source",
 )
 
+PRICE_SNAPSHOTS_COLUMNS: tuple[str, ...] = (
+    "condition_id",
+    "token_id",
+    "outcome",
+    "timestamp_ms",
+    "price",
+    "source",
+)
+
 
 def connect_duckdb(path: str | Path = ":memory:") -> duckdb.DuckDBPyConnection:
     db_path = str(path) if isinstance(path, Path) else path
@@ -89,3 +98,31 @@ def validate_normalized_fills_ingest(conn: duckdb.DuckDBPyConnection, expected_r
         "duplicate_key_rows": duplicate_rows,
         "source_non_null": null_source_rows == 0,
     }
+
+
+def create_price_snapshots_table(conn: duckdb.DuckDBPyConnection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS price_snapshots (
+            condition_id TEXT NOT NULL,
+            token_id TEXT NOT NULL,
+            outcome TEXT NOT NULL,
+            timestamp_ms BIGINT NOT NULL,
+            price DOUBLE NOT NULL,
+            source TEXT NOT NULL
+        )
+        """
+    )
+
+
+def load_price_snapshots_csv(conn: duckdb.DuckDBPyConnection, csv_path: str | Path) -> int:
+    csv_path = Path(csv_path)
+    conn.execute(
+        """
+        INSERT INTO price_snapshots
+        SELECT condition_id, token_id, outcome, timestamp_ms, price, source
+        FROM read_csv_auto(?, header=true)
+        """,
+        [str(csv_path)],
+    )
+    return conn.execute("SELECT COUNT(*) FROM price_snapshots").fetchone()[0]
