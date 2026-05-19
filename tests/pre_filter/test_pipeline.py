@@ -29,7 +29,12 @@ import pytest
 from redis.asyncio import Redis
 
 from meg.core.config_loader import MegConfig
-from meg.core.events import QualifiedWhaleTrade, RawWhaleTrade
+from meg.core.events import (
+    QualifiedWhaleTrade,
+    RawWhaleTrade,
+    RedisKeys,
+    validate_shared_event_json,
+)
 from meg.pre_filter import pipeline
 from tests.pre_filter.conftest import make_raw_trade, set_wallet_redis_data
 
@@ -51,6 +56,9 @@ def _make_qualified(trade: RawWhaleTrade) -> QualifiedWhaleTrade:
         whale_score=0.75,
         archetype="INFORMATION",
         intent="SIGNAL",
+        condition_id=trade.condition_id,
+        token_id=trade.token_id,
+        market_slug=trade.market_slug,
     )
 
 
@@ -159,8 +167,12 @@ async def test_pipeline_full_pass_publishes(
 
     pub.assert_called_once()
     channel_arg = pub.call_args[0][1]
-    from meg.core.events import RedisKeys
     assert channel_arg == RedisKeys.CHANNEL_QUALIFIED_WHALE_TRADES
+
+    published_json = pub.call_args[0][2]
+    parsed = validate_shared_event_json(published_json)
+    assert isinstance(parsed, QualifiedWhaleTrade)
+    assert parsed == qualified
 
 
 async def test_pipeline_full_pass_publishes_signal_ladder(
@@ -211,11 +223,116 @@ async def test_pipeline_qualified_trade_schema_valid(
     await pipeline._process_event(trade, mock_redis, test_config, session=None)
 
     published_json = pub.call_args[0][2]
-    parsed = QualifiedWhaleTrade.model_validate_json(published_json)
+    parsed = validate_shared_event_json(published_json)
+    assert isinstance(parsed, QualifiedWhaleTrade)
     assert parsed.event_type == "qualified_whale_trade"
     assert parsed.whale_score > 0.0
     assert parsed.archetype in ("INFORMATION", "MOMENTUM", "ARBITRAGE", "MANIPULATOR")
     assert parsed.intent in ("SIGNAL", "SIGNAL_LADDER", "HEDGE", "REBALANCE")
+
+
+async def test_pipeline_legacy_qualified_without_canonical_identifiers_still_publishes(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    """Legacy-compatible qualified payloads do not require canonical identifiers."""
+    trade = make_raw_trade().model_copy(
+        update={"condition_id": None, "token_id": None, "market_slug": None}
+    )
+    qualified = _make_qualified(trade)
+
+    mocker.patch("meg.pre_filter.market_quality.check", new=AsyncMock(return_value=True))
+    mocker.patch("meg.pre_filter.arbitrage_exclusion.check", new=AsyncMock(return_value=True))
+    mocker.patch(
+        "meg.pre_filter.intent_classifier.classify", new=AsyncMock(return_value="SIGNAL")
+    )
+    mocker.patch(
+        "meg.pre_filter.intent_classifier.build_qualified_trade",
+        new=AsyncMock(return_value=qualified),
+    )
+    pub = mocker.patch("meg.pre_filter.pipeline.publish", new=AsyncMock())
+
+    await pipeline._process_event(trade, mock_redis, test_config, session=None)
+
+    pub.assert_called_once()
+    parsed = validate_shared_event_json(pub.call_args[0][2])
+    assert isinstance(parsed, QualifiedWhaleTrade)
+    assert parsed.condition_id is None
+    assert parsed.token_id is None
+    assert parsed.market_slug is None
+    assert getattr(parsed, LEGACY_ID_FIELD) == getattr(qualified, LEGACY_ID_FIELD)
+
+
+async def test_pipeline_preserves_optional_canonical_identifiers_on_qualified_publish(
+    mock_redis: Redis, test_config: MegConfig, mocker
+) -> None:
+    """Optional canonical identifiers and display slug survive outbound validation."""
+    trade = make_raw_trade().model_copy(
+        update={
+            "condition_id": CONDITION_ID_VALUE,
+            "token_id": TOKEN_ID_VALUE,
+            "market_slug": MARKET_SLUG_VALUE,
+        }
+    )
+    qualified = _make_qualified(trade)
+
+    mocker.patch("meg.pre_filter.market_quality.check", new=AsyncMock(return_value=True))
+    mocker.patch("meg.pre_filter.arbitrage_exclusion.check", new=AsyncMock(return_value=True))
+    mocker.patch(
+        "meg.pre_filter.intent_classifier.classify", new=AsyncMock(return_value="SIGNAL")
+    )
+    mocker.patch(
+        "meg.pre_filter.intent_classifier.build_qualified_trade",
+        new=AsyncMock(return_value=qualified),
+    )
+    pub = mocker.patch("meg.pre_filter.pipeline.publish", new=AsyncMock())
+
+    await pipeline._process_event(trade, mock_redis, test_config, session=None)
+
+    pub.assert_called_once()
+    parsed = validate_shared_event_json(pub.call_args[0][2])
+    assert isinstance(parsed, QualifiedWhaleTrade)
+    assert parsed.condition_id == CONDITION_ID_VALUE
+    assert parsed.token_id == TOKEN_ID_VALUE
+    assert parsed.market_slug == MARKET_SLUG_VALUE
+    assert parsed.outcome == trade.outcome
+
+
+@pytest.mark.parametrize(
+    ("payload_update", "payload_drop"),
+    [
+        pytest.param({"event_type": "raw_whale_trade"}, (), id="wrong_event_type"),
+        pytest.param({"schema_version": 2}, (), id="unsupported_schema_version"),
+        pytest.param({}, ("wallet_address",), id="missing_required_field"),
+    ],
+)
+async def test_pipeline_invalid_qualified_payload_fails_closed_before_publish(
+    mock_redis: Redis,
+    test_config: MegConfig,
+    mocker,
+    payload_update: dict,
+    payload_drop: tuple[str, ...],
+) -> None:
+    """Malformed or wrong-envelope outbound qualified payloads are not published."""
+    trade = make_raw_trade()
+    payload = _make_qualified(trade).model_dump()
+    payload.update(payload_update)
+    for field in payload_drop:
+        payload.pop(field, None)
+
+    mocker.patch("meg.pre_filter.market_quality.check", new=AsyncMock(return_value=True))
+    mocker.patch("meg.pre_filter.arbitrage_exclusion.check", new=AsyncMock(return_value=True))
+    mocker.patch(
+        "meg.pre_filter.intent_classifier.classify", new=AsyncMock(return_value="SIGNAL")
+    )
+    mocker.patch(
+        "meg.pre_filter.intent_classifier.build_qualified_trade",
+        new=AsyncMock(return_value=payload),
+    )
+    pub = mocker.patch("meg.pre_filter.pipeline.publish", new=AsyncMock())
+
+    await pipeline._process_event(trade, mock_redis, test_config, session=None)
+
+    pub.assert_not_called()
 
 
 # ── Wallet data unavailable ───────────────────────────────────────────────────
