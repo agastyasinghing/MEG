@@ -71,7 +71,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from meg.core.canonical_ids import normalize_boundary_payload
 from meg.core.config_loader import MegConfig
-from meg.core.events import PositionState, RedisKeys, TradeProposal
+from meg.core.events import PositionState, RedisKeys, SignalEvent, TradeProposal
 from meg.core.redis_client import close as close_redis
 from meg.core.redis_client import create_redis_client
 from meg.db.models import Position, PositionStatus, SignalOutcome, SignalStatus, Wallet
@@ -814,12 +814,11 @@ async def get_markets(redis: Redis = Depends(get_redis)) -> dict:
 
 
 def _normalize_signal_feed_data(data: Any) -> str:
-    """Normalize dashboard signal SSE payloads when canonical IDs are explicit.
+    """Normalize dashboard signal SSE payloads with shared-event validation.
 
     The dashboard feed is display-only and must remain compatible with legacy
-    publishers. Payloads without an explicit condition_id/token_id/outcome
-    triple are forwarded unchanged; legacy route fields and display slugs are
-    never used to derive canonical identity.
+    publishers. Payloads that cannot be validated as SignalEvent are forwarded
+    unchanged so the SSE loop remains fail-safe.
     """
     raw_data = data.decode("utf-8") if isinstance(data, bytes) else str(data)
 
@@ -831,25 +830,31 @@ def _normalize_signal_feed_data(data: Any) -> str:
     if not isinstance(payload, dict):
         return raw_data
 
-    canonical_fields = ("condition_id", "token_id", "outcome")
-    if not all(payload.get(field) is not None for field in canonical_fields):
+    try:
+        validated = SignalEvent.model_validate(payload)
+    except ValidationError as exc:
+        logger.debug("dashboard.feed.signals.invalid_signal_event", error=str(exc))
         return raw_data
 
-    try:
-        normalized = normalize_boundary_payload(
-            payload,
-            condition_id=payload["condition_id"],
-            token_id=payload["token_id"],
-            outcome=payload["outcome"],
-            market_slug=payload.get("market_slug"),
-            context="dashboard.signal_feed",
-        )
-    except ValueError as exc:
-        logger.warning(
-            "dashboard.feed.signals.canonical_normalization_failed",
-            error=str(exc),
-        )
-        return raw_data
+    normalized = validated.model_dump(mode="json")
+
+    canonical_fields = ("condition_id", "token_id", "outcome")
+    if all(normalized.get(field) is not None for field in canonical_fields):
+        try:
+            normalized = normalize_boundary_payload(
+                normalized,
+                condition_id=normalized["condition_id"],
+                token_id=normalized["token_id"],
+                outcome=normalized["outcome"],
+                market_slug=normalized.get("market_slug"),
+                context="dashboard.signal_feed",
+            )
+        except ValueError as exc:
+            logger.warning(
+                "dashboard.feed.signals.canonical_normalization_failed",
+                error=str(exc),
+            )
+            return raw_data
 
     return json.dumps(normalized, separators=(",", ":"))
 
