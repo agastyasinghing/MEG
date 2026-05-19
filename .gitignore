@@ -49,3 +49,9 @@ Thumbs.db
 # Claude Code skills (local tooling, not project code)
 .claude/skills/gstack
 .claude/skills/
+data/raw/
+data/staged/
+data/duckdb/
+data/exports/
+*.duckdb
+*.duckdb.wal
