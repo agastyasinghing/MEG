@@ -418,6 +418,17 @@ def _ensure_raw_whale_trade(event: BaseModel) -> RawWhaleTrade:
     return event
 
 
+def _ensure_qualified_whale_trade(event: BaseModel) -> QualifiedWhaleTrade:
+    """Return a QualifiedWhaleTrade or raise when dispatch found another type."""
+    if not isinstance(event, QualifiedWhaleTrade):
+        raise ValueError(
+            "Qualified whale trade channel expects event_type=qualified_whale_trade, "
+            f"got {getattr(event, 'event_type', None)}"
+        )
+
+    return event
+
+
 def validate_raw_whale_trade_channel_payload(payload_json: str) -> RawWhaleTrade:
     """Validate a raw whale trade consumer payload from the shared event rail."""
     return _ensure_raw_whale_trade(validate_shared_event_json(payload_json))
@@ -440,6 +451,25 @@ def validate_raw_whale_trade_for_publish(
         else event_or_payload
     )
     return _ensure_raw_whale_trade(validate_shared_event_payload(payload))
+
+
+def validate_qualified_whale_trade_for_publish(
+    event_or_payload: QualifiedWhaleTrade | Mapping[str, Any]
+) -> QualifiedWhaleTrade:
+    """Validate the pre-filter qualified whale publisher payload before Redis publish.
+
+    This publisher boundary uses shared event dispatch so event_type and
+    schema_version mismatches fail before publication. Missing schema_version
+    defaults through validate_shared_event_payload(); schema_version=1, the
+    legacy identifier, and optional canonical identifiers are preserved by the
+    QualifiedWhaleTrade model.
+    """
+    payload = (
+        event_or_payload.model_dump()
+        if isinstance(event_or_payload, QualifiedWhaleTrade)
+        else event_or_payload
+    )
+    return _ensure_qualified_whale_trade(validate_shared_event_payload(payload))
 
 
 # ── Redis key patterns ────────────────────────────────────────────────────────

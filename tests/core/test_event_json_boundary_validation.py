@@ -8,7 +8,9 @@ import pytest
 from meg.core.events import (
     SUPPORTED_EVENT_SCHEMA_VERSION,
     RawWhaleTrade,
+    QualifiedWhaleTrade,
     SignalEvent,
+    validate_qualified_whale_trade_for_publish,
     validate_raw_whale_trade_channel_payload,
     validate_shared_event_json,
 )
@@ -51,6 +53,19 @@ def _raw_whale_trade_payload() -> dict[str, Any]:
         "market_price_at_trade": 0.63,
         "market_category": "politics",
     }
+
+
+def _qualified_whale_trade_payload() -> dict[str, Any]:
+    payload = _raw_whale_trade_payload()
+    payload.update(
+        {
+            "event_type": "qualified_whale_trade",
+            "whale_score": 0.77,
+            "archetype": "INFORMATION",
+            "intent": "SIGNAL",
+        }
+    )
+    return payload
 
 
 def _signal_payload() -> dict[str, Any]:
@@ -249,3 +264,36 @@ def test_production_raw_whale_trade_helper_rejects_wrong_supported_event_type() 
 def test_production_shared_event_json_helper_rejects_non_object_json() -> None:
     with pytest.raises(ValueError, match="must decode to an object"):
         validate_shared_event_json("[]")
+
+
+def test_production_qualified_whale_trade_publish_helper_accepts_model() -> None:
+    payload = _qualified_whale_trade_payload()
+    model = QualifiedWhaleTrade.model_validate(payload)
+
+    event = validate_qualified_whale_trade_for_publish(model)
+
+    assert event.schema_version == SUPPORTED_EVENT_SCHEMA_VERSION
+    assert event.event_type == "qualified_whale_trade"
+    assert getattr(event, LEGACY_ID_FIELD) == LEGACY_ID_VALUE
+    assert event.condition_id == CONDITION_ID_VALUE
+    assert event.token_id == TOKEN_ID_VALUE
+
+def test_production_qualified_whale_trade_publish_helper_defaults_missing_schema_version() -> None:
+    payload = _qualified_whale_trade_payload()
+    payload.pop("schema_version", None)
+
+    event = validate_qualified_whale_trade_for_publish(payload)
+
+    assert event.schema_version == SUPPORTED_EVENT_SCHEMA_VERSION
+    assert event.event_type == "qualified_whale_trade"
+
+def test_production_qualified_whale_trade_publish_helper_rejects_wrong_supported_event_type() -> None:
+    with pytest.raises(ValueError, match="expects event_type=qualified_whale_trade"):
+        validate_qualified_whale_trade_for_publish(_raw_whale_trade_payload())
+
+def test_production_qualified_whale_trade_publish_helper_rejects_unsupported_schema_version() -> None:
+    payload = _qualified_whale_trade_payload()
+    payload["schema_version"] = SUPPORTED_EVENT_SCHEMA_VERSION + 1
+
+    with pytest.raises(ValueError, match="Unsupported event schema_version"):
+        validate_qualified_whale_trade_for_publish(payload)

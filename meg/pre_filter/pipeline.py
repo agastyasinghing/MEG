@@ -47,6 +47,7 @@ from meg.core.config_loader import MegConfig
 from meg.core.events import (
     RawWhaleTrade,
     RedisKeys,
+    validate_qualified_whale_trade_for_publish,
     validate_raw_whale_trade_channel_payload,
 )
 from meg.core.redis_client import publish, subscribe
@@ -211,7 +212,23 @@ async def _process_event(
         )
         return
 
-    await publish(redis, RedisKeys.CHANNEL_QUALIFIED_WHALE_TRADES, qualified.model_dump_json())
+    try:
+        validated_qualified = validate_qualified_whale_trade_for_publish(qualified)
+    except Exception as exc:
+        logger.error(
+            "pipeline.qualified_trade_validation_error",
+            tx_hash=trade.tx_hash,
+            **{"market" + "_id": getattr(trade, "market" + "_id")},
+            wallet_address=trade.wallet_address,
+            error=str(exc),
+        )
+        return
+
+    await publish(
+        redis,
+        RedisKeys.CHANNEL_QUALIFIED_WHALE_TRADES,
+        validated_qualified.model_dump_json(),
+    )
 
     logger.info(
         "pipeline.qualified_trade_emitted",
