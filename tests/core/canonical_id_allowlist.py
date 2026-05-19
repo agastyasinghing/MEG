@@ -23,6 +23,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     "docs/DATA_MODEL.md": 6,
     "docs/PHASE_0A_SHARED_RAIL.md": 7,
     "docs/phase0a/0A-01_CANONICAL_ID_INVENTORY.md": 59,
+    # Phase 0B historical-lake doc: legacy identifier noted for compatibility mapping only.
+    "docs/phase0b/0B-01_DUCKDB_HISTORICAL_LAKE_PLAN.md": 1,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
     "meg/agent_core/crowding_detector.py": 2,
     "meg/agent_core/decision_agent.py": 11,
