@@ -1,0 +1,4 @@
+condition_id,token_id,outcome,timestamp_ms,price,source
+0xcond_001,10001,YES,1714500300000,0.64,fixture_seed
+0xcond_001,10002,NO,1714500900000,0.35,fixture_seed
+0xcond_001,10002,NO,1714501300000,0.34,fixture_seed
