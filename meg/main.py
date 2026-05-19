@@ -4,7 +4,8 @@ MEG bot entry point — starts all concurrent pipeline tasks.
 Pipeline tasks (run concurrently in a single asyncio.TaskGroup):
   polygon_feed        — Polygon RPC block watcher → raw_whale_trades
   pre_filter_pipeline — raw_whale_trades → qualified_whale_trades
-  signal_aggregator   — qualified_whale_trades → decision_agent
+  signal_engine_runner — qualified_whale_trades → signal_events
+  signal_aggregator   — signal_events → decision_agent
   position_monitor    — TP/SL/whale exit monitor loop (every 30s)
   telegram_bot        — approval flow, alerts, /pause /resume /reject
 
@@ -33,6 +34,7 @@ from meg.core.redis_client import create_redis_client
 from meg.data_layer import polygon_feed
 from meg.db.session import close_db, init_db
 from meg.pre_filter import pipeline as pre_filter_pipeline
+from meg.signal_engine import runner as signal_engine_runner
 from meg.telegram import bot as telegram_bot
 
 _CONFIG_PATH = Path(__file__).parent.parent / "config" / "config.yaml"
@@ -91,6 +93,10 @@ async def _main() -> None:
             tg.create_task(
                 pre_filter_pipeline.run(redis, config),
                 name="pre_filter_pipeline",
+            )
+            tg.create_task(
+                signal_engine_runner.run(redis, config),
+                name="signal_engine_runner",
             )
             tg.create_task(
                 signal_aggregator.run(redis, config),
