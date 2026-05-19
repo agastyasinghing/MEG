@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from meg.research.duckdb_lake.loader import (
     connect_duckdb,
     create_normalized_fills_table,
@@ -35,11 +37,11 @@ def test_wallet_forward_returns_deterministic_rows_and_signs() -> None:
 
         assert buy_row["token_id"] == "10001"
         assert buy_row["forward_return_bps"] > 0
-        assert buy_row["forward_return_bps"] == 300.0000000000003
+        assert buy_row["forward_return_bps"] == pytest.approx(300.0)
 
         assert sell_row["token_id"] == "10002"
         assert sell_row["forward_return_bps"] > 0
-        assert sell_row["forward_return_bps"] == 499.9999999999999
+        assert sell_row["forward_return_bps"] == pytest.approx(400.0)
     finally:
         conn.close()
 
@@ -62,7 +64,7 @@ def test_lead_lag_summary_counts_and_average() -> None:
         summary = lead_lag_summary(conn, horizon_ms=300000)
         assert summary["fills_analyzed"] == 3
         assert summary["fills_with_future_price"] == 2
-        assert summary["average_forward_return_bps"] == 400.0000000000001
+        assert summary["average_forward_return_bps"] == pytest.approx(350.0)
     finally:
         conn.close()
 

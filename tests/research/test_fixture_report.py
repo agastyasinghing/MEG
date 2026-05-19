@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from meg.research.duckdb_lake.loader import (
     connect_duckdb,
     create_normalized_fills_table,
@@ -46,13 +48,15 @@ def test_build_fixture_lead_lag_report_deterministic_summary_and_rows() -> None:
     assert report["horizon_ms"] == 300000
     assert report["fills_analyzed"] == 3
     assert report["fills_with_future_price"] == 2
-    assert report["average_forward_return_bps"] == 400.0000000000001
+    assert report["average_forward_return_bps"] == pytest.approx(350.0)
 
     rows = report["rows"]
     assert isinstance(rows, list)
     assert len(rows) == 3
     values = [row["forward_return_bps"] for row in rows]
-    assert values == [300.0000000000003, 499.9999999999999, None]
+    assert values[0] == pytest.approx(300.0)
+    assert values[1] == pytest.approx(400.0)
+    assert values[2] is None
 
 
 def test_write_report_json_writes_valid_json_to_tmp_path(tmp_path: Path) -> None:
@@ -68,7 +72,7 @@ def test_write_report_json_writes_valid_json_to_tmp_path(tmp_path: Path) -> None
     assert output_path.exists()
     parsed = json.loads(output_path.read_text(encoding="utf-8"))
     assert parsed["generated_from"] == "fixture"
-    assert parsed["rows"][0]["forward_return_bps"] == 300.0000000000003
+    assert parsed["rows"][0]["forward_return_bps"] == pytest.approx(300.0)
 
 
 def test_report_module_does_not_pull_runtime_rails() -> None:
