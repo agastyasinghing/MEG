@@ -56,6 +56,99 @@ _FORBIDDEN_RUNTIME_OPTION_KEYS = {
     "archive_import",
     "loader_execution",
 }
+DEFAULT_DRY_RUN_SCHEMA_VERSION = "phase1_fixture_manifest/v1"
+DEFAULT_DRY_RUN_MANIFEST_REF = "phase1_04_tiny_fixture_dry_run_manifest"
+DRY_RUN_SCRIPT_VERSION = "phase1-04-dry-run"
+DRY_RUN_CHECKSUM_PLACEHOLDER = "not_computed_dry_run"
+DRY_RUN_GENERATED_CHECKSUM_PLACEHOLDER = "not_generated_dry_run"
+DRY_RUN_DERIVATION_TIMESTAMP_PLACEHOLDER = "not_derived_dry_run"
+
+PLANNED_FIXTURE_FAMILIES: tuple[dict[str, object], ...] = (
+    {
+        "fixture_family": "kalshi_markets_tiny",
+        "platform": "kalshi",
+        "source_relative_path": "data/kalshi/markets/markets_0_10000.parquet",
+        "output_relative_path": "fixtures/phase1/kalshi_markets_tiny.json",
+        "selected_row_count": 3,
+        "selected_stable_keys": ["ticker_ref", "event_ticker_ref", "fetched_at"],
+        "row_selection_rule": "sort ticker_ref, event_ticker_ref, fetched_at then first_n",
+        "normalization_plan_ref": "0B-22",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+    {
+        "fixture_family": "kalshi_trades_tiny",
+        "platform": "kalshi",
+        "source_relative_path": "data/kalshi/trades/trades_0_10000.parquet",
+        "output_relative_path": "fixtures/phase1/kalshi_trades_tiny.json",
+        "selected_row_count": 2,
+        "selected_stable_keys": ["trade_ref", "ticker_ref", "created_time"],
+        "row_selection_rule": "sort trade_ref, ticker_ref, created_time then first_n",
+        "normalization_plan_ref": "0B-22",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+    {
+        "fixture_family": "poly_markets_tiny",
+        "platform": "polymarket",
+        "source_relative_path": "data/polymarket/markets/markets_0_10000.parquet",
+        "output_relative_path": "fixtures/phase1/poly_markets_tiny.json",
+        "selected_row_count": 3,
+        "selected_stable_keys": ["condition_id", "source_market_ref", "fetched_at"],
+        "row_selection_rule": "sort condition_id, source_market_ref, fetched_at then first_n",
+        "normalization_plan_ref": "0B-21",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+    {
+        "fixture_family": "poly_clob_trades_tiny",
+        "platform": "polymarket",
+        "source_relative_path": "data/polymarket/trades/trades_0_10000.parquet",
+        "output_relative_path": "fixtures/phase1/poly_clob_trades_tiny.json",
+        "selected_row_count": 4,
+        "selected_stable_keys": ["transaction_hash", "log_index", "order_hash"],
+        "row_selection_rule": "sort transaction_hash, log_index, order_hash then first_n",
+        "normalization_plan_ref": "0B-21",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+    {
+        "fixture_family": "poly_blocks_tiny",
+        "platform": "polymarket",
+        "source_relative_path": "data/polymarket/blocks/blocks_10000000_10100000.parquet",
+        "output_relative_path": "fixtures/phase1/poly_blocks_tiny.json",
+        "selected_row_count": 5,
+        "selected_stable_keys": ["block_number"],
+        "row_selection_rule": "sort block_number then first_n",
+        "normalization_plan_ref": "0B-21",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+    {
+        "fixture_family": "poly_legacy_fpmm_trades_tiny",
+        "platform": "polymarket",
+        "source_relative_path": "data/polymarket/legacy_trades/trades_0_10000.parquet",
+        "output_relative_path": "fixtures/phase1/poly_legacy_fpmm_trades_tiny.json",
+        "selected_row_count": 3,
+        "selected_stable_keys": ["transaction_hash", "log_index", "fpmm_address"],
+        "row_selection_rule": "sort transaction_hash, log_index, fpmm_address then first_n",
+        "normalization_plan_ref": "0B-21",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+    {
+        "fixture_family": "poly_fpmm_collateral_lookup_tiny",
+        "platform": "polymarket",
+        "source_relative_path": "data/polymarket/fpmm_collateral_lookup.json",
+        "output_relative_path": "fixtures/phase1/poly_fpmm_collateral_lookup_tiny.json",
+        "selected_row_count": 2,
+        "selected_stable_keys": ["fpmm_address", "collateral_token_address"],
+        "row_selection_rule": "sort fpmm_address, collateral_token_address then first_n",
+        "normalization_plan_ref": "0B-21",
+        "source_record_shape_version": "phase0b-19-v1",
+        "unresolved_state_policy": "preserve_as_unresolved",
+    },
+)
 
 
 @dataclass
@@ -206,28 +299,175 @@ def _build_parser() -> argparse.ArgumentParser:
     check.add_argument("--row-limit", required=True, type=int)
     check.add_argument("--source-manifest-ref", required=True)
     check.add_argument("--script-mode", required=True, choices=["safety_check_only", "dry_run_plan_only"])
+    dry = sub.add_parser("dry-run-manifest", help="Build a dry-run tiny fixture manifest")
+    dry.add_argument("--source-manifest-ref", required=True)
+    dry.add_argument("--source-repo-ref", required=True)
+    dry.add_argument("--source-repo-commit", required=True)
+    dry.add_argument("--source-archive-ref", required=True)
+    dry.add_argument("--created-by", required=True)
+    dry.add_argument("--schema-version", default=DEFAULT_DRY_RUN_SCHEMA_VERSION)
+    dry.add_argument("--manifest-ref", default=DEFAULT_DRY_RUN_MANIFEST_REF)
     return parser
+
+
+def build_default_dry_run_config(
+    *,
+    source_manifest_ref: str,
+    source_repo_ref: str,
+    source_repo_commit: str,
+    source_archive_ref: str,
+    created_by: str,
+    schema_version: str = DEFAULT_DRY_RUN_SCHEMA_VERSION,
+    manifest_ref: str = DEFAULT_DRY_RUN_MANIFEST_REF,
+) -> dict[str, object]:
+    return {
+        "phase1_01_merged": True,
+        "phase0b_26_merged": True,
+        "fixture_derivation_approved": False,
+        "fixture_commit_approved": False,
+        "script_mode": "dry_run_plan_only",
+        "source_manifest_ref": source_manifest_ref,
+        "source_repo_ref": source_repo_ref,
+        "source_repo_commit": source_repo_commit,
+        "source_archive_ref": source_archive_ref,
+        "created_by": created_by,
+        "schema_version": schema_version,
+        "manifest_ref": manifest_ref,
+    }
+
+
+def build_dry_run_fixture_manifest(config: dict[str, object]) -> dict[str, object]:
+    if not isinstance(config, dict):
+        raise ValueError("dry-run config must be a dictionary")
+    required = ["source_manifest_ref", "source_repo_ref", "source_repo_commit", "source_archive_ref", "created_by"]
+    missing = [k for k in required if not isinstance(config.get(k), str) or not str(config.get(k)).strip()]
+    if missing:
+        raise ValueError(f"missing required dry-run config fields: {', '.join(missing)}")
+    fixture_entries: list[dict[str, object]] = []
+    for family in PLANNED_FIXTURE_FAMILIES:
+        gate = evaluate_fixture_derivation_gate(
+            {
+                "phase1_01_merged": config.get("phase1_01_merged"),
+                "phase0b_26_merged": config.get("phase0b_26_merged"),
+                "fixture_derivation_approved": config.get("fixture_derivation_approved"),
+                "fixture_commit_approved": config.get("fixture_commit_approved"),
+                "script_mode": config.get("script_mode"),
+                "source_manifest_ref": config.get("source_manifest_ref"),
+                "source_relative_path": family["source_relative_path"],
+                "output_relative_path": family["output_relative_path"],
+                "row_limit": family["selected_row_count"],
+                "runtime_options": {},
+            }
+        )
+        if not gate.allowed:
+            raise ValueError(f"dry-run manifest blocked for {family['fixture_family']}: {'; '.join(gate.reasons)}")
+        fixture_entries.append(
+            {
+                "fixture_ref": f"fixture-{family['fixture_family'].replace('_', '-')}",
+                **family,
+                "source_file_checksum": DRY_RUN_CHECKSUM_PLACEHOLDER,
+                "checksum_algorithm": "sha256",
+                "generated_fixture_checksum": DRY_RUN_GENERATED_CHECKSUM_PLACEHOLDER,
+                "script_version": DRY_RUN_SCRIPT_VERSION,
+                "parser_version": "v0-dry-run",
+                "derivation_timestamp": DRY_RUN_DERIVATION_TIMESTAMP_PLACEHOLDER,
+                "entry_posture": {
+                    "fixture_derivation_approved": False,
+                    "fixture_commit_approved": False,
+                    "fixture_written": False,
+                    "archive_rows_read": False,
+                    "source_payload_read": False,
+                    "normalization_applied": False,
+                    "runtime_loader_used": False,
+                },
+            }
+        )
+    return {
+        "manifest_ref": config.get("manifest_ref", DEFAULT_DRY_RUN_MANIFEST_REF),
+        "schema_version": config.get("schema_version", DEFAULT_DRY_RUN_SCHEMA_VERSION),
+        "phase": "phase1-04",
+        "manifest_status": "dry_run_manifest",
+        "created_by": config["created_by"],
+        "created_at": "dry_run_manifest_not_timestamped",
+        "source_manifest_ref": config["source_manifest_ref"],
+        "source_repo_ref": config["source_repo_ref"],
+        "source_repo_commit": config["source_repo_commit"],
+        "source_archive_ref": config["source_archive_ref"],
+        "fixture_derivation_approval_ref": "dry_run_only",
+        "fixture_commit_approval_ref": "dry_run_only",
+        "fixture_entries": fixture_entries,
+        "global_posture": {
+            "research_only": True,
+            "local_only": True,
+            "network_allowed": False,
+            "api_calls_allowed": False,
+            "secrets_allowed": False,
+            "connector_import_allowed": False,
+            "archive_import_allowed": False,
+            "fixture_writes_allowed": False,
+            "loader_execution_allowed": False,
+            "order_routing_allowed": False,
+            "live_trading_allowed": False,
+            "autonomous_execution_allowed": False,
+        },
+        "artifact_hygiene": {
+            "no_compressed_archives_committed": True,
+            "no_extracted_archive_data_committed": True,
+            "no_absolute_archive_paths_in_payloads": True,
+            "no_duckdb_artifacts": True,
+            "no_generated_reports": True,
+            "no_external_repo_files": True,
+            "no_network_outputs": True,
+            "no_secret_material": True,
+            "appledouble_files_ignored": True,
+        },
+        "reviewer_envelope": {
+            "human_review_required": True,
+            "reviewer_ref": None,
+            "reviewed_at": None,
+            "review_decision": "pending",
+            "review_rationale": "dry-run manifest only; no derivation or commit approval granted",
+        },
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    config: dict[str, object] = {
-        "phase1_01_merged": True,
-        "phase0b_26_merged": True,
-        "fixture_derivation_approved": False,
-        "fixture_commit_approved": False,
-        "script_mode": args.script_mode,
-        "source_manifest_ref": args.source_manifest_ref,
-        "source_relative_path": args.source_relative_path,
-        "output_relative_path": args.output_relative_path,
-        "row_limit": args.row_limit,
-        "runtime_options": {},
-    }
-    decision = evaluate_fixture_derivation_gate(config)
-    print(json.dumps(decision.to_dict(), sort_keys=True))
-    return 0 if decision.allowed else 1
+    if args.command == "check":
+        config: dict[str, object] = {
+            "phase1_01_merged": True,
+            "phase0b_26_merged": True,
+            "fixture_derivation_approved": False,
+            "fixture_commit_approved": False,
+            "script_mode": args.script_mode,
+            "source_manifest_ref": args.source_manifest_ref,
+            "source_relative_path": args.source_relative_path,
+            "output_relative_path": args.output_relative_path,
+            "row_limit": args.row_limit,
+            "runtime_options": {},
+        }
+        decision = evaluate_fixture_derivation_gate(config)
+        print(json.dumps(decision.to_dict(), sort_keys=True))
+        return 0 if decision.allowed else 1
+
+    config = build_default_dry_run_config(
+        source_manifest_ref=args.source_manifest_ref,
+        source_repo_ref=args.source_repo_ref,
+        source_repo_commit=args.source_repo_commit,
+        source_archive_ref=args.source_archive_ref,
+        created_by=args.created_by,
+        schema_version=args.schema_version,
+        manifest_ref=args.manifest_ref,
+    )
+    try:
+        manifest = build_dry_run_fixture_manifest(config)
+    except ValueError as exc:
+        print(json.dumps({"manifest_status": "dry_run_blocked", "reasons": [str(exc)]}, sort_keys=True))
+        return 1
+    print(json.dumps(manifest, sort_keys=True))
+    return 0
 
 
 if __name__ == "__main__":
