@@ -6,8 +6,12 @@ status: "example_template_only"
 sources:
   - source_id: "jon_becker_prediction_market_analysis_snapshot"
     source_name: "Jon-Becker/prediction-market-analysis"
-    source_type: "repo_snapshot"
-    origin_url_or_path: "https://github.com/Jon-Becker/prediction-market-analysis.git"
+    source_type: "git_repository"
+    origin_url_or_path: "https://github.com/Jon-Becker/prediction-market-analysis"
+    repository_url: "https://github.com/Jon-Becker/prediction-market-analysis"
+    remote_url: "https://github.com/Jon-Becker/prediction-market-analysis.git"
+    commit_inspected: "f3ab641264d9acbedb72b5db9040bc9d078d5ff0"
+    local_repo_path_inspected: "/e/meg_source_review/repos/prediction-market-analysis"
     acquisition_method: "operator_local_read_only_git_clone"
     acquired_at: "2026-05-19"
     snapshot_date_range:
@@ -16,31 +20,106 @@ sources:
     expected_format: "repo_files_mixed"
     expected_size_bytes: 2097152
     checksum_strategy: "TODO_SHA256_REPLACE_BEFORE_IMPORT"
-    license_or_terms_status: "repo_code_license_reviewed_acceptable_dataset_terms_pending_review"
-    allowed_use: "research_planning_and_local_inspection_only"
+    license_or_terms_status: "pending_for_archive_dataset"
+    inspection_status: "metadata_inspected"
+    inspection_doc: "docs/phase0b/reviews/JON_BECKER_LOCAL_ARCHIVE_REVIEW_PENDING.md"
+    allowed_use: "local_inspection_and_planning_only"
+    import_decision: "hold"
+    fixture_derivation_decision: "pending_no_approval"
     refresh_policy: "one_off_snapshot_until_review_complete"
     owner_reviewer: "TODO_OWNER_AND_REVIEWER"
     import_priority: "P0"
-    notes: "Repository code/docs manually reviewed from remote git snapshot (inspected commit: f3ab641264d9acbedb72b5db9040bc9d078d5ff0; shallow clone size approx 2.0M; file count 110). docs/ANALYSIS.md and docs/SCHEMAS.md were found. No committed parquet/csv/json/jsonl dataset payload files were found in the shallow clone. The downloaded ~36 GiB local archive was not inspected in 0B-14. No fixture derivation, import, or loader implementation is approved yet; planning-only posture remains in effect."
+    notes: "Repository metadata inspection is documented in docs/phase0b/reviews/JON_BECKER_LOCAL_ARCHIVE_REVIEW_PENDING.md. This repository review does not approve dataset import, loader implementation, or fixture derivation."
 
   - source_id: "local_poly_kalshi_historical_archive_placeholder"
     source_name: "Local Polymarket/Kalshi historical archive"
-    source_type: "local_archive"
-    origin_url_or_path: "TODO_LOCAL_ARCHIVE_PATH_REPLACE_BEFORE_IMPORT"
-    acquisition_method: "filesystem_handoff_placeholder"
-    acquired_at: "TODO_ACQUIRED_AT_UTC_REPLACE_BEFORE_IMPORT"
+    source_type: "local_archive_candidate"
+    origin_url_or_path: "/e/meg_source_review/repos/prediction-market-analysis/data"
+    origin_repository_source_id: "jon_becker_prediction_market_analysis_snapshot"
+    archive_path_inspected: "/e/meg_source_review/repos/prediction-market-analysis/data"
+    compressed_archive_observed: "data/data.tar.zst"
+    compressed_archive_size_observed: "34G"
+    extracted_sentinel_observed: "data/.download_complete"
+    acquisition_method: "filesystem_metadata_inspection_only"
+    acquired_at: "2026-05-21"
     snapshot_date_range:
       start_utc: "TODO_START_UTC_REPLACE_BEFORE_IMPORT"
       end_utc: "TODO_END_UTC_REPLACE_BEFORE_IMPORT"
     expected_format: "parquet_csv_json_bundle"
-    expected_size_bytes: 0
+    expected_size_bytes: 36507222016
     checksum_strategy: "TODO_SHA256_REPLACE_BEFORE_IMPORT"
-    license_or_terms_status: "pending_review"
-    allowed_use: "local_inspection_only_until_provenance_and_terms_reviewed"
+    license_or_terms_status: "pending_for_archive_dataset"
+    inspection_status: "metadata_schema_inspected"
+    inspection_doc: "docs/phase0b/reviews/JON_BECKER_LOCAL_ARCHIVE_REVIEW_PENDING.md"
+    allowed_use: "local_inspection_and_planning_only"
+    import_decision: "hold"
+    fixture_derivation_decision: "pending_no_approval"
+    data_committed_to_meg: false
+    import_approved: false
+    fixture_derivation_approved: false
+    loader_approved: false
+    live_trading_approved: false
+    autonomous_execution_approved: false
     refresh_policy: "snapshot_with_manual_refresh_decision"
     owner_reviewer: "TODO_OWNER_AND_REVIEWER"
     import_priority: "P0"
-    notes: "Pending review placeholder remains intentionally conservative. The local ~36 GiB archive was not inspected in 0B-14; provenance, checksums, and dataset/archive terms are still unresolved. Keep local inspection only until provenance and terms review are complete. May include legacy market identifier fields for compatibility reference only; canonical mapping must use condition_id/token_id/outcome."
+    file_counts:
+      total_files: 78732
+      parquet_files: 78723
+      csv_files: 0
+      json_files: 1
+      jsonl_files: 0
+      appledouble_metadata_files: 29245
+    extracted_layout_paths:
+      - "data/kalshi/markets"
+      - "data/kalshi/trades"
+      - "data/polymarket/blocks"
+      - "data/polymarket/legacy_trades"
+      - "data/polymarket/markets"
+      - "data/polymarket/trades"
+    non_appledouble_file_counts:
+      "kalshi/markets": 769
+      "kalshi/trades": 7214
+      "polymarket/blocks": 785
+      "polymarket/markets": 41
+      "polymarket/trades": 40454
+      "polymarket/legacy_trades": 221
+    platform_coverage:
+      kalshi_markets_present: true
+      kalshi_trades_present: true
+      polymarket_blocks_present: true
+      polymarket_markets_present: true
+      polymarket_trades_present: true
+      polymarket_legacy_trades_present: true
+      polymarket_fpmm_collateral_lookup_present: true
+    research_scope:
+      kalshi_first_class_research_target: true
+      polymarket_first_class_research_target: true
+    representative_row_counts:
+      kalshi_markets_sample: 10000
+      kalshi_trades_sample: 10000
+      polymarket_blocks_sample: 100000
+      polymarket_markets_sample: 10000
+      polymarket_trades_sample: 10000
+      polymarket_legacy_trades_sample: 10000
+    future_research_scope:
+      polymarket_wallet_lead_lag: "candidate_future_research"
+      kalshi_calibration_ev_analysis: "candidate_future_research"
+      cross_platform_opportunity_detection: "candidate_future_research"
+      cross_platform_arbitrage_or_mispricing: "candidate_future_research"
+      semantic_matching_required: true
+      resolution_criteria_comparison_required: true
+      fee_comparison_required: true
+      liquidity_comparison_required: true
+      platform_restrictions_comparison_required: true
+      tos_jurisdiction_review_required_before_live_use: true
+    hygiene_notes:
+      never_commit_compressed_archive: true
+      never_commit_extracted_data: true
+      ignore_appledouble_files: true
+      never_commit_duckdb_files: true
+      never_commit_generated_reports: true
+    notes: "Manifest metadata placeholder only; no data import, fixture derivation, loader implementation, live trading, or autonomous execution approval. Cross-platform candidate pairs must compare semantic meaning, resolution criteria, fees, liquidity, settlement/platform restrictions, and ToS/jurisdiction constraints before being treated as equivalent. Files prefixed with ._ are AppleDouble artifacts and must be ignored for future inspection/import logic."
 
   - source_id: "polymarket_market_metadata_placeholder"
     source_name: "Polymarket market metadata"
