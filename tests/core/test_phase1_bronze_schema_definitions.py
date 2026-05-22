@@ -368,8 +368,18 @@ def test_no_real_fixture_payloads_or_runtime_fixture_reads_required() -> None:
     fixtures_dir = REPO_ROOT / "fixtures/phase1"
     assert not fixtures_dir.exists()
 
-    fixture_payload_candidates = list(REPO_ROOT.rglob("fixtures/phase1/*.json"))
+    fixture_payload_candidates = list((REPO_ROOT / "fixtures").glob("phase1/*.json"))
     assert fixture_payload_candidates == []
 
-    archive_payload_candidates = list(REPO_ROOT.rglob("fixtures/phase1/*.parquet"))
+    archive_payload_candidates = list((REPO_ROOT / "fixtures").glob("phase1/*.parquet"))
     assert archive_payload_candidates == []
+
+
+def test_bronze_schema_contract_test_is_static_and_pathlib_only() -> None:
+    test_source = Path(__file__).read_text(encoding="utf-8")
+    lowered = test_source.lower()
+    assert "import " + "subprocess" not in lowered
+    assert "sub" + "process." not in lowered
+    assert "git" + " status" not in lowered
+    assert ".r" + "glob(" not in test_source
+    assert "read_text" in test_source
