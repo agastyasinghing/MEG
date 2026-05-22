@@ -4,7 +4,7 @@ import argparse
 import json
 import pathlib
 import sys
-from datetime import datetime, timezone
+import datetime
 from typing import Any
 
 from scripts.prd_0b.local_research_lake_smoke import (
@@ -128,7 +128,7 @@ def build_data_dictionary(config: dict[str, object]) -> dict[str, object]:
         observed_types = dict(observed_map.get(ref, {}).get("observed_types", {}))
         missing = [c for c in list(spec["expected_columns"]) if c not in observed_cols] if observed_cols else []
         entries.append({**spec, "observed_columns": observed_cols, "missing_columns": missing, "column_metadata": build_static_column_metadata(spec, observed_cols, observed_types), "future_dictionary_status": "generated_from_local_archive" if observed_cols else "planned_only", "generation_notes": ["json_sidecar_static_only"] if spec["source_kind"] == "json_sidecar" else list(observed_map.get(ref, {}).get("warnings", []))})
-    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     return {"dictionary_ref": "prd_0b_local_data_dictionary", "schema_version": "0.1.0", "phase": "PRD-0B-IMPL-05", "dictionary_status": "generated_pending_review", "created_by": config["created_by"], "created_at": now, "source_manifest_ref": config["source_manifest_ref"], "source_repo_ref": config["source_repo_ref"], "source_repo_commit": config["source_repo_commit"], "source_archive_ref": config["source_archive_ref"], "generation_mode": "local_generated_from_sanity_harness", "dataset_entries": entries, "global_posture": {"research_only": True, "local_only": True, "archive_payload_read_allowed": payload_read, "duckdb_execution_allowed": duck_exec, "generated_output_allowed": True, "committed_data_allowed": False, "fixture_commit_allowed": False, "bronze_silver_view_creation_allowed": False, "loader_execution_allowed": False, "connector_import_allowed": False, "api_calls_allowed": False, "order_routing_allowed": False, "live_trading_allowed": False, "autonomous_execution_allowed": False}, "artifact_hygiene": {"no_row_level_archive_export": True, "no_committed_dictionary_file": True, "no_duckdb_artifacts": True, "no_generated_reports": True, "no_committed_archive_data": True, "no_fixture_outputs": True, "no_external_repo_files": True, "no_secret_material": True, "no_absolute_archive_paths": True}, "reviewer_envelope": {"warnings": warnings}}
 
 
