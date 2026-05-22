@@ -47,9 +47,8 @@ def test_pyproject_places_duckdb_in_dev_group():
     assert '"duckdb' in text
 
 
-def test_uv_lock_includes_duckdb_when_present():
-    if not LOCK_PATH.exists():
-        return
+def test_uv_lock_exists_and_includes_duckdb():
+    assert LOCK_PATH.is_file(), "uv.lock must exist for PRD-0B-DEP-02 lockfile posture"
     text = LOCK_PATH.read_text(encoding="utf-8")
     assert "name = \"duckdb\"" in text or "duckdb" in text
 
