@@ -15,6 +15,29 @@ BRONZE_SQL_PATH = ROOT / "sql/prd_0b/bronze_views.sql"
 SILVER_SQL_PATH = ROOT / "sql/prd_0b/silver_views.sql"
 
 
+BRONZE_SEMANTIC_COLUMNS = [
+    "source_dataset",
+    "source_platform",
+    "source_relative_path",
+    "bronze_view_version",
+    "raw_ingested_at",
+    "source_record_ref",
+    "bronze_unresolved_status",
+    "required_field_status",
+]
+
+SILVER_SEMANTIC_COLUMNS = [
+    "silver_view_version",
+    "source_platform",
+    "normalized_entity_type",
+    "source_dataset",
+    "source_relative_path",
+    "source_record_ref",
+    "unresolved_status",
+    "dependency_status",
+]
+
+
 def test_doc_exists_and_posture_markers() -> None:
     text = DOC_PATH.read_text(encoding="utf-8")
     assert "skeleton" in text.lower()
@@ -90,6 +113,10 @@ def test_in_memory_smoke_and_view_queries(tmp_path: Path) -> None:
     assert summary["ok"] is True
     assert summary["wrote_outputs"] is False
     assert summary["created_duckdb_file"] is False
+    assert "unresolved_status_counts" in summary
+    assert "dependency_status_counts" in summary
+    assert summary["unresolved_status_counts"].get("missing_required_raw_field", 0) >= 1
+    assert summary["dependency_status_counts"].get("missing_dependency", 0) >= 1
 
     con = duckdb.connect(database=":memory:")
     run_view_smoke.create_synthetic_source_relations(con)
@@ -98,6 +125,7 @@ def test_in_memory_smoke_and_view_queries(tmp_path: Path) -> None:
         run_view_smoke.load_sql_file(BRONZE_SQL_PATH),
         run_view_smoke.load_sql_file(SILVER_SQL_PATH),
     )
+
     view_names = set(run_view_smoke.list_duckdb_views(con))
     assert set(run_view_smoke.get_expected_bronze_views()).issubset(view_names)
     assert set(run_view_smoke.get_expected_silver_views()).issubset(view_names)
@@ -106,6 +134,19 @@ def test_in_memory_smoke_and_view_queries(tmp_path: Path) -> None:
         assert con.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0] >= 1
     for name in run_view_smoke.get_expected_silver_views():
         con.execute(f"SELECT * FROM {name} LIMIT 1").fetchall()
+
+    bronze_columns = [
+        row[1]
+        for row in con.execute("PRAGMA table_info('bronze_kalshi_trades')").fetchall()
+    ]
+    silver_columns = [
+        row[1]
+        for row in con.execute("PRAGMA table_info('silver_kalshi_fills')").fetchall()
+    ]
+    for required_column in BRONZE_SEMANTIC_COLUMNS:
+        assert required_column in bronze_columns
+    for required_column in SILVER_SEMANTIC_COLUMNS:
+        assert required_column in silver_columns
 
     after = {p for p in ROOT.rglob("*.duckdb")}
     assert after == before
@@ -116,4 +157,9 @@ def test_cli_json_run() -> None:
     out = subprocess.run(cmd, cwd=ROOT, check=True, capture_output=True, text=True)
     payload = json.loads(out.stdout.strip())
     assert payload["ok"] is True
-
+    assert payload["wrote_outputs"] is False
+    assert payload["created_duckdb_file"] is False
+    assert "unresolved_status_counts" in payload
+    assert "dependency_status_counts" in payload
+    assert payload["unresolved_status_counts"].get("missing_required_raw_field", 0) >= 1
+    assert payload["dependency_status_counts"].get("missing_dependency", 0) >= 1

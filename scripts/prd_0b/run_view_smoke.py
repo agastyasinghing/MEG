@@ -41,33 +41,98 @@ def get_expected_silver_views() -> list[str]:
     ]
 
 
-def create_synthetic_source_relations(con: duckdb.DuckDBPyConnection) -> None:
-    con.execute("CREATE TABLE source_kalshi_markets AS SELECT 'KX1' ticker_ref, 'EV1' event_ticker_ref, 'src-kx1' source_market_ref, 'YES' outcome, 'snap1' snapshot_ref, 'res1' result_ref")
-    con.execute("CREATE TABLE source_kalshi_trades AS SELECT 'tx-k1' transaction_ref, 'KX1' ticker_ref, 'trade-k1' trade_ref")
-    con.execute("CREATE TABLE source_poly_markets AS SELECT 'COND1' condition_ref, 'TOK1' token_ref, 'src-p1' source_market_ref, 'YES' outcome")
-    con.execute("CREATE TABLE source_poly_clob_trades AS SELECT 'tx-p1' transaction_ref, 'COND1' condition_ref, 'BLK1' block_ref")
-    con.execute("CREATE TABLE source_poly_blocks AS SELECT 'BLK1' block_ref")
-    con.execute("CREATE TABLE source_poly_legacy_fpmm_trades AS SELECT 'FPMM1' fpmm_ref, 'USDC' collateral_asset_ref")
-    con.execute("CREATE TABLE source_poly_fpmm_collateral_lookup AS SELECT 'USDC' collateral_asset_ref")
+def create_synthetic_source_relations(
+    con: duckdb.DuckDBPyConnection,
+    include_unresolved_cases: bool = True,
+) -> None:
+    con.execute(
+        "CREATE TABLE source_kalshi_markets AS "
+        "SELECT * FROM (VALUES ('KX1','EV1','src-kx1','YES','snap1','res1')) "
+        "t(ticker_ref,event_ticker_ref,source_market_ref,outcome,snapshot_ref,result_ref)"
+    )
+    con.execute(
+        "CREATE TABLE source_kalshi_trades AS "
+        "SELECT * FROM (VALUES ('tx-k1','KX1','trade-k1')) "
+        "t(transaction_ref,ticker_ref,trade_ref)"
+    )
+    con.execute(
+        "CREATE TABLE source_poly_markets AS "
+        "SELECT * FROM (VALUES ('COND1','TOK1','src-p1','YES')) "
+        "t(condition_ref,token_ref,source_market_ref,outcome)"
+    )
+    con.execute(
+        "CREATE TABLE source_poly_clob_trades AS "
+        "SELECT * FROM (VALUES ('tx-p1','COND1','BLK1')) "
+        "t(transaction_ref,condition_ref,block_ref)"
+    )
+    con.execute(
+        "CREATE TABLE source_poly_blocks AS "
+        "SELECT * FROM (VALUES ('BLK1')) t(block_ref)"
+    )
+    con.execute(
+        "CREATE TABLE source_poly_legacy_fpmm_trades AS "
+        "SELECT * FROM (VALUES ('FPMM1','USDC')) t(fpmm_ref,collateral_asset_ref)"
+    )
+    con.execute(
+        "CREATE TABLE source_poly_fpmm_collateral_lookup AS "
+        "SELECT * FROM (VALUES ('USDC')) t(collateral_asset_ref)"
+    )
+
+    if include_unresolved_cases:
+        con.execute(
+            "INSERT INTO source_kalshi_trades VALUES "
+            "('tx-k-miss-market','KX404','trade-k404'),("
+            "'tx-k-null',NULL,NULL)"
+        )
+        con.execute(
+            "INSERT INTO source_poly_clob_trades VALUES "
+            "('tx-p-miss-market','COND404','BLK1'),"
+            "('tx-p-miss-block','COND1','BLK404'),"
+            "(NULL,NULL,NULL)"
+        )
+        con.execute(
+            "INSERT INTO source_poly_legacy_fpmm_trades VALUES "
+            "('FPMM404','DAI404'),(NULL,NULL)"
+        )
 
 
-def apply_view_sql(con: duckdb.DuckDBPyConnection, bronze_sql: str, silver_sql: str) -> None:
+def apply_view_sql(
+    con: duckdb.DuckDBPyConnection,
+    bronze_sql: str,
+    silver_sql: str,
+) -> None:
     con.execute(bronze_sql)
     con.execute(silver_sql)
 
 
 def list_duckdb_views(con: duckdb.DuckDBPyConnection) -> list[str]:
-    rows = con.execute("SELECT view_name FROM duckdb_views() WHERE schema_name = 'main' ORDER BY view_name").fetchall()
+    rows = con.execute(
+        "SELECT view_name FROM duckdb_views() "
+        "WHERE schema_name='main' ORDER BY view_name"
+    ).fetchall()
     return [row[0] for row in rows]
 
 
-def run_in_memory_view_smoke() -> dict[str, object]:
+def _collect_status_counts(
+    con: duckdb.DuckDBPyConnection,
+    column_name: str,
+) -> dict[str, int]:
+    union_query = " UNION ALL ".join(
+        [f"SELECT {column_name} AS status_value FROM {view_name}" for view_name in get_expected_silver_views()]
+    )
+    rows = con.execute(
+        f"SELECT status_value, COUNT(*) FROM ({union_query}) status_rows GROUP BY 1"
+    ).fetchall()
+    return {row[0]: row[1] for row in rows}
+
+
+def run_in_memory_view_smoke(include_unresolved_cases: bool = True) -> dict[str, object]:
     repo_root = Path(__file__).resolve().parents[2]
     bronze_sql = load_sql_file(repo_root / "sql/prd_0b/bronze_views.sql")
     silver_sql = load_sql_file(repo_root / "sql/prd_0b/silver_views.sql")
 
-    con = duckdb.connect(database=":memory:")
-    create_synthetic_source_relations(con)
+    con = duckdb.connect(":memory:")
+    create_synthetic_source_relations(con, include_unresolved_cases=include_unresolved_cases)
     apply_view_sql(con, bronze_sql, silver_sql)
 
     views = set(list_duckdb_views(con))
@@ -76,11 +141,19 @@ def run_in_memory_view_smoke() -> dict[str, object]:
 
     row_count_checks = {
         view_name: con.execute(f"SELECT COUNT(*) FROM {view_name}").fetchone()[0]
-        for view_name in expected_bronze
+        for view_name in expected_bronze + expected_silver
     }
+    unresolved_status_counts = _collect_status_counts(con, "unresolved_status")
+    dependency_status_counts = _collect_status_counts(con, "dependency_status")
+
     missing_bronze = [name for name in expected_bronze if name not in views]
     missing_silver = [name for name in expected_silver if name not in views]
-    ok = not missing_bronze and not missing_silver and all(count >= 1 for count in row_count_checks.values())
+    ok = (
+        not missing_bronze
+        and not missing_silver
+        and all(count >= 1 for count in row_count_checks.values())
+    )
+
     return {
         "ok": ok,
         "status": "ok" if ok else "failed",
@@ -89,6 +162,8 @@ def run_in_memory_view_smoke() -> dict[str, object]:
         "missing_bronze_views": missing_bronze,
         "missing_silver_views": missing_silver,
         "row_count_checks": row_count_checks,
+        "unresolved_status_counts": unresolved_status_counts,
+        "dependency_status_counts": dependency_status_counts,
         "warnings": [],
         "wrote_outputs": False,
         "created_duckdb_file": False,
@@ -100,15 +175,19 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--json", action="store_true", dest="as_json")
+    run_parser.add_argument("--without-unresolved-cases", action="store_true")
     args = parser.parse_args()
 
     if args.command == "run":
-        summary = run_in_memory_view_smoke()
+        summary = run_in_memory_view_smoke(
+            include_unresolved_cases=not args.without_unresolved_cases
+        )
         if args.as_json:
             print(json.dumps(summary, sort_keys=True))
         else:
             print(summary)
         return 0 if bool(summary["ok"]) else 1
+
     return 1
 
 
