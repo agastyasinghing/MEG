@@ -181,9 +181,13 @@ def test_doc_contains_planned_view_names_and_counts():
     for name in SILVER_MAP:
         assert name in text
 
+ALLOWED_SQL_SOURCE_FILES = {
+    Path("sql/prd_0b/bronze_views.sql"),
+    Path("sql/prd_0b/silver_views.sql"),
+}
+
 def test_no_forbidden_output_directories_or_files_exist():
     forbidden_paths = [
-        Path("sql/prd_0b"),
         Path("reports/prd_0b"),
         Path("generated/prd_0b"),
         Path("generated/reports/prd_0b"),
@@ -193,6 +197,9 @@ def test_no_forbidden_output_directories_or_files_exist():
     ]
     for forbidden in forbidden_paths:
         assert not forbidden.exists()
+
+    discovered_sql_files = {path for path in Path("sql").glob("**/*") if path.is_file()} if Path("sql").exists() else set()
+    assert discovered_sql_files <= ALLOWED_SQL_SOURCE_FILES
 
     assert not list(Path(".").rglob("*.duckdb"))
 

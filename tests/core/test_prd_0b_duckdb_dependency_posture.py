@@ -10,6 +10,10 @@ OPTIONAL_DUCKDB_SCRIPTS = [
     Path("scripts/prd_0b/becker_sanity_query_harness.py"),
     Path("scripts/prd_0b/data_dictionary_generator.py"),
 ]
+ALLOWED_SQL_SOURCE_FILES = {
+    Path("sql/prd_0b/bronze_views.sql"),
+    Path("sql/prd_0b/silver_views.sql"),
+}
 
 
 def test_doc_exists_and_required_posture_sections():
@@ -57,14 +61,21 @@ def test_no_duckdb_files_in_repo():
     assert not list(Path(".").glob("**/*.duckdb"))
 
 
+def test_sql_tree_limited_to_approved_source_sql_skeleton_files_only():
+    discovered_sql_files = {path for path in Path("sql").glob("**/*") if path.is_file()} if Path("sql").exists() else set()
+    assert discovered_sql_files <= ALLOWED_SQL_SOURCE_FILES
+
+
 def test_no_generated_sql_report_dictionary_fixture_outputs_from_ticket():
     blocked = [
         Path("generated"),
         Path("reports"),
-        Path("sql"),
         Path("fixtures/output"),
     ]
     assert all(not p.exists() for p in blocked)
+    assert not Path("generated/sql").exists()
+    assert not Path("generated/reports").exists()
+    assert not Path("generated/dictionary").exists()
 
 
 def test_optional_duckdb_fail_closed_paths_remain_in_scripts():
