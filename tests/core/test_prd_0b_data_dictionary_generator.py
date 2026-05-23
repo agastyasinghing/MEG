@@ -9,7 +9,16 @@ DOC_PATH = Path("docs/prd/PRD-0B-IMPL-05_LOCAL_DATA_DICTIONARY_GENERATOR.md")
 
 
 def test_import_side_effects_and_no_duckdb_imported():
-    assert "duckdb" not in sys.modules
+    probe = """
+import json
+import sys
+import scripts.prd_0b.data_dictionary_generator  # noqa: F401
+print(json.dumps({"duckdb_loaded": "duckdb" in sys.modules}))
+"""
+    result = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, check=False)
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["duckdb_loaded"] is False
 
 
 def test_specs_count_and_unique_and_mapping_columns():
