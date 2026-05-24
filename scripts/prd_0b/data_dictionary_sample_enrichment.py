@@ -26,6 +26,63 @@ APPROVED_SAMPLE_KEYS = {
     "sample_persistent_output_written",
 }
 
+FORBIDDEN_SAMPLE_PAYLOAD_KEYS = {
+    "raw_rows",
+    "raw_payload",
+    "archive_payload",
+    "fixture_payload",
+    "production_feature",
+    "strategy_label",
+    "trade_label",
+    "opportunity_label",
+    "user_dump",
+    "trader_dump",
+    "event_dump",
+}
+
+
+def get_approved_sample_keys() -> set[str]:
+    return set(APPROVED_SAMPLE_KEYS)
+
+
+def validate_sample_enrichment_result(result: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    keys = set(result.keys())
+    approved = get_approved_sample_keys()
+    if keys != approved:
+        errors.append("sample_result_keys_must_match_approved_set")
+    forbidden = sorted(key for key in keys if key in FORBIDDEN_SAMPLE_PAYLOAD_KEYS)
+    if forbidden:
+        errors.append(f"sample_result_contains_forbidden_keys:{','.join(forbidden)}")
+    if result.get("sample_persistent_output_written") is not False:
+        errors.append("sample_persistent_output_written_must_be_false")
+    return errors
+
+
+def validate_sample_enrichment_summary(summary: dict[str, object]) -> list[str]:
+    errors: list[str] = []
+    if summary.get("wrote_outputs") is not False:
+        errors.append("wrote_outputs_must_be_false")
+    if summary.get("created_duckdb_file") is not False:
+        errors.append("created_duckdb_file_must_be_false")
+    if summary.get("generated_artifacts") != []:
+        errors.append("generated_artifacts_must_be_empty")
+    if summary.get("committed_fixtures") is not False:
+        errors.append("committed_fixtures_must_be_false")
+    if summary.get("production_readiness_claim") is not False:
+        errors.append("production_readiness_claim_must_be_false")
+    if summary.get("final_trading_readiness_claim") is not False:
+        errors.append("final_trading_readiness_claim_must_be_false")
+    sample_results = summary.get("sample_enrichment_results")
+    if isinstance(sample_results, list):
+        for idx, result in enumerate(sample_results):
+            if not isinstance(result, dict):
+                errors.append(f"sample_result_{idx}_must_be_dict")
+                continue
+            for err in validate_sample_enrichment_result(result):
+                errors.append(f"sample_result_{idx}:{err}")
+    return errors
+
 
 def get_sample_enrichment_mode() -> str:
     return ENRICHMENT_MODE
