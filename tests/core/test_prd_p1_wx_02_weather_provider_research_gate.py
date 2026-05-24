@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 PRD_PATH = Path("docs/prd/PRD-P1-WX-02_WEATHER_DATA_PROVIDER_RESEARCH_AND_CONNECTOR_APPROVAL_GATE.md")
@@ -55,3 +56,20 @@ def test_prd_p1_wx_02_non_approval_language() -> None:
 
     missing = [term for term in required_non_approvals if term not in lower]
     assert not missing, f"Missing non-approval terms: {missing}"
+
+
+def test_prd_p1_wx_02_confidence_statuses_are_strict() -> None:
+    text = PRD_PATH.read_text(encoding="utf-8")
+    lower = text.lower()
+
+    assert "claim confidence status: **confirmed**, **unclear**, or **unknown**" in lower
+
+    forbidden_patterns = [
+        r"confirmed/unclear",
+        r"confirmed/unknown",
+        r"unclear/unknown",
+        r"/unclear",
+        r"/unknown",
+    ]
+    for pattern in forbidden_patterns:
+        assert not re.search(pattern, lower), f"Forbidden hybrid confidence status found: {pattern}"
