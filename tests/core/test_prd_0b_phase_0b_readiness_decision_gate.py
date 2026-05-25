@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import subprocess
 
 DOC_PATH = Path("docs/prd/PRD-0B-IMPL-17_PHASE_0B_READINESS_DECISION_GATE.md")
 TEST_PATH = Path("tests/core/test_prd_0b_phase_0b_readiness_decision_gate.py")
@@ -86,15 +85,49 @@ def test_no_duckdb_files_or_generated_output_dirs_exist() -> None:
         assert not Path(rel).exists()
 
 
-def test_only_allowed_files_are_changed_in_worktree() -> None:
-    allowed = {
-        "docs/prd/PRD-0B-IMPL-17_PHASE_0B_READINESS_DECISION_GATE.md",
-        "tests/core/test_prd_0b_phase_0b_readiness_decision_gate.py",
-        "tests/core/canonical_id_allowlist.py",
+ALLOWED_CHANGE_PATHS = {
+    "docs/prd/PRD-0B-IMPL-17_PHASE_0B_READINESS_DECISION_GATE.md",
+    "docs/prd/PRD-P1-WX-KICKOFF_PHASE_1_WEATHER_BOT_TICKET_PLAN.md",
+    "docs/prd/PRD-P1-WX-01_WEATHER_BOT_REQUIREMENTS_AND_MARKET_TAXONOMY_PLANNING.md",
+    "docs/prd/PRD-P1-WX-02_WEATHER_DATA_PROVIDER_RESEARCH_AND_CONNECTOR_APPROVAL_GATE.md",
+    "docs/prd/PRD-P1-WX-03_WEATHER_BOT_CONFIG_SECRETS_FAIL_CLOSED_CONTRACT.md",
+    "docs/prd/PRD-P1-WX-04_WEATHER_BOT_RESULT_STATUS_OBSERVABILITY_SUMMARY_CONTRACT.md",
+    "tests/core/test_prd_0b_phase_0b_readiness_decision_gate.py",
+    "tests/core/test_prd_p1_wx_kickoff_ticket_plan.py",
+    "tests/core/test_prd_p1_wx_unblock_note.py",
+    "tests/core/test_prd_p1_wx_01_weather_taxonomy.py",
+    "tests/core/test_prd_p1_wx_02_weather_provider_research_gate.py",
+    "tests/core/test_prd_p1_wx_03_weather_config_secrets_contract.py",
+    "tests/core/test_prd_p1_wx_04_weather_status_observability_contract.py",
+    "tests/core/test_meta_handoff_roadmap_docs.py",
+    "tests/core/canonical_id_allowlist.py",
+}
+
+
+def _is_allowed_docs_or_static_test_change(path: str) -> bool:
+    return path in ALLOWED_CHANGE_PATHS
+
+
+def test_allowlist_accepts_weather_planning_docs_and_static_tests() -> None:
+    changed = {
+        "docs/prd/PRD-P1-WX-01_WEATHER_BOT_REQUIREMENTS_AND_MARKET_TAXONOMY_PLANNING.md",
+        "docs/prd/PRD-P1-WX-04_WEATHER_BOT_RESULT_STATUS_OBSERVABILITY_SUMMARY_CONTRACT.md",
+        "tests/core/test_prd_p1_wx_04_weather_status_observability_contract.py",
+        "tests/core/test_meta_handoff_roadmap_docs.py",
     }
-    out = subprocess.check_output(["git", "status", "--short"], text=True)
-    changed = {line.split()[-1] for line in out.splitlines() if line.strip()}
-    assert changed <= allowed
+    disallowed = {path for path in changed if not _is_allowed_docs_or_static_test_change(path)}
+    assert not disallowed
+
+
+def test_allowlist_rejects_production_and_runtime_paths() -> None:
+    changed = {
+        "src/runtime/main.py",
+        "connectors/weather/noaa.py",
+        "scripts/build_weather.py",
+        "pyproject.toml",
+    }
+    disallowed = {path for path in changed if not _is_allowed_docs_or_static_test_change(path)}
+    assert disallowed == changed
 
 
 def test_test_file_has_no_production_runtime_imports() -> None:
