@@ -1,4 +1,7 @@
-# MEG — Megalodon Market Intelligence Engine
+# MEG — Megalodon Market Intelligence Engine - btw ts readme ahh and needs to be updated doesnt cover nothing #tikitiki
+#rd
+#dhokla
+#yara yara then i hook up with your friend
 
 Real-time prediction market intelligence engine for Polymarket. Detects, scores, and surfaces trade signals from on-chain whale behavior — not blind copy-trading. Exploits the 4–12 hour window between whale entry and retail reaction.
 
