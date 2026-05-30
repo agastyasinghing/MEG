@@ -121,16 +121,21 @@ _BLOCKING_POINT_IN_TIME_STATUSES = frozenset(
     {
         PointInTimeAvailabilityStatus.UNAVAILABLE_AS_OF,
         PointInTimeAvailabilityStatus.AMBIGUOUS_AS_OF,
+        PointInTimeAvailabilityStatus.NOT_APPLICABLE,
+        PointInTimeAvailabilityStatus.DESIGN_ONLY,
     }
 )
 _BLOCKING_EVIDENCE_STATUSES = frozenset(
     {
+        EvidenceStatus.REVIEWER_INFERRED,
         EvidenceStatus.MISSING,
         EvidenceStatus.CONFLICTING,
+        EvidenceStatus.NOT_APPLICABLE,
     }
 )
 _BLOCKING_USABILITY_POSTURES = frozenset(
     {
+        LabelUsabilityPosture.DESIGN_ONLY,
         LabelUsabilityPosture.BLOCKED_PENDING_SOURCE_MATCH,
         LabelUsabilityPosture.BLOCKED_PENDING_PROVENANCE,
         LabelUsabilityPosture.BLOCKED_PENDING_ADJUDICATION,
@@ -148,7 +153,7 @@ def source_resolution_metadata_from_mapping(metadata: Mapping[str, Any]) -> Sour
     """Build source-resolution metadata from explicitly supplied values."""
 
     return SourceResolutionMetadata(
-        resolver_source_identity=metadata.get("resolver_source_identity"),
+        resolver_source_identity=metadata["resolver_source_identity"],
         status=_enum_value(SourceResolutionStatus, metadata["status"]),
         evidence_status=_enum_value(EvidenceStatus, metadata["evidence_status"]),
         reviewer_note=str(metadata.get("reviewer_note", "")),
@@ -194,7 +199,7 @@ def historical_label_metadata_from_mapping(metadata: Mapping[str, Any]) -> Histo
             metadata["point_in_time_provenance"]
         ),
         label_usability=label_usability_metadata_from_mapping(metadata["label_usability"]),
-        venue_rule_summary=str(metadata.get("venue_rule_summary", "")),
+        venue_rule_summary=str(metadata["venue_rule_summary"]),
     )
 
 
@@ -203,7 +208,17 @@ def validate_historical_label_metadata(metadata: HistoricalLabelMetadata) -> Val
 
     reasons: list[str] = []
 
-    if not metadata.source_resolution.resolver_source_identity:
+    required_text_fields = (
+        ("condition_id", metadata.condition_id),
+        ("token_id", metadata.token_id),
+        ("outcome", metadata.outcome),
+        ("venue_rule_summary", metadata.venue_rule_summary),
+    )
+    for field_name, field_value in required_text_fields:
+        if not str(field_value).strip():
+            reasons.append(f"{field_name} is missing")
+
+    if not (metadata.source_resolution.resolver_source_identity or "").strip():
         reasons.append("resolver source identity is missing")
 
     if metadata.source_resolution.status in _BLOCKING_SOURCE_STATUSES:
@@ -224,8 +239,11 @@ def validate_historical_label_metadata(metadata: HistoricalLabelMetadata) -> Val
         if status in _BLOCKING_EVIDENCE_STATUSES:
             reasons.append(f"{field_name} status is {status.value}")
 
-    if metadata.label_usability.label_confidence is LabelConfidence.UNKNOWN:
-        reasons.append("label confidence is unknown")
+    if metadata.label_usability.label_confidence in (
+        LabelConfidence.UNCLEAR,
+        LabelConfidence.UNKNOWN,
+    ):
+        reasons.append(f"label confidence is {metadata.label_usability.label_confidence.value}")
 
     if metadata.label_usability.posture in _BLOCKING_USABILITY_POSTURES:
         reasons.append(f"label usability posture is {metadata.label_usability.posture.value}")
@@ -240,6 +258,8 @@ def validate_historical_label_metadata(metadata: HistoricalLabelMetadata) -> Val
     if (
         metadata.source_resolution.status is SourceResolutionStatus.SOURCE_RESOLVED
         and metadata.source_resolution.evidence_status is EvidenceStatus.SOURCE_BACKED
+        and metadata.point_in_time_provenance.availability_status
+        is PointInTimeAvailabilityStatus.AVAILABLE_AS_OF
         and metadata.point_in_time_provenance.evidence_status is EvidenceStatus.SOURCE_BACKED
         and metadata.label_usability.evidence_status is EvidenceStatus.SOURCE_BACKED
         and metadata.label_usability.label_confidence is LabelConfidence.CONFIRMED
