@@ -25,6 +25,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     "docs/phase0a/0A-01_CANONICAL_ID_INVENTORY.md": 59,
     # Phase 0B historical-lake doc: legacy identifier noted for compatibility mapping only.
     "docs/phase0b/0B-01_DUCKDB_HISTORICAL_LAKE_PLAN.md": 1,
+    # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
+    "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
     "meg/agent_core/crowding_detector.py": 2,
     "meg/agent_core/decision_agent.py": 11,
