@@ -149,6 +149,10 @@ def _enum_value(enum_type: type[_ClosedValue], value: _ClosedValue | str) -> _Cl
     return enum_type(value)
 
 
+def _is_nonblank_text(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
 def source_resolution_metadata_from_mapping(metadata: Mapping[str, Any]) -> SourceResolutionMetadata:
     """Build source-resolution metadata from explicitly supplied values."""
 
@@ -191,15 +195,15 @@ def historical_label_metadata_from_mapping(metadata: Mapping[str, Any]) -> Histo
     """Build historical-label metadata from explicitly supplied nested values."""
 
     return HistoricalLabelMetadata(
-        condition_id=str(metadata["condition_id"]),
-        token_id=str(metadata["token_id"]),
-        outcome=str(metadata["outcome"]),
+        condition_id=metadata["condition_id"],
+        token_id=metadata["token_id"],
+        outcome=metadata["outcome"],
         source_resolution=source_resolution_metadata_from_mapping(metadata["source_resolution"]),
         point_in_time_provenance=point_in_time_provenance_metadata_from_mapping(
             metadata["point_in_time_provenance"]
         ),
         label_usability=label_usability_metadata_from_mapping(metadata["label_usability"]),
-        venue_rule_summary=str(metadata["venue_rule_summary"]),
+        venue_rule_summary=metadata["venue_rule_summary"],
     )
 
 
@@ -215,10 +219,10 @@ def validate_historical_label_metadata(metadata: HistoricalLabelMetadata) -> Val
         ("venue_rule_summary", metadata.venue_rule_summary),
     )
     for field_name, field_value in required_text_fields:
-        if not str(field_value).strip():
+        if not _is_nonblank_text(field_value):
             reasons.append(f"{field_name} is missing")
 
-    if not (metadata.source_resolution.resolver_source_identity or "").strip():
+    if not _is_nonblank_text(metadata.source_resolution.resolver_source_identity):
         reasons.append("resolver source identity is missing")
 
     if metadata.source_resolution.status in _BLOCKING_SOURCE_STATUSES:

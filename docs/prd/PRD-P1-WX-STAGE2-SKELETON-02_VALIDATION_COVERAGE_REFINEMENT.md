@@ -97,10 +97,11 @@ Validation continues to block missing resolver source identity, unresolved/confl
 
 This refinement adds conservative handling for these previously under-covered cases:
 
-- Blank `condition_id` blocks validation.
-- Blank `token_id` blocks validation.
-- Blank `outcome` blocks validation.
-- Blank `venue_rule_summary` blocks validation.
+- Missing, blank, or non-string `condition_id` blocks validation.
+- Missing, blank, or non-string `token_id` blocks validation.
+- Missing, blank, or non-string `outcome` blocks validation.
+- Missing, blank, or non-string `venue_rule_summary` blocks validation.
+- Missing, blank, or non-string resolver source identity blocks validation.
 - Point-in-time `not_applicable` blocks validation.
 - Point-in-time `design_only` blocks validation.
 - Evidence `reviewer_inferred` blocks validation.

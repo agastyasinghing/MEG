@@ -114,6 +114,46 @@ def test_missing_required_text_fields_do_not_pass(field_name: str, reason: str) 
 
 
 @pytest.mark.parametrize(
+    ("field_name", "field_value", "reason"),
+    (
+        ("condition_id", None, "condition_id is missing"),
+        ("token_id", None, "token_id is missing"),
+        ("outcome", None, "outcome is missing"),
+        ("venue_rule_summary", None, "venue_rule_summary is missing"),
+        ("condition_id", 123, "condition_id is missing"),
+        ("token_id", 123, "token_id is missing"),
+    ),
+)
+def test_none_or_non_string_required_text_fields_do_not_pass(
+    field_name: str,
+    field_value: object,
+    reason: str,
+) -> None:
+    metadata = replace(_valid_metadata(), **{field_name: field_value})
+
+    result = hl.validate_historical_label_metadata(metadata)
+
+    _assert_does_not_pass(result)
+    assert reason in result.reasons
+
+
+def test_none_resolver_source_identity_does_not_pass() -> None:
+    metadata = _valid_metadata()
+    result = hl.validate_historical_label_metadata(
+        replace(
+            metadata,
+            source_resolution=replace(
+                metadata.source_resolution,
+                resolver_source_identity=None,
+            ),
+        )
+    )
+
+    _assert_does_not_pass(result)
+    assert "resolver source identity is missing" in result.reasons
+
+
+@pytest.mark.parametrize(
     "status",
     (
         hl.PointInTimeAvailabilityStatus.NOT_APPLICABLE,
@@ -285,6 +325,39 @@ def test_missing_required_mapping_keys_raise_key_error(
         builder(metadata)
 
     assert exc_info.value.args == (missing_key,)
+
+
+def test_mapping_builder_preserves_invalid_required_text_for_fail_closed_validation() -> None:
+    metadata = hl.historical_label_metadata_from_mapping(
+        {
+            "condition_id": None,
+            "token_id": 123,
+            "outcome": "Yes",
+            "source_resolution": {
+                "resolver_source_identity": None,
+                "status": "source_resolved",
+                "evidence_status": "source_backed",
+            },
+            "point_in_time_provenance": {
+                "availability_status": "available_as_of",
+                "evidence_status": "source_backed",
+            },
+            "label_usability": {
+                "posture": "usable_after_stage_2_approval",
+                "evidence_status": "source_backed",
+                "label_confidence": "confirmed",
+            },
+            "venue_rule_summary": None,
+        }
+    )
+
+    result = hl.validate_historical_label_metadata(metadata)
+
+    _assert_does_not_pass(result)
+    assert "condition_id is missing" in result.reasons
+    assert "token_id is missing" in result.reasons
+    assert "venue_rule_summary is missing" in result.reasons
+    assert "resolver source identity is missing" in result.reasons
 
 
 def test_validators_are_supplied_metadata_only_and_do_not_mutate_inputs() -> None:
