@@ -243,10 +243,9 @@ def test_machine_checkable_assignment_section_exists_and_uses_only_closed_sets()
 
     for name, allowed_values in ALLOWED_ASSIGNMENTS.items():
         missing_allowed_values = allowed_values - set(observed[name])
-        optional_unassigned = {"blocked_pending_fix", "unclear", "blocked", "missing", "conflicting", "unknown"}
-        assert missing_allowed_values <= optional_unassigned, (
-            f"Expected every non-error closed-set value for {name}; "
-            f"missing {sorted(missing_allowed_values - optional_unassigned)}"
+        assert not missing_allowed_values, (
+            f"Expected every closed-set value for {name}; "
+            f"missing {sorted(missing_allowed_values)}"
         )
 
 

@@ -221,6 +221,8 @@ The following are forbidden examples for actual machine-checkable assignments. T
 - request status: request_prepared
 - request status: fixtures_not_approved
 - request status: human_review_required
+- request status: blocked_pending_fix
+- request status: unclear
 - requested future scope: static_fixture_planning_only
 - requested future scope: fixture_schema_planning
 - requested future scope: fixture_provenance_planning
@@ -230,6 +232,7 @@ The following are forbidden examples for actual machine-checkable assignments. T
 - approval boundary status: not_approved
 - approval boundary status: separate_human_approval_required
 - approval boundary status: explicitly_out_of_scope
+- approval boundary status: blocked
 - future ticket permission: may_request_fixture_planning_ticket
 - future ticket permission: must_not_create_fixtures_now
 - future ticket permission: must_not_create_ingestion
@@ -261,9 +264,12 @@ The following are forbidden examples for actual machine-checkable assignments. T
 - non-approval category: other_unclear
 - evidence status: source_backed
 - evidence status: reviewer_inferred
+- evidence status: missing
+- evidence status: conflicting
 - evidence status: not_applicable
 - label confidence: confirmed
 - label confidence: unclear
+- label confidence: unknown
 
 ## 14. Fixture approval-request matrix
 
