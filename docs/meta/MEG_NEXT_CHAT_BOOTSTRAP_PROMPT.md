@@ -1,41 +1,45 @@
 # MEG Next Chat Bootstrap Prompt
 
-## 1) Bootstrap prompt
-You are continuing MEG. Read these repo files first:
-- docs/meta/MEG_CURRENT_STATE.md
-- docs/meta/MEG_CHAT_HANDOFF.md
+Copy this prompt into a fresh chat when restarting MEG work.
+
+```text
+You are helping with the MEG repository.
+
+First read these repo-native operating-memory docs before producing tickets or reviews:
+- AGENTS.md
+- docs/meta/MEG_ACTIVE_STATE.md
+- docs/meta/MEG_CONTEXT_ROUTER.md
 - docs/meta/MEG_WORKFLOW_PLAYBOOK.md
-- docs/meta/MEG_TICKET_PROMPT_TEMPLATE.md
-- docs/meta/MEG_PHASE_HISTORY_SUMMARY.md
-- docs/meta/MEG_DUCKDB_RESEARCH_RAIL_EXPLAINER.md
-- docs/meta/MEG_STRATEGIC_IDEA_REGISTRY.md
-- docs/prd/PRD-P1-WX-KICKOFF_PHASE_1_WEATHER_BOT_TICKET_PLAN.md
+- docs/meta/MEG_TICKET_STYLE_GUIDE.md
+- docs/meta/MEG_PR_REVIEW_CHECKLIST.md
+- docs/meta/domain_packets/WEATHER_BOT_PACKET.md when Weather Bot is active
 
-Then continue with the next ticket:
-- PRD-P1-WX-01 Weather bot requirements and market taxonomy planning
+Then summarize:
+1. current project state
+2. current active phase
+3. latest merged/reviewed PR
+4. current approved gate
+5. next possible gate
+6. explicitly forbidden scopes
+7. source-of-truth docs
+8. MEG ticket formatting rules
 
-Rules:
-- Preserve the existing PR check / next ticket workflow.
-- Do not open unnecessary issues.
-- Always include main prompt and self-review prompt.
-- Always include research depth flag.
-- Always include language/tooling suitability check.
-- Do not start implementation before planning/approval gates.
-- Keep weather execution, connectors/API calls, trading/autonomy unapproved until gates.
+Do not generate a ticket until the user asks.
+Do not open issues.
+Do not approve runtime, connectors, trading, or autonomy.
+Do not assume implementation approval from planning or approval-request docs.
+Do not merge PRs or approve PRs as final authority.
+```
 
-## 2) Condensed project state
-- Phase 0B local research readiness completed.
-- Phase 0A shared rail closure completed.
-- Phase 1 unblocked for kickoff/planning only.
-- PRD-P1-WX-KICKOFF defines sequence.
-- Next ticket is PRD-P1-WX-01.
-- Weather runtime implementation not started.
-- External weather/API connector behavior not started.
-- Production execution not approved.
-- Live trading/order placement/autonomy not approved.
-- DuckDB is dev/research-only.
-- Bounded local research posture is preserved.
-- Docs/static tests are preferred for governance tickets.
+## Legacy bootstrap compatibility references
 
-## 3) First thing to ask user
-Should we proceed directly to PRD-P1-WX-01, or first discuss strategic decisions around weather bot scope, canonical event graph pilot, provider research depth, market taxonomy, and idea registry prioritization?
+Older meta-handoff tests and historical chats may also reference these documents. Read them when reconciling older Phase 1 planning context, but defer to `docs/meta/MEG_ACTIVE_STATE.md` for current post-PR #194 gate posture:
+
+- docs/meta/meg_current_state.md
+- docs/meta/meg_chat_handoff.md
+- docs/meta/meg_workflow_playbook.md
+- docs/meta/meg_ticket_prompt_template.md
+- docs/meta/meg_phase_history_summary.md
+- docs/meta/meg_duckdb_research_rail_explainer.md
+- docs/meta/meg_strategic_idea_registry.md
+- prd-p1-wx-01
