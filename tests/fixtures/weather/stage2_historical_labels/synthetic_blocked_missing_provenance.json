@@ -1,0 +1,33 @@
+{
+  "fixture_id": "synthetic_blocked_missing_provenance",
+  "fixture_kind": "synthetic_blocked_missing_provenance",
+  "synthetic_or_real": "synthetic",
+  "canonical_event_summary": "Synthetic placeholder event for a missing-provenance weather-label example; no real event, venue, source, or historical label is represented.",
+  "venue_rule_summary": "Synthetic venue rule summary: the reviewer cannot confirm the required resolver source or point-in-time availability from supplied metadata.",
+  "condition_id": "synthetic_condition_stage2_blocked_001",
+  "token_id": "synthetic_token_stage2_blocked_001",
+  "outcome": "Yes",
+  "source_resolution": {
+    "resolver_source_identity": "",
+    "status": "source_unknown",
+    "evidence_status": "missing",
+    "reviewer_note": "Required resolver identity and source evidence are intentionally absent for this blocked fixture."
+  },
+  "point_in_time_provenance": {
+    "availability_status": "unavailable_as_of",
+    "evidence_status": "missing",
+    "as_of_timestamp": null,
+    "reviewer_note": "The fixture intentionally lacks supplied evidence that the label was available at the relevant review time."
+  },
+  "label_usability": {
+    "posture": "blocked_pending_provenance",
+    "evidence_status": "missing",
+    "label_confidence": "unknown",
+    "reviewer_note": "The label must remain blocked until provenance is supplied and reviewed under a separate gate."
+  },
+  "expected_validation_posture": "blocked",
+  "reviewer_notes": "Expected to fail closed because source identity, source evidence, point-in-time provenance, and confidence are insufficient.",
+  "provenance_notes": "Synthetic blocked example only; absence of provenance is deliberate and does not describe a real missing record.",
+  "no_lookahead_notes": "No later evidence is used to repair the missing supplied provenance in this static fixture.",
+  "non_approval_notes": "Static blocked fixture only; does not approve data loading, provider integration, external calls, forecast pulls, scoring, replay, runtime use, execution, or production behavior."
+}

@@ -1,0 +1,33 @@
+{
+  "fixture_id": "synthetic_unclear_requires_adjudication",
+  "fixture_kind": "synthetic_unclear_requires_adjudication",
+  "synthetic_or_real": "synthetic",
+  "canonical_event_summary": "Synthetic placeholder event for an unclear weather-label example requiring human adjudication; no real event, venue, source, or historical label is represented.",
+  "venue_rule_summary": "Synthetic venue rule summary: supplied resolver notes conflict about whether the synthetic outcome should resolve Yes.",
+  "condition_id": "synthetic_condition_stage2_unclear_001",
+  "token_id": "synthetic_token_stage2_unclear_001",
+  "outcome": "Yes",
+  "source_resolution": {
+    "resolver_source_identity": "synthetic conflicting resolver-note pair",
+    "status": "requires_adjudication",
+    "evidence_status": "conflicting",
+    "reviewer_note": "Synthetic supplied notes conflict, so a human reviewer would need adjudication before any label could be used."
+  },
+  "point_in_time_provenance": {
+    "availability_status": "ambiguous_as_of",
+    "evidence_status": "conflicting",
+    "as_of_timestamp": "2026-05-30T00:00:00Z",
+    "reviewer_note": "The fixture intentionally leaves point-in-time availability ambiguous."
+  },
+  "label_usability": {
+    "posture": "blocked_pending_adjudication",
+    "evidence_status": "conflicting",
+    "label_confidence": "unclear",
+    "reviewer_note": "Not usable until a separate human adjudication process resolves the synthetic conflict."
+  },
+  "expected_validation_posture": "blocked",
+  "reviewer_notes": "Expected to fail closed because source resolution requires adjudication and label confidence is unclear.",
+  "provenance_notes": "Synthetic adjudication example only; conflicting evidence is hand-authored for static validation and does not describe real source disagreement.",
+  "no_lookahead_notes": "The fixture does not use later observations to choose between conflicting synthetic notes.",
+  "non_approval_notes": "Static adjudication fixture only; does not approve data loading, provider integration, external calls, forecast pulls, scoring, replay, runtime use, execution, or production behavior."
+}

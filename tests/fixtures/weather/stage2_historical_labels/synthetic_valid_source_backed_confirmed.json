@@ -1,0 +1,33 @@
+{
+  "fixture_id": "synthetic_valid_source_backed_confirmed",
+  "fixture_kind": "synthetic_valid_source_backed_confirmed",
+  "synthetic_or_real": "synthetic",
+  "canonical_event_summary": "Synthetic placeholder event for a venue-defined weather outcome; no real event, venue, source, or historical label is represented.",
+  "venue_rule_summary": "Synthetic venue rule summary: resolve Yes only if the named synthetic resolver source confirms the synthetic threshold by the stated point-in-time review cutoff.",
+  "condition_id": "synthetic_condition_stage2_valid_001",
+  "token_id": "synthetic_token_stage2_valid_001",
+  "outcome": "Yes",
+  "source_resolution": {
+    "resolver_source_identity": "synthetic resolver bulletin fixture identity",
+    "status": "source_resolved",
+    "evidence_status": "source_backed",
+    "reviewer_note": "Synthetic source identity is supplied only to exercise the Stage 2 validator's confirmed path."
+  },
+  "point_in_time_provenance": {
+    "availability_status": "available_as_of",
+    "evidence_status": "source_backed",
+    "as_of_timestamp": "2026-05-30T00:00:00Z",
+    "reviewer_note": "Synthetic metadata states that the example resolver note was available before the static review cutoff."
+  },
+  "label_usability": {
+    "posture": "usable_after_stage_2_approval",
+    "evidence_status": "source_backed",
+    "label_confidence": "confirmed",
+    "reviewer_note": "This fixture is usable only for Stage 2 static validation after the approved static-fixture gate."
+  },
+  "expected_validation_posture": "pass",
+  "reviewer_notes": "Expected to pass supplied-metadata validation because every required closed-set value is source-backed, confirmed, and unblocked.",
+  "provenance_notes": "Synthetic provenance only; hand-authored for static tests and not derived from a provider, service, scrape, or real historical label.",
+  "no_lookahead_notes": "The synthetic point-in-time cutoff is part of the supplied metadata and does not rely on later observations or external collection.",
+  "non_approval_notes": "Static fixture only; does not approve data loading, provider integration, external calls, forecast pulls, scoring, replay, runtime use, execution, or production behavior."
+}
