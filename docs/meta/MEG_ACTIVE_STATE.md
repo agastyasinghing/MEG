@@ -9,13 +9,16 @@ This is the first working-memory file to read after `AGENTS.md`.
 - MEG Weather Bot Stage 2 static historical-label fixture track.
 
 ## Current active phase
-- Post-PR #194 static fixture planning completed; MEG-OPS-01 is the immediate ops-docs handoff ticket until this PR merges.
+- MEG-OPS-01 establishes the repo-native orchestration layer for durable project handoff after it lands.
+- The current active Weather Bot area remains the Stage 2 static historical-label fixture track.
+- Static fixture planning was completed by PR #194.
 
 ## Latest merged PR
 - PR #194 was merged by the user.
 
 ## Latest reviewed PR
-- PR #194 is the latest reviewed sequence item recorded in this active state.
+- PR #195 / MEG-OPS-01 is the latest reviewed ops-docs handoff sequence item represented by this active state, assuming this PR merges cleanly.
+- PR #194 remains the latest merged Weather Bot gate-setting PR recorded here.
 
 ## Current approved gate
 - Static fixture planning completed for the Stage 2 historical-label fixture track.
@@ -73,7 +76,7 @@ This is the first working-memory file to read after `AGENTS.md`.
 - Reviews are advisory only and must end with a final merge/block recommendation plus a recommended next ticket.
 
 ## Known blockers
-- No known blocker is recorded for MEG-OPS-01.
+- No active ops blocker is known after MEG-OPS-01, assuming this PR merges cleanly.
 - Weather Bot fixture implementation cannot begin without a separate explicit human approval request and approval.
 
 ## Last updated by
@@ -81,5 +84,6 @@ This is the first working-memory file to read after `AGENTS.md`.
 
 ## How to use this file
 - Read this file immediately after `AGENTS.md` in a fresh chat.
+- Future chats should use this file as current working memory after MEG-OPS-01 lands.
 - Treat it as current working memory, not as a replacement for controlling PRDs.
 - Use it to determine the active phase, approved gate, next possible gate, and forbidden scopes before writing tickets or reviewing PRs.

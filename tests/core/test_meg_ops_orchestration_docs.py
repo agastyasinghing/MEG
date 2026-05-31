@@ -89,6 +89,9 @@ def test_active_state_required_fields_and_post_194_gate() -> None:
             "## last updated by",
             "## how to use this file",
             "pr #194",
+            "meg-ops-01 establishes the repo-native orchestration layer",
+            "future chats should use this file as current working memory after meg-ops-01 lands",
+            "no active ops blocker is known after meg-ops-01",
             "next possible gate is static fixture implementation approval request only",
         ],
     )
@@ -177,6 +180,7 @@ def test_phase_ledger_references_recent_sequence() -> None:
     text = _read("ledger")
     for item in ["PR #191", "PR #192", "PR #193", "PR #194", "MEG-OPS-01"]:
         assert item in text
+    assert "repo-native orchestration layer established" in text
 
 
 def test_bootstrap_tells_new_chat_to_wait_for_user_ticket_request() -> None:
