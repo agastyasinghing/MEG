@@ -90,18 +90,27 @@ def test_active_state_required_fields_and_post_fixture_closeout_gate() -> None:
             "## how to use this file",
             "pr #194",
             "pr #198",
+            "pr #203",
+            "pr #204",
             "prd-p1-wx-stage2-fixture-implementation-closeout-01",
+            "prd-p1-wx-stage2-real-fixture-implementation-closeout-01",
             "meg-ops-01 established the repo-native orchestration layer",
             "future chats should use this file as current working memory after meg-ops-01 lands",
             "no active ops blocker is known after meg-ops-01",
-            "stage 2 static fixture implementation v1 is complete",
-            "closed out the static fixture implementation subphase",
+            "stage 2 synthetic static fixture implementation v1 is complete and closed out",
+            "stage 2 real source-backed fixture implementation v1 is complete and closed out",
+            "closed out the real source-backed fixture implementation subphase",
             "exactly three static synthetic fixture json files exist",
-            "hold/checkpoint unless a concrete fixture validation gap is found or the user explicitly chooses a later approval gate",
+            "exactly two real source-backed fixture json files exist",
+            "the fixture count cap of at most 3 real source-backed fixtures was preserved",
+            "the third real fixture was intentionally not fabricated",
+            "old real-fixture planning/approval tests are successor-aware after pr #203",
+            "hold/checkpoint unless a concrete source-evidence/validation gap is found or the user explicitly chooses a later approval/request/planning gate",
         ],
     )
     for phrase in [
-        "real historical-label data is not approved",
+        "historical-label loading is not approved",
+        "real historical-label data expansion is not approved",
         "generated data is not approved",
         "ingestion is not approved",
         "provider/api connectors are not approved",
@@ -109,6 +118,7 @@ def test_active_state_required_fields_and_post_fixture_closeout_gate() -> None:
         "credentials/secrets/config loading is not approved",
         "forecast pulls are not approved",
         "scoring is not approved",
+        "probability scoring is not approved",
         "backtesting is not approved",
         "paper simulation is not approved",
         "runtime observation is not approved",
@@ -192,11 +202,15 @@ def test_pr_review_checklist_core_items() -> None:
 
 def test_phase_ledger_references_recent_sequence() -> None:
     text = _read("ledger")
-    for item in ["PR #191", "PR #192", "PR #193", "PR #194", "PR #198", "MEG-OPS-01"]:
+    for item in ["PR #191", "PR #192", "PR #193", "PR #194", "PR #198", "PR #203", "PR #204", "MEG-OPS-01"]:
         assert item in text
     assert "repo-native orchestration layer established" in text
     assert "static fixture implementation v1 closed out" in text
     assert "three synthetic fixtures remain the complete fixture set" in text
+    assert "real source-backed fixture implementation v1 closed out" in text
+    assert "exactly two real fixture JSONs remain the complete real-fixture set" in text
+    assert "at-most-3 cap preserved" in text
+    assert "third fixture intentionally not fabricated" in text
 
 
 def test_bootstrap_tells_new_chat_to_wait_for_user_ticket_request() -> None:
@@ -208,7 +222,8 @@ def test_bootstrap_tells_new_chat_to_wait_for_user_ticket_request() -> None:
             "do not open issues",
             "do not approve runtime, connectors, trading, or autonomy",
             "do not assume later-gate approval from planning, approval-request, implementation, or closeout docs",
-            "fixture implementation v1 as complete/closed out after pr #198",
+            "synthetic fixture implementation v1 as complete/closed out after pr #198",
+            "real source-backed fixture implementation v1 as complete/closed out after pr #204",
             "hold/checkpoint as the default posture",
         ],
     )
@@ -236,15 +251,27 @@ def test_weather_packet_current_gate() -> None:
             "stage 2 skeleton v1 complete",
             "pr #194",
             "pr #198",
+            "pr #203",
+            "pr #204",
             "prd-p1-wx-stage2-fixture-implementation-closeout-01",
-            "static fixture implementation v1 is complete and closed out",
+            "prd-p1-wx-stage2-real-fixture-implementation-closeout-01",
+            "stage 2 synthetic static fixture implementation v1 is complete and closed out",
+            "stage 2 real source-backed fixture implementation v1 is complete and closed out",
             "exactly three synthetic, hand-authored json fixtures",
+            "exactly two real source-backed fixture json files exist",
+            "the real fixture cap of at most 3 was preserved",
+            "the third real fixture was intentionally not fabricated",
+            "old real-fixture planning/approval tests are successor-aware",
             "the next default posture is hold/checkpoint",
             "the next work must be a separate approval/request/planning gate",
+            "historical-label loading is not approved",
             "ingestion is not approved",
-            "scoring and backtesting are not approved",
+            "scoring is not approved",
+            "backtesting is not approved",
             "runtime observation is not approved",
-            "trading, order placement, and autonomy are not approved",
+            "trading is not approved",
+            "order placement is not approved",
+            "autonomy is not approved",
             "production behavior is not approved",
         ],
     )
@@ -272,6 +299,7 @@ def test_ops_docs_do_not_contain_positive_approval_drift() -> None:
         "trading" + " approved",
         "order placement" + " approved",
         "connector implementation" + " approved",
+        "historical-label loading" + " approved",
         "ingestion" + " approved",
         "scoring" + " approved",
         "backtesting" + " approved",

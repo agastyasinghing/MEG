@@ -16,8 +16,13 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 
 - Stage 2 skeleton v1 complete.
 - Static fixture planning completed by PR #194.
-- Static fixture implementation v1 is complete and closed out by PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01.
-- The fixture set is exactly three synthetic, hand-authored JSON fixtures under `tests/fixtures/weather/stage2_historical_labels/`.
+- Stage 2 synthetic static fixture implementation v1 is complete and closed out by PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01.
+- Stage 2 real source-backed fixture implementation v1 is complete and closed out by PR #204 / PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01.
+- The synthetic fixture set is exactly three hand-authored JSON fixtures under `tests/fixtures/weather/stage2_historical_labels/`.
+- The real source-backed fixture set is exactly two hand-authored source-backed JSON fixtures under `tests/fixtures/weather/stage2_real_source_backed_labels/`.
+- The real fixture cap of at most 3 was preserved.
+- The third real fixture was intentionally not fabricated.
+- Old real-fixture planning/approval tests are successor-aware after PR #203.
 - The next default posture is hold/checkpoint.
 
 ## Recent completed artifacts
@@ -27,35 +32,45 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - PR #193 created the static fixture/data approval-request posture that allowed fixture planning to be requested after human approval.
 - PR #194 completed static historical-label fixture planning.
 - PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out static fixture implementation v1.
+- PR #203 made old real-fixture planning/approval tests successor-aware.
+- PR #204 / PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out real source-backed fixture implementation v1.
 
 ## Current approved gate
 
 - Stage 2 skeleton v1 is complete.
 - Static fixture planning is complete.
-- Static fixture implementation v1 is complete and closed out.
-- Exactly three static synthetic, hand-authored JSON fixtures are the complete fixture set for the closed-out subphase.
-- Completion of this fixture subphase does not authorize ingestion, scoring, backtesting, runtime, trading, order placement, autonomy, production behavior, or later Weather Bot gates.
+- Stage 2 synthetic static fixture implementation v1 is complete and closed out.
+- Exactly three synthetic, hand-authored JSON fixtures are the complete synthetic fixture set for the closed-out synthetic subphase.
+- Stage 2 real source-backed fixture implementation v1 is complete and closed out.
+- Exactly two real source-backed fixture JSON files exist as hand-authored, source-backed JSON fixtures and are the complete real fixture set for the closed-out real subphase.
+- The real fixture cap of at most 3 was preserved, and the third real fixture was intentionally not fabricated.
+- Completion of these fixture subphases does not authorize historical-label loading, ingestion, scoring, backtesting, runtime, trading, order placement, autonomy, production behavior, or later Weather Bot gates.
 
 ## Next possible gate
 
-- The next default Weather Bot posture is hold/checkpoint unless a concrete fixture validation gap is found or the user explicitly chooses a later approval gate.
-- If the user explicitly chooses to continue, the next work must be a separate approval/request/planning gate.
-- Separately approved later work may include targeted fixture validation refinement if a concrete gap exists, or planning/approval-request work for real source-backed fixtures or historical-label loading.
-- Do not proceed directly to ingestion, scoring, runtime, trading, order placement, autonomy, or production behavior.
+- The next default Weather Bot posture is hold/checkpoint unless a concrete source-evidence/validation gap is found or the user explicitly chooses a later approval/request/planning gate.
+- If the user explicitly chooses to continue, the next work must be a separate approval/request/planning gate or targeted refinement if a concrete gap exists.
+- Continued work must not proceed directly to ingestion, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior.
+- Do not present real fixture implementation as the next default gate because real source-backed fixture implementation v1 is complete and closed out.
 
 ## Explicitly not approved
 
-- Real historical-label data is not approved.
+- Historical-label loading is not approved.
+- Real historical-label data expansion is not approved.
 - Generated data is not approved.
 - Ingestion is not approved.
 - Provider/source integration and provider/API connectors are not approved.
 - External API calls are not approved.
 - Credentials/secrets/config loading is not approved.
 - Forecast pulls are not approved.
-- Scoring and backtesting are not approved.
+- Scoring is not approved.
+- Probability scoring is not approved.
+- Backtesting is not approved.
 - Paper simulation is not approved.
 - Runtime observation is not approved.
-- Trading, order placement, and autonomy are not approved.
+- Trading is not approved.
+- Order placement is not approved.
+- Autonomy is not approved.
 - Production behavior is not approved.
 - C++/Rust runtime components are not approved.
 
@@ -68,11 +83,16 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 
 ## Fixture track summary
 
-- Static fixture implementation v1 is complete and closed out.
+- Stage 2 synthetic static fixture implementation v1 is complete and closed out.
 - Exactly three synthetic, hand-authored JSON fixtures exist under `tests/fixtures/weather/stage2_historical_labels/`.
-- The three synthetic fixtures remain the complete fixture set for this subphase.
-- No real historical-label data or generated data is approved by the fixture closeout.
-- Hold/checkpoint is the recommended posture unless a concrete fixture validation gap is found or the user explicitly chooses a later approval gate.
+- The three synthetic fixtures remain the complete synthetic fixture set for that closed-out subphase.
+- Stage 2 real source-backed fixture implementation v1 is complete and closed out.
+- Exactly two real source-backed fixture JSON files exist under `tests/fixtures/weather/stage2_real_source_backed_labels/`.
+- The two real fixtures remain the complete hand-authored source-backed fixture set for that closed-out subphase.
+- The at-most-3 real fixture cap was preserved, and the third real fixture was intentionally not fabricated.
+- Old real-fixture planning/approval tests are successor-aware after PR #203.
+- No historical-label loading, real historical-label data expansion, generated data, ingestion, scoring, backtesting, runtime, or trading is approved by the fixture closeouts.
+- Hold/checkpoint is the recommended posture unless a concrete source-evidence/validation gap is found or the user explicitly chooses a later approval/request/planning gate.
 
 ## Closed-set/static-test pitfalls
 
@@ -93,13 +113,13 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 ## Weather Bot PR review additions
 
 - Confirm no Weather Bot runtime/source behavior changed in docs/static-test tickets.
-- Confirm no real historical-label data, generated data, ingestion, connectors, external API calls, scoring/backtesting, runtime observation, trading, order placement, autonomy, or production behavior was added.
+- Confirm no real historical-label data expansion, generated data, historical-label loading, ingestion, connectors, external API calls, scoring/backtesting, runtime observation, trading, order placement, autonomy, or production behavior was added.
 - Confirm closed-set/static-test parsing is section-scoped.
 
 ## Relationship to future phases
 
-- Targeted fixture validation refinement: only if a concrete gap is found and scoped as a separate gate.
-- Real source-backed fixtures or historical-label loading: not approved unless separately requested/planned/approved.
+- Targeted source-evidence or fixture-validation refinement: only if a concrete gap is found and scoped as a separate gate.
+- Historical-label loading: not approved unless separately requested/planned/approved.
 - Ingestion: not approved by Stage 2 skeleton, fixture planning, fixture implementation, or fixture closeout.
 - Provider/source integration: not approved.
 - Scoring/backtesting: not approved.
