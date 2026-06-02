@@ -27,6 +27,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     "docs/phase0b/0B-01_DUCKDB_HISTORICAL_LAKE_PLAN.md": 1,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
+    # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
+    "docs/prd/PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_STATIC_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
     "meg/agent_core/crowding_detector.py": 2,
     "meg/agent_core/decision_agent.py": 11,
