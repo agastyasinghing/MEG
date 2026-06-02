@@ -9,28 +9,35 @@ This is the first working-memory file to read after `AGENTS.md`.
 - MEG Weather Bot Stage 2 static historical-label fixture track.
 
 ## Current active phase
-- MEG-OPS-01 establishes the repo-native orchestration layer for durable project handoff after it lands.
+- MEG-OPS-01 established the repo-native orchestration layer for durable project handoff.
 - The current active Weather Bot area remains the Stage 2 static historical-label fixture track.
-- Static fixture planning was completed by PR #194.
+- Stage 2 skeleton v1 is complete.
+- Stage 2 static fixture implementation v1 is complete.
+- PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out the static fixture implementation subphase after PR #198.
+- Exactly three static synthetic fixture JSON files exist under `tests/fixtures/weather/stage2_historical_labels/`.
 
 ## Latest merged PR
-- PR #194 was merged by the user.
+- PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out the static fixture implementation subphase.
 
 ## Latest reviewed PR
-- PR #195 / MEG-OPS-01 is the latest reviewed ops-docs handoff sequence item represented by this active state, assuming this PR merges cleanly.
-- PR #194 remains the latest merged Weather Bot gate-setting PR recorded here.
+- PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 is the latest Weather Bot closeout/checkpoint item represented by this active state.
+- PR #195 / MEG-OPS-01 remains the latest reviewed ops-docs handoff sequence item recorded here.
 
 ## Current approved gate
-- Static fixture planning completed for the Stage 2 historical-label fixture track.
-- Planning completion does not grant implementation authority.
+- Stage 2 skeleton v1 is complete.
+- Static fixture planning was completed by PR #194.
+- Static fixture implementation v1 is complete and closed out by PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01.
+- The complete fixture set is exactly three static synthetic, hand-authored JSON fixtures under `tests/fixtures/weather/stage2_historical_labels/`.
+- This closeout does not approve ingestion, scoring, backtesting, runtime, trading, order placement, autonomy, production behavior, or any later Weather Bot gate.
 
 ## Next possible gate
-- The next possible gate is static fixture implementation approval request only.
-- If continuing Weather Bot work, the current recommended next Weather Bot ticket is a static fixture implementation approval request only.
+- Current recommended posture: hold/checkpoint unless a concrete fixture validation gap is found or the user explicitly chooses a later approval gate.
+- Current next possible Weather Bot action, if the user explicitly chooses to continue, is a separately approved later gate only.
+- Examples of separately approved later gates include targeted fixture validation refinement if a concrete gap exists, or a later approval-request/planning gate for real source-backed fixtures or historical-label loading.
+- Do not present ingestion, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior as approved or next by default.
 
 ## Explicitly not approved
-- Fixture implementation is not approved.
-- Historical-label data is not approved.
+- Real historical-label data is not approved.
 - Generated data is not approved.
 - Ingestion is not approved.
 - Provider/API connectors are not approved.
@@ -45,6 +52,7 @@ This is the first working-memory file to read after `AGENTS.md`.
 - Order placement is not approved.
 - Autonomy is not approved.
 - Production behavior is not approved.
+- C++/Rust runtime components are not approved.
 
 ## Current controlling docs
 - `AGENTS.md`
@@ -60,12 +68,16 @@ This is the first working-memory file to read after `AGENTS.md`.
 - `docs/prd/PRD-P1-WX-STAGE2-SKELETON-CLOSEOUT-01_STAGE_2_SKELETON_CLOSEOUT_CHECKPOINT.md`
 - `docs/prd/PRD-P1-WX-STAGE2-FIXTURE-APPROVAL-01_STATIC_FIXTURE_DATA_APPROVAL_REQUEST.md`
 - `docs/prd/PRD-P1-WX-STAGE2-FIXTURE-PLAN-01_STATIC_HISTORICAL_LABEL_FIXTURE_PLANNING.md`
+- `docs/prd/PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-01_STATIC_HISTORICAL_LABEL_FIXTURE_IMPLEMENTATION.md`
+- `docs/prd/PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_STATIC_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md`
 
 ## Current Weather Bot status summary
 - Stage 2 skeleton v1 is complete.
 - Static historical-label fixture planning was completed by PR #194.
-- The fixture track remains planning/request-gated only.
-- Fixture implementation, historical-label fixture data, ingestion, provider/source integration, scoring/backtesting, paper simulation, runtime observation, trading, order placement, autonomy, and production behavior remain outside the approved gate.
+- Static fixture implementation v1 is complete and closed out by PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01.
+- Exactly three static synthetic fixture JSON files exist under `tests/fixtures/weather/stage2_historical_labels/`; they are the complete fixture set for this closed-out subphase.
+- The default Weather Bot posture is hold/checkpoint unless a concrete fixture validation gap is found or the user explicitly chooses a later approval gate.
+- Ingestion, provider/source integration, scoring/backtesting, paper simulation, runtime observation, trading, order placement, autonomy, and production behavior remain outside the approved gate.
 
 ## Current ticket style
 - Use the MEG ticket format from `docs/meta/MEG_TICKET_STYLE_GUIDE.md`.
@@ -76,11 +88,12 @@ This is the first working-memory file to read after `AGENTS.md`.
 - Reviews are advisory only and must end with a final merge/block recommendation plus a recommended next ticket.
 
 ## Known blockers
-- No active ops blocker is known after MEG-OPS-01, assuming this PR merges cleanly.
-- Weather Bot fixture implementation cannot begin without a separate explicit human approval request and approval.
+- No active ops blocker is known after MEG-OPS-01.
+- No active Weather Bot fixture implementation blocker is known after PR #198 closeout.
+- Any continued Weather Bot work requires either a concrete fixture validation gap or an explicit user choice of a separately approved later approval/request/planning gate.
 
 ## Last updated by
-- Codex for MEG-OPS-01, after user-reported PR #194 merge.
+- Codex for MEG-OPS-WX-ACTIVE-STATE-01, after PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01.
 
 ## How to use this file
 - Read this file immediately after `AGENTS.md` in a fresh chat.
