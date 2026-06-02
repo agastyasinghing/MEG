@@ -31,6 +31,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     "docs/prd/PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_STATIC_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Stage 2 real fixture implementation test includes a forbidden legacy identifier guard only.
     "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py": 1,
+    # Stage 2 real fixture implementation closeout documents fixture JSON legacy identifier guards only.
+    "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
     "meg/agent_core/crowding_detector.py": 2,
     "meg/agent_core/decision_agent.py": 11,
