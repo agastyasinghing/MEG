@@ -1,0 +1,40 @@
+{
+  "fixture_id": "real_fixture_stage2_polymarket_nyc_may_2026_precip_no_001",
+  "fixture_kind": "real_source_backed_candidate",
+  "synthetic_or_real": "real_source_backed",
+  "canonical_event_summary": "Polymarket NYC May 2026 precipitation range outcome candidate for the listed less-than-2-inch band, represented as the venue page's final No label for the selected less-than-2-inch candidate token.",
+  "venue_rule_summary": "The venue page states that the market resolves according to total precipitation in inches in Central Park, New York City between May 1 and May 31, 2026, 11:59 PM ET, according to NOAA, using the finalized monthly summarized Central Park NY precipitation figure and the page's stated bracket and revision handling.",
+  "condition_id": "real_fixture_condition_stage2_polymarket_nyc_precip_may_2026_001",
+  "token_id": "real_fixture_token_stage2_polymarket_nyc_precip_less_than_2_no_001",
+  "outcome": "No",
+  "source_resolution": {
+    "resolver_source_identity": "Polymarket resolver 0x69c47De9D... as displayed on the public venue page",
+    "status": "source_resolved",
+    "evidence_status": "source_backed",
+    "reviewer_note": "The public venue page displayed Outcome proposed: No, No dispute, and Final outcome: No for this selected less-than-2-inch candidate token during the static review."
+  },
+  "point_in_time_provenance": {
+    "availability_status": "available_as_of",
+    "evidence_status": "source_backed",
+    "as_of_timestamp": "2026-06-02T00:00:00Z",
+    "reviewer_note": "The venue page showed the final outcome and an update timestamp after the May 2026 measurement window ended; the static review occurred on 2026-06-02."
+  },
+  "label_usability": {
+    "posture": "usable_after_stage_2_approval",
+    "evidence_status": "source_backed",
+    "label_confidence": "confirmed",
+    "reviewer_note": "Usable only as a static Stage 2 source-backed candidate because the venue page itself supplied the final label posture and resolver identity at review time."
+  },
+  "expected_validation_posture": "pass",
+  "source_identity": "polymarket_nyc_may_2026_precipitation_market_page",
+  "source_name": "Polymarket NYC May 2026 precipitation market page",
+  "source_locator": "https://polymarket.com/event/precipitation-in-nyc-in-may",
+  "access_date": "2026-06-02",
+  "venue_rule_reference": "Polymarket page Rules and Market Context sections for precipitation in NYC in May 2026; NOAA monthly summarized Central Park NY precipitation figure named as the resolution source.",
+  "resolver_source_identity": "Polymarket resolver 0x69c47De9D... displayed on the venue page",
+  "reviewer_notes": "Reviewer accepted this as a narrow static candidate because the venue page identified the source rule, resolver identity, no-dispute state, and final No outcome for the candidate token. The fixture does not assert any independent NOAA value beyond what the venue page states.",
+  "provenance_notes": "Static source notes were taken from the public venue page and its displayed resolver/source-rule text during review on 2026-06-02. No automated collection or generated data was used.",
+  "no_lookahead_notes": "The measurement window ended on 2026-05-31 11:59 PM ET and the page displayed the final label before the 2026-06-02 review, so the fixture represents settlement-review evidence rather than pre-event knowledge.",
+  "conflicting_source_notes": "No conflict was identified within the reviewed venue page for this candidate token; independent NOAA re-adjudication remains out of scope for this static fixture.",
+  "non_approval_notes": "Static fixture only; this does not approve historical-label loading, ingestion, provider connections, external runtime calls, credential loading, forecast pulls, scoring, replay, runtime use, trading, execution, autonomy, production behavior, or any later gate."
+}

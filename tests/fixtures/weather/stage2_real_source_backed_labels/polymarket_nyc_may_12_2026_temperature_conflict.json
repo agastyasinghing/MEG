@@ -1,0 +1,40 @@
+{
+  "fixture_id": "real_fixture_stage2_polymarket_nyc_may_12_2026_temp_conflict_001",
+  "fixture_kind": "conflicting_source_case",
+  "synthetic_or_real": "real_source_backed",
+  "canonical_event_summary": "Polymarket NYC May 12, 2026 temperature candidate retained as a source-backed conflict case because reviewed page text mixed the selected venue rule source for LaGuardia/Wunderground with summary language that also referenced Central Park or National Weather Service observations.",
+  "venue_rule_summary": "The venue rule text for the selected May 12, 2026 NYC temperature page states that the market resolves to the temperature range containing the highest temperature at the LaGuardia Airport Station in whole degrees Fahrenheit, with Wunderground KLGA daily history named as the resolution source once finalized.",
+  "condition_id": "real_fixture_condition_stage2_polymarket_nyc_temp_may_12_2026_001",
+  "token_id": "real_fixture_token_stage2_polymarket_nyc_temp_conflict_001",
+  "outcome": "No",
+  "source_resolution": {
+    "resolver_source_identity": "Polymarket resolver 0x69c47De9D... as displayed on the public venue page",
+    "status": "source_conflicting",
+    "evidence_status": "conflicting",
+    "reviewer_note": "The rule text names Wunderground KLGA, while nearby venue-page summary language references official observations from Central Park or LaGuardia and National Weather Service, so this candidate is retained only as a blocked conflict example."
+  },
+  "point_in_time_provenance": {
+    "availability_status": "ambiguous_as_of",
+    "evidence_status": "conflicting",
+    "as_of_timestamp": "2026-06-02T00:00:00Z",
+    "reviewer_note": "The reviewed page displayed resolved/final language, but the precise source identity to rely on for this candidate is ambiguous without human adjudication."
+  },
+  "label_usability": {
+    "posture": "blocked_pending_adjudication",
+    "evidence_status": "conflicting",
+    "label_confidence": "unclear",
+    "reviewer_note": "The candidate must remain blocked because the reviewed source notes require adjudication before any real label could be treated as confirmed."
+  },
+  "expected_validation_posture": "blocked",
+  "source_identity": "polymarket_nyc_may_12_2026_temperature_market_page",
+  "source_name": "Polymarket NYC May 12, 2026 temperature market page",
+  "source_locator": "https://polymarket.com/event/highest-temperature-in-nyc-on-may-12-2026?marketSlug=highest-temperature-in-nyc-on-may-12-2026-64-65f&outcomeIndex=1",
+  "access_date": "2026-06-02",
+  "venue_rule_reference": "Polymarket page Rules section for highest temperature in NYC on May 12, 2026, naming LaGuardia Airport Station and Wunderground KLGA daily history as the rule source.",
+  "resolver_source_identity": "Polymarket resolver 0x69c47De9D... displayed on the venue page",
+  "reviewer_notes": "Reviewer kept this fixture as a deliberate edge case. The venue page provides reviewable evidence, but source-reference language is mixed enough that Stage 2 should fail closed pending adjudication.",
+  "provenance_notes": "Static source notes were taken from the public venue page during review on 2026-06-02. The fixture does not fetch Wunderground or NOAA records and does not settle any source conflict automatically.",
+  "no_lookahead_notes": "The source review occurred after the May 12, 2026 event and uses settlement-review evidence only. Because point-in-time source identity is ambiguous, the fixture is blocked rather than pass.",
+  "conflicting_source_notes": "Conflict is the purpose of this fixture: rule text names Wunderground KLGA, while page summary language also references Central Park or LaGuardia and National Weather Service observations.",
+  "non_approval_notes": "Static conflict fixture only; this does not approve historical-label loading, ingestion, provider connections, external runtime calls, credential loading, forecast pulls, scoring, replay, runtime use, trading, execution, autonomy, production behavior, or any later gate."
+}
