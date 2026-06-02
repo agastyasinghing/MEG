@@ -27,13 +27,14 @@ Then summarize:
 Do not generate a ticket until the user asks.
 Do not open issues.
 Do not approve runtime, connectors, trading, or autonomy.
-Do not assume implementation approval from planning or approval-request docs.
+Do not assume later-gate approval from planning, approval-request, implementation, or closeout docs.
+Treat Weather Bot fixture implementation v1 as complete/closed out after PR #198, with hold/checkpoint as the default posture unless a concrete fixture validation gap is found or the user explicitly chooses a later approval gate.
 Do not merge PRs or approve PRs as final authority.
 ```
 
 ## Legacy bootstrap compatibility references
 
-Older meta-handoff tests and historical chats may also reference these documents. Read them when reconciling older Phase 1 planning context, but defer to `docs/meta/MEG_ACTIVE_STATE.md` for current post-PR #194 gate posture:
+Older meta-handoff tests and historical chats may also reference these documents. Read them when reconciling older Phase 1 planning context, but defer to `docs/meta/MEG_ACTIVE_STATE.md` for current post-PR #198 fixture-closeout posture:
 
 - docs/meta/meg_current_state.md
 - docs/meta/meg_chat_handoff.md
