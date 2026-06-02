@@ -7,6 +7,12 @@ PRD_PATH = Path(
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-APPROVAL-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_APPROVAL_REQUEST.md"
 )
 PLANNED_REAL_FIXTURE_DIR = Path("tests/fixtures/weather/stage2_real_source_backed_labels")
+SUCCESSOR_IMPLEMENTATION_PRD = Path(
+    "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION.md"
+)
+SUCCESSOR_IMPLEMENTATION_TEST = Path(
+    "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py"
+)
 CANONICAL_ID = "PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-APPROVAL-01"
 ASSIGNMENT_HEADING = "## Machine-checkable Stage 2 real-fixture implementation approval-request assignments"
 ASSIGNMENT_PREFIXES = {
@@ -175,6 +181,17 @@ FORBIDDEN_IMPLEMENTATION_FRAGMENTS = (
 )
 
 
+def _assert_planned_directory_posture_is_successor_aware() -> None:
+    if not PLANNED_REAL_FIXTURE_DIR.exists():
+        return
+
+    assert SUCCESSOR_IMPLEMENTATION_PRD.is_file()
+    assert SUCCESSOR_IMPLEMENTATION_TEST.is_file()
+    assert (PLANNED_REAL_FIXTURE_DIR / "README.md").is_file()
+    fixture_paths = sorted(PLANNED_REAL_FIXTURE_DIR.glob("*.json"))
+    assert 1 <= len(fixture_paths) <= 3
+
+
 def _prd_text() -> str:
     return PRD_PATH.read_text(encoding="utf-8")
 
@@ -331,7 +348,7 @@ def test_fixture_count_cap_and_directory_posture_are_enforced() -> None:
     assert "at most 3 real source-backed fixture candidates" in text
     assert "Any larger fixture set requires a separate expansion approval request" in text
     assert "planned directory `tests/fixtures/weather/stage2_real_source_backed_labels/`" in text
-    assert not PLANNED_REAL_FIXTURE_DIR.exists()
+    _assert_planned_directory_posture_is_successor_aware()
 
 
 def test_machine_checkable_assignment_section_uses_only_closed_sets() -> None:
