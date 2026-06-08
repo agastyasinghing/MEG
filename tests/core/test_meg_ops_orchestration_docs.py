@@ -68,7 +68,7 @@ def test_agents_contains_core_operating_rules() -> None:
     )
 
 
-def test_active_state_required_fields_and_post_fixture_closeout_gate() -> None:
+def test_active_state_required_fields_and_post_historical_label_loading_plan_closeout_gate() -> None:
     text = _lower("active")
     _assert_contains(
         text,
@@ -92,24 +92,34 @@ def test_active_state_required_fields_and_post_fixture_closeout_gate() -> None:
             "pr #198",
             "pr #203",
             "pr #204",
+            "pr #208",
             "prd-p1-wx-stage2-fixture-implementation-closeout-01",
             "prd-p1-wx-stage2-real-fixture-implementation-closeout-01",
+            "prd-p1-wx-stage2-historical-label-loading-plan-closeout-01",
             "meg-ops-01 established the repo-native orchestration layer",
             "future chats should use this file as current working memory after meg-ops-01 lands",
             "no active ops blocker is known after meg-ops-01",
+            "stage 2 skeleton v1 is complete and closed out",
             "stage 2 synthetic static fixture implementation v1 is complete and closed out",
             "stage 2 real source-backed fixture implementation v1 is complete and closed out",
+            "stage 2 historical-label loading/validation planning v1 is complete and closed out",
             "closed out the real source-backed fixture implementation subphase",
+            "closed out the historical-label loading/validation planning subphase",
             "exactly three static synthetic fixture json files exist",
             "exactly two real source-backed fixture json files exist",
             "the fixture count cap of at most 3 real source-backed fixtures was preserved",
             "the third real fixture was intentionally not fabricated",
             "old real-fixture planning/approval tests are successor-aware after pr #203",
-            "hold/checkpoint unless a concrete source-evidence/validation gap is found or the user explicitly chooses a later approval/request/planning gate",
+            "no loader was created",
+            "historical-label loading implementation remains unapproved",
+            "no fixture json/readme files were modified",
+            "no historical-label data files or generated data were created",
+            "hold/checkpoint unless a concrete loading-planning gap is found or the user explicitly chooses a later approval/request/planning gate",
         ],
     )
     for phrase in [
-        "historical-label loading is not approved",
+        "loader implementation is not approved",
+        "historical-label loading implementation is not approved",
         "real historical-label data expansion is not approved",
         "generated data is not approved",
         "ingestion is not approved",
@@ -202,7 +212,7 @@ def test_pr_review_checklist_core_items() -> None:
 
 def test_phase_ledger_references_recent_sequence() -> None:
     text = _read("ledger")
-    for item in ["PR #191", "PR #192", "PR #193", "PR #194", "PR #198", "PR #203", "PR #204", "MEG-OPS-01"]:
+    for item in ["PR #191", "PR #192", "PR #193", "PR #194", "PR #198", "PR #203", "PR #204", "PR #208", "MEG-OPS-01"]:
         assert item in text
     assert "repo-native orchestration layer established" in text
     assert "static fixture implementation v1 closed out" in text
@@ -211,6 +221,11 @@ def test_phase_ledger_references_recent_sequence() -> None:
     assert "exactly two real fixture JSONs remain the complete real-fixture set" in text
     assert "at-most-3 cap preserved" in text
     assert "third fixture intentionally not fabricated" in text
+    assert "historical-label loading/validation planning v1 closed out" in text
+    assert "no loader created" in text
+    assert "no fixture files modified" in text
+    assert "no historical-label data/generated data created" in text
+    assert "hold/checkpoint unless a concrete loading-planning gap is found" in text
 
 
 def test_bootstrap_tells_new_chat_to_wait_for_user_ticket_request() -> None:
@@ -253,10 +268,16 @@ def test_weather_packet_current_gate() -> None:
             "pr #198",
             "pr #203",
             "pr #204",
+            "pr #208",
             "prd-p1-wx-stage2-fixture-implementation-closeout-01",
             "prd-p1-wx-stage2-real-fixture-implementation-closeout-01",
+            "prd-p1-wx-stage2-historical-label-loading-plan-closeout-01",
             "stage 2 synthetic static fixture implementation v1 is complete and closed out",
             "stage 2 real source-backed fixture implementation v1 is complete and closed out",
+            "stage 2 historical-label loading/validation planning v1 is complete and closed out",
+            "no loader exists",
+            "no historical-label loading implementation is approved",
+            "no ingestion/scoring/backtesting/runtime/trading is approved",
             "exactly three synthetic, hand-authored json fixtures",
             "exactly two real source-backed fixture json files exist",
             "the real fixture cap of at most 3 was preserved",
@@ -264,7 +285,8 @@ def test_weather_packet_current_gate() -> None:
             "old real-fixture planning/approval tests are successor-aware",
             "the next default posture is hold/checkpoint",
             "the next work must be a separate approval/request/planning gate",
-            "historical-label loading is not approved",
+            "loader implementation is not approved",
+            "historical-label loading implementation is not approved",
             "ingestion is not approved",
             "scoring is not approved",
             "backtesting is not approved",
@@ -299,6 +321,8 @@ def test_ops_docs_do_not_contain_positive_approval_drift() -> None:
         "trading" + " approved",
         "order placement" + " approved",
         "connector implementation" + " approved",
+        "loader implementation" + " approved",
+        "historical-label loading implementation" + " approved",
         "historical-label loading" + " approved",
         "ingestion" + " approved",
         "scoring" + " approved",

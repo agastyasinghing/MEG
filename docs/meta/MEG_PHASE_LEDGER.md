@@ -12,10 +12,11 @@ This is an append-style project ledger. Do not fabricate merge SHAs; use PR numb
 - PR #198 / PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01: result is static fixture implementation v1 closed out; three synthetic fixtures remain the complete fixture set; recommended posture is hold/checkpoint unless a concrete gap is found or the user chooses a later gate.
 - PR #203: result is old real-fixture planning/approval tests became successor-aware after approved real source-backed fixture implementation created the planned directory.
 - PR #204 / PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01: result is real source-backed fixture implementation v1 closed out; exactly two real fixture JSONs remain the complete real-fixture set; at-most-3 cap preserved; third fixture intentionally not fabricated; old planning/approval tests successor-aware; recommended posture is hold/checkpoint unless a concrete gap is found or the user chooses a later gate.
+- PR #208 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01: result is historical-label loading/validation planning v1 closed out; no loader created; no fixture files modified; no historical-label data/generated data created; recommended posture is hold/checkpoint unless a concrete loading-planning gap is found or the user chooses a later gate.
 
-## Current ledger posture after PR #204
+## Current ledger posture after PR #208
 
-- Stage 2 skeleton v1 is complete.
+- Stage 2 skeleton v1 is complete and closed out.
 - Static historical-label fixture planning is complete.
 - Stage 2 synthetic static fixture implementation v1 is complete and closed out.
 - Exactly three static synthetic fixture JSON files exist under `tests/fixtures/weather/stage2_historical_labels/`, and they remain the complete synthetic fixture set for the closed-out synthetic implementation subphase.
@@ -23,6 +24,11 @@ This is an append-style project ledger. Do not fabricate merge SHAs; use PR numb
 - Exactly two real source-backed fixture JSON files exist under `tests/fixtures/weather/stage2_real_source_backed_labels/`, and they remain the complete real-fixture set for the closed-out real implementation subphase.
 - The at-most-3 cap for real source-backed fixtures was preserved, and the third real fixture was intentionally not fabricated.
 - Old real-fixture planning/approval tests are successor-aware after PR #203.
-- The recommended Weather Bot posture is hold/checkpoint unless a concrete source-evidence/validation gap is found or the user explicitly chooses a later approval/request/planning gate.
-- Any next Weather Bot work must be separately approved later-gate work, such as targeted source-evidence or fixture-validation refinement for a concrete gap, or a separate approval/request/planning gate chosen by the user.
-- No historical-label loading, real historical-label data expansion, generated data, ingestion, provider/API connector, external API call, credentials/secrets/config loading, forecast pull, scoring, probability scoring, backtesting, paper simulation, runtime observation, trading, order placement, autonomy, production behavior, or C++/Rust runtime component is approved by this ledger.
+- Stage 2 historical-label loading/validation planning v1 is complete and closed out by PR #208 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01.
+- PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 closed out the historical-label loading/validation planning subphase.
+- No loader was created.
+- No fixture files were modified.
+- No historical-label data files or generated data were created.
+- The recommended Weather Bot posture is hold/checkpoint unless a concrete loading-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
+- Any next Weather Bot work must be separately approved later-gate work, such as targeted loading-planning refinement for a concrete gap, or a separate approval/request/planning gate chosen by the user.
+- No loader implementation, historical-label loading implementation, real historical-label data expansion, generated data, ingestion, provider/API connector, external API call, credentials/secrets/config loading, forecast pull, scoring, probability scoring, backtesting, paper simulation, runtime observation, trading, order placement, autonomy, production behavior, or C++/Rust runtime component is approved by this ledger.
