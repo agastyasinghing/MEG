@@ -116,10 +116,10 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 
 ## Next possible gate
 
-- The next default Weather Bot posture is hold/checkpoint unless a concrete static ingestion skeleton gap is found or the user explicitly chooses a later approval/request/planning gate.
-- If the user explicitly chooses to continue, the next work must be a separate approval/request/planning gate or targeted refinement if a concrete static ingestion skeleton gap exists, not direct real ingestion/connectors/source fetching/scoring/runtime/trading.
+- The next default Weather Bot posture is hold/checkpoint unless a concrete real ingestion planning gap is found or the user explicitly chooses a later approval/request/planning gate.
+- If the user explicitly chooses to continue, the next work must be a separate approval/request/planning gate or targeted refinement if a concrete real ingestion planning gap exists, not direct real ingestion/connectors/source fetching/scoring/runtime/trading.
 - Continued work must not proceed directly to ingestion implementation, connectors, provider/source integration, source fetching, scoring, backtesting, runtime observation, trading, order placement, autonomy, or production behavior.
-- Do not present real ingestion, connectors, source fetching, scoring, backtesting, runtime, or trading as the next default gate because static ingestion boundary skeleton v1 is complete and closed out.
+- Do not present real ingestion implementation, provider/source connectors, source fetching, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior as approved or next by default because real ingestion boundary planning v1 is complete and closed out.
 
 ## Explicitly not approved
 

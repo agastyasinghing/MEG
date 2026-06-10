@@ -423,8 +423,11 @@ def test_weather_packet_current_gate() -> None:
             "the third real fixture was intentionally not fabricated",
             "old real-fixture planning/approval tests are successor-aware",
             "the next default posture is hold/checkpoint",
+            "hold/checkpoint unless a concrete real ingestion planning gap is found",
             "the next work must be a separate approval/request/planning gate",
+            "targeted refinement if a concrete real ingestion planning gap exists",
             "not direct real ingestion/connectors/source fetching/scoring/runtime/trading",
+            "because real ingestion boundary planning v1 is complete and closed out",
             "loader expansion is not approved",
             "ingestion implementation is not approved",
             "ingestion is not approved",
@@ -438,6 +441,16 @@ def test_weather_packet_current_gate() -> None:
             "production behavior is not approved",
         ],
     )
+
+
+def test_weather_packet_has_no_stale_static_skeleton_next_posture() -> None:
+    text = _lower("weather_packet")
+    stale_fragments = [
+        "concrete static ingestion " + "skeleton gap",
+        "because static ingestion boundary " + "skeleton v1 is complete and closed out",
+    ]
+    hits = [fragment for fragment in stale_fragments if fragment in text]
+    assert hits == []
 
 
 def test_core_workflow_packet_roles_and_no_autonomous_merge_deploy() -> None:
