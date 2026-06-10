@@ -6,20 +6,23 @@ This is the first working-memory file to read after `AGENTS.md`.
 - MEG repo-native project operations and Weather Bot gated planning.
 
 ## Current active area
-- MEG Weather Bot Stage 2 static historical-label loading/validation implementation closeout track.
+- MEG Weather Bot Stage 2 post-ingestion-boundary-planning closeout checkpoint track.
 
 ## Current active phase
 - MEG-OPS-01 established the repo-native orchestration layer for durable project handoff.
-- The current active Weather Bot area is the post-static-historical-label loading/validation implementation closeout checkpoint.
+- The current active Weather Bot area is the post-ingestion-boundary-planning closeout checkpoint.
 - Stage 2 skeleton v1 is complete and closed out.
 - Stage 2 synthetic static fixture implementation v1 is complete and closed out.
 - Stage 2 real source-backed fixture implementation v1 is complete and closed out.
 - Stage 2 historical-label loading/validation planning v1 is complete and closed out.
 - Stage 2 static historical-label loading/validation implementation v1 is complete and closed out.
+- Stage 2 ingestion boundary planning v1 is complete and closed out.
 - PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out the static fixture implementation subphase after PR #198.
 - PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out the real source-backed fixture implementation subphase after PR #204.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 closed out the historical-label loading/validation planning subphase after PR #208.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 closed out the static loader/validator implementation subphase after PR #212.
+- PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 closed out the ingestion boundary planning subphase after PR #217.
+- The ingestion boundary planning artifact defined planning-only vocabulary, allowed/prohibited future source categories, no-lookahead safeguards, fixture/loader separation rules, fail-closed blockers, and later handoff gates.
 - `meg/weather/stage2/historical_label_loader.py` exists as the narrow static historical-label fixture loader/validator module.
 - The loader is limited to explicit static fixture validation.
 - The loader reads only caller-supplied paths under the two allowlisted fixture directories.
@@ -33,10 +36,11 @@ This is the first working-memory file to read after `AGENTS.md`.
 - Old real-fixture planning/approval tests are successor-aware after PR #203.
 
 ## Latest merged PR
-- PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 closed out the static historical-label loading/validation implementation subphase.
+- PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 closed out the ingestion boundary planning subphase.
 
 ## Latest reviewed PR
-- PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 is the latest Weather Bot closeout/checkpoint item represented by this active state.
+- PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 is the latest Weather Bot closeout/checkpoint item represented by this active state.
+- PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 remains represented as the static historical-label loading/validation implementation closeout.
 - PR #208 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 remains represented as the historical-label loading/validation planning closeout.
 - PR #203 is represented as the blocker fix that made old real-fixture planning/approval tests successor-aware after approved real-fixture implementation.
 - PR #195 / MEG-OPS-01 remains the latest reviewed ops-docs handoff sequence item recorded here.
@@ -53,6 +57,9 @@ This is the first working-memory file to read after `AGENTS.md`.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 closed out the historical-label loading/validation planning subphase.
 - Stage 2 static historical-label loading/validation implementation v1 is complete and closed out by PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 closed out the static loader/validator implementation subphase.
+- Stage 2 ingestion boundary planning v1 is complete and closed out by PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01.
+- PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 closed out the ingestion boundary planning subphase.
+- The ingestion boundary planning artifact defined planning-only vocabulary, allowed/prohibited future source categories, no-lookahead safeguards, fixture/loader separation rules, fail-closed blockers, and later handoff gates.
 - `meg/weather/stage2/historical_label_loader.py` exists.
 - The loader is limited to explicit static fixture validation.
 - The loader reads only caller-supplied paths under the two allowlisted fixture directories: `tests/fixtures/weather/stage2_historical_labels/` and `tests/fixtures/weather/stage2_real_source_backed_labels/`.
@@ -61,23 +68,36 @@ This is the first working-memory file to read after `AGENTS.md`.
 - All three synthetic and both real source-backed fixtures load through the static loader.
 - No fixture JSON/README files were modified.
 - No historical-label data files or generated data were created.
-- This closeout does not approve ingestion, provider connectors, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, production behavior, or any later Weather Bot gate.
+- No ingestion implementation was created or approved.
+- No provider/API connectors were created or approved.
+- No source fetching was created or approved.
+- No external API calls were created or approved.
+- No credentials/secrets/config loading was created or approved.
+- No forecast pulls were created or approved.
+- No loader expansion was created or approved.
+- No scoring/backtesting/runtime/trading/order placement/autonomy is approved.
+- This closeout does not approve ingestion implementation, provider/source connector implementation, source fetching, scoring, backtesting, runtime, trading, order placement, autonomy, production behavior, or any later Weather Bot gate.
 
 ## Next possible gate
-- Current recommended posture: hold/checkpoint unless a concrete loader-validation gap is found or the user explicitly chooses a later approval/request/planning gate.
+- Current recommended posture: hold/checkpoint unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
 - Current next possible Weather Bot action, if the user explicitly chooses to continue, is a separately approved later gate only.
-- Examples of separately approved later gates include targeted loader-validation refinement if a concrete gap exists, or a later approval-request/planning gate chosen by the user.
-- Do not present ingestion, provider connectors, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior as approved or next by default.
+- Examples of separately approved later gates include targeted ingestion-planning refinement if a concrete gap exists, or a later approval-request/planning gate chosen by the user.
+- Do not present ingestion implementation, provider/source connectors, source fetching, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior as approved or next by default.
 
 ## Explicitly not approved
 - Loader expansion is not approved.
+- Ingestion implementation is not approved.
 - Ingestion is not approved.
 - Real historical-label data expansion is not approved.
 - Generated data is not approved.
 - Provider/API connectors are not approved.
+- Provider/source connector implementation is not approved.
+- Source fetching is not approved.
 - External API calls are not approved.
 - Credentials/secrets/config loading is not approved.
 - Forecast pulls are not approved.
+- Scraping/polling/streaming is not approved.
+- Scheduling/queues/jobs is not approved.
 - Scoring is not approved.
 - Probability scoring is not approved.
 - Backtesting is not approved.
@@ -113,6 +133,9 @@ This is the first working-memory file to read after `AGENTS.md`.
 - `docs/prd/PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-APPROVAL-01_HISTORICAL_LABEL_LOADING_VALIDATION_IMPLEMENTATION_APPROVAL_REQUEST.md`
 - `docs/prd/PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-01_STATIC_HISTORICAL_LABEL_LOADING_VALIDATION_IMPLEMENTATION.md`
 - `docs/prd/PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01_STATIC_HISTORICAL_LABEL_LOADING_VALIDATION_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md`
+- `docs/prd/PRD-P1-WX-STAGE2-INGESTION-PLANNING-APPROVAL-01_INGESTION_PLANNING_APPROVAL_REQUEST.md`
+- `docs/prd/PRD-P1-WX-STAGE2-INGESTION-PLAN-01_INGESTION_BOUNDARY_PLANNING.md`
+- `docs/prd/PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01_INGESTION_BOUNDARY_PLANNING_CLOSEOUT_CHECKPOINT.md`
 
 ## Current Weather Bot status summary
 - Stage 2 skeleton v1 is complete and closed out.
@@ -127,6 +150,9 @@ This is the first working-memory file to read after `AGENTS.md`.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 closed out the historical-label loading/validation planning subphase.
 - Stage 2 static historical-label loading/validation implementation v1 is complete and closed out by PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 closed out the static loader/validator implementation subphase.
+- Stage 2 ingestion boundary planning v1 is complete and closed out by PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01.
+- PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 closed out the ingestion boundary planning subphase.
+- The ingestion boundary planning artifact defined planning-only vocabulary, allowed/prohibited future source categories, no-lookahead safeguards, fixture/loader separation rules, fail-closed blockers, and later handoff gates.
 - `meg/weather/stage2/historical_label_loader.py` exists.
 - The loader is limited to explicit static fixture validation.
 - The loader reads only caller-supplied paths under the two allowlisted fixture directories.
@@ -134,9 +160,18 @@ This is the first working-memory file to read after `AGENTS.md`.
 - The loader reuses the existing Stage 2 metadata validator.
 - All three synthetic and both real source-backed fixtures load through the static loader.
 - No fixture JSON/README files were modified.
+- No fixture README/JSON files were modified.
 - No historical-label data files or generated data were created.
-- The default Weather Bot posture is hold/checkpoint unless a concrete loader-validation gap is found or the user explicitly chooses a later approval/request/planning gate.
-- Ingestion, provider/source integration, external API calls, scoring/backtesting, paper simulation, runtime observation, trading, order placement, autonomy, and production behavior remain outside the approved gate.
+- No ingestion implementation was created or approved.
+- No provider/API connectors were created or approved.
+- No source fetching was created or approved.
+- No external API calls were created or approved.
+- No credentials/secrets/config loading was created or approved.
+- No forecast pulls were created or approved.
+- No loader expansion was created or approved.
+- The default Weather Bot posture is hold/checkpoint unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
+- No scoring/backtesting/runtime/trading/order placement/autonomy is approved.
+- Ingestion implementation, provider/source connector implementation, source fetching, external API calls, scoring/backtesting, paper simulation, runtime observation, trading, order placement, autonomy, and production behavior remain outside the approved gate.
 
 ## Current ticket style
 - Use the MEG ticket format from `docs/meta/MEG_TICKET_STYLE_GUIDE.md`.
@@ -151,14 +186,15 @@ This is the first working-memory file to read after `AGENTS.md`.
 - No active Weather Bot fixture implementation blocker is known after PR #204 closeout.
 - No active historical-label loading/validation planning blocker is known after PR #208 closeout.
 - No active static loader/validator implementation blocker is known after PR #212 closeout.
-- Any continued Weather Bot work requires either a concrete loader-validation gap or an explicit user choice of a separately approved later approval/request/planning gate.
+- No active ingestion boundary planning blocker is known after PR #217 closeout.
+- Any continued Weather Bot work requires either a concrete ingestion-planning gap or an explicit user choice of a separately approved later approval/request/planning gate.
 
 ## Last updated by
-- Codex for MEG-OPS-WX-ACTIVE-STATE-04, after PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01.
+- Codex for MEG-OPS-WX-ACTIVE-STATE-05, after PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01.
 
 ## How to use this file
 - Read this file immediately after `AGENTS.md` in a fresh chat.
 - Future chats should use this file as current working memory after MEG-OPS-01 lands.
 - Treat real source-backed fixture implementation v1 as complete/closed out after PR #204.
-- Default to hold/checkpoint unless a concrete loader-validation gap is found or the user explicitly chooses a later approval/request/planning gate.
-- Do not infer approval for ingestion, provider connectors, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior from any completed Stage 2 fixture, planning, loader implementation, or closeout work.
+- Default to hold/checkpoint unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
+- Do not infer approval for ingestion implementation, provider/source connectors, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior from any completed Stage 2 fixture, planning, loader implementation, ingestion planning, or closeout work.
