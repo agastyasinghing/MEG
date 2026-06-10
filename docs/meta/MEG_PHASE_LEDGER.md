@@ -14,9 +14,10 @@ This is an append-style project ledger. Do not fabricate merge SHAs; use PR numb
 - PR #204 / PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01: result is real source-backed fixture implementation v1 closed out; exactly two real fixture JSONs remain the complete real-fixture set; at-most-3 cap preserved; third fixture intentionally not fabricated; old planning/approval tests successor-aware; recommended posture is hold/checkpoint unless a concrete gap is found or the user chooses a later gate.
 - PR #208 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01: result is historical-label loading/validation planning v1 closed out; no loader created; no fixture files modified; no historical-label data/generated data created; recommended posture is hold/checkpoint unless a concrete loading-planning gap is found or the user chooses a later gate.
 - PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01: result is static historical-label loading/validation implementation v1 closed out; loader module exists; all three synthetic and both real source-backed fixtures load through the static loader; no fixture README/JSON files changed; no historical-label data/generated data created; recommended posture is hold/checkpoint unless a concrete loader-validation gap is found or user chooses a later gate.
-- PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01: result is ingestion boundary planning v1 closed out; planning-only vocabulary and boundaries captured; no ingestion implementation, connectors, source fetching, scoring, runtime, trading, fixture changes, historical-label data, or generated data created; recommended posture is hold/checkpoint unless a concrete ingestion-planning gap is found or user chooses a later gate.
+- PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01: result is ingestion boundary planning v1 closed out; planning-only vocabulary and boundaries captured; no ingestion implementation, connectors, source fetching, scoring, runtime, trading, fixture changes, historical-label data, or generated data created; recommended posture is hold/checkpoint unless a concrete static ingestion skeleton gap is found or user chooses a later gate.
+- PR #221 / PRD-P1-WX-STAGE2-INGESTION-IMPLEMENTATION-CLOSEOUT-01: result is static ingestion boundary skeleton v1 closed out; `meg/weather/stage2/ingestion_boundary.py` recorded as static-only descriptor validator; no real ingestion, connectors, source fetching, scoring, runtime, trading, fixture changes, historical-label data, or generated data created; recommended posture is hold/checkpoint unless a gap is found or user chooses a later gate.
 
-## Current ledger posture after PR #217
+## Current ledger posture after PR #221
 
 - Stage 2 skeleton v1 is complete and closed out.
 - Static historical-label fixture planning is complete.
@@ -32,12 +33,16 @@ This is an append-style project ledger. Do not fabricate merge SHAs; use PR numb
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 closed out the static loader/validator implementation subphase.
 - Stage 2 ingestion boundary planning v1 is complete and closed out by PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01.
 - PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 closed out the ingestion boundary planning subphase.
+- Stage 2 static ingestion boundary skeleton v1 is complete and closed out by PR #221 / PRD-P1-WX-STAGE2-INGESTION-IMPLEMENTATION-CLOSEOUT-01.
+- PRD-P1-WX-STAGE2-INGESTION-IMPLEMENTATION-CLOSEOUT-01 closed out the static ingestion boundary skeleton subphase.
+- `meg/weather/stage2/ingestion_boundary.py` exists as a static-only descriptor validator for caller-supplied already-human-reviewed descriptor mappings.
+- The static ingestion boundary skeleton is not real ingestion, connectors, source fetching, scoring, runtime, trading, fixture changes, historical-label data, or generated data.
 - The ingestion boundary planning artifact captured planning-only vocabulary and boundaries, including allowed/prohibited future source categories, no-lookahead safeguards, fixture/loader separation rules, fail-closed blockers, and later handoff gates.
 - `meg/weather/stage2/historical_label_loader.py` exists.
 - The loader is limited to explicit static fixture validation, reads only caller-supplied paths under the two allowlisted fixture directories, uses a non-recursive directory loader, and reuses the existing Stage 2 metadata validator.
 - All three synthetic and both real source-backed fixtures load through the static loader.
 - No fixture README/JSON files were modified.
 - No historical-label data files or generated data were created.
-- The recommended Weather Bot posture is hold/checkpoint unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
+- The recommended Weather Bot posture is hold/checkpoint unless a concrete static ingestion skeleton gap is found or the user explicitly chooses a later approval/request/planning gate.
 - Any next Weather Bot work must be separately approved later-gate work, such as targeted ingestion-planning refinement for a concrete gap, or a separate approval/request/planning gate chosen by the user.
 - No loader expansion, real historical-label data expansion, generated data, ingestion implementation, provider/API connector, provider/source connector implementation, source fetching, external API call, credentials/secrets/config loading, forecast pull, scraping/polling/streaming, scheduling/queues/jobs, scoring, probability scoring, backtesting, paper simulation, runtime observation, trading, order placement, autonomy, production behavior, or C++/Rust runtime component is approved by this ledger.
