@@ -68,7 +68,7 @@ def test_agents_contains_core_operating_rules() -> None:
     )
 
 
-def test_active_state_required_fields_and_post_ingestion_boundary_planning_closeout_gate() -> None:
+def test_active_state_required_fields_and_post_static_ingestion_boundary_skeleton_closeout_gate() -> None:
     text = _lower("active")
     _assert_contains(
         text,
@@ -95,11 +95,13 @@ def test_active_state_required_fields_and_post_ingestion_boundary_planning_close
             "pr #208",
             "pr #212",
             "pr #217",
+            "pr #221",
             "prd-p1-wx-stage2-fixture-implementation-closeout-01",
             "prd-p1-wx-stage2-real-fixture-implementation-closeout-01",
             "prd-p1-wx-stage2-historical-label-loading-plan-closeout-01",
             "prd-p1-wx-stage2-historical-label-loading-implementation-closeout-01",
             "prd-p1-wx-stage2-ingestion-plan-closeout-01",
+            "prd-p1-wx-stage2-ingestion-implementation-closeout-01",
             "meg-ops-01 established the repo-native orchestration layer",
             "future chats should use this file as current working memory after meg-ops-01 lands",
             "no active ops blocker is known after meg-ops-01",
@@ -109,10 +111,18 @@ def test_active_state_required_fields_and_post_ingestion_boundary_planning_close
             "stage 2 historical-label loading/validation planning v1 is complete and closed out",
             "stage 2 static historical-label loading/validation implementation v1 is complete and closed out",
             "stage 2 ingestion boundary planning v1 is complete and closed out",
+            "stage 2 static ingestion boundary skeleton v1 is complete and closed out",
             "closed out the real source-backed fixture implementation subphase",
             "closed out the historical-label loading/validation planning subphase",
             "closed out the static loader/validator implementation subphase",
             "closed out the ingestion boundary planning subphase",
+            "closed out the static ingestion boundary skeleton subphase",
+            "meg/weather/stage2/ingestion_boundary.py` exists as a static validator only",
+            "the static ingestion boundary skeleton validates caller-supplied already-human-reviewed descriptor mappings only",
+            "it uses closed vocabularies",
+            "it returns pass, caution, or blocked validation results",
+            "it is stdlib-only",
+            "it does not read files, write files, call services, open network connections, load credentials/secrets/config, create schemas, or start jobs",
             "the ingestion boundary planning artifact defined planning-only vocabulary",
             "allowed/prohibited future source categories",
             "no-lookahead safeguards",
@@ -130,8 +140,9 @@ def test_active_state_required_fields_and_post_ingestion_boundary_planning_close
             "the fixture count cap of at most 3 real source-backed fixtures was preserved",
             "the third real fixture was intentionally not fabricated",
             "old real-fixture planning/approval tests are successor-aware after pr #203",
-            "no fixture json/readme files were modified",
+            "no fixture readme/json files were modified",
             "no historical-label data files or generated data were created",
+            "no real ingestion was created or approved",
             "no ingestion implementation was created or approved",
             "no provider/api connectors were created or approved",
             "no source fetching was created or approved",
@@ -140,7 +151,7 @@ def test_active_state_required_fields_and_post_ingestion_boundary_planning_close
             "no forecast pulls were created or approved",
             "no loader expansion was created or approved",
             "no scoring/backtesting/runtime/trading/order placement/autonomy is approved",
-            "hold/checkpoint unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate",
+            "hold/checkpoint unless a concrete static ingestion skeleton gap is found or the user explicitly chooses a later approval/request/planning gate",
         ],
     )
     for phrase in [
@@ -242,7 +253,7 @@ def test_pr_review_checklist_core_items() -> None:
 
 def test_phase_ledger_references_recent_sequence() -> None:
     text = _read("ledger")
-    for item in ["PR #191", "PR #192", "PR #193", "PR #194", "PR #198", "PR #203", "PR #204", "PR #208", "PR #212", "PR #217", "MEG-OPS-01"]:
+    for item in ["PR #191", "PR #192", "PR #193", "PR #194", "PR #198", "PR #203", "PR #204", "PR #208", "PR #212", "PR #217", "PR #221", "MEG-OPS-01"]:
         assert item in text
     assert "repo-native orchestration layer established" in text
     assert "static fixture implementation v1 closed out" in text
@@ -254,12 +265,14 @@ def test_phase_ledger_references_recent_sequence() -> None:
     assert "historical-label loading/validation planning v1 closed out" in text
     assert "static historical-label loading/validation implementation v1 closed out" in text
     assert "ingestion boundary planning v1 closed out" in text
+    assert "static ingestion boundary skeleton v1 closed out" in text
+    assert "static-only descriptor validator" in text
     assert "planning-only vocabulary and boundaries captured" in text
     assert "loader module exists" in text
     assert "all three synthetic and both real source-backed fixtures load through the static loader" in text
     assert "no fixture README/JSON files changed" in text
     assert "no historical-label data/generated data created" in text
-    assert "hold/checkpoint unless a concrete ingestion-planning gap is found" in text
+    assert "hold/checkpoint unless a concrete static ingestion skeleton gap is found" in text
 
 
 def test_bootstrap_tells_new_chat_to_wait_for_user_ticket_request() -> None:
@@ -305,16 +318,26 @@ def test_weather_packet_current_gate() -> None:
             "pr #208",
             "pr #212",
             "pr #217",
+            "pr #221",
             "prd-p1-wx-stage2-fixture-implementation-closeout-01",
             "prd-p1-wx-stage2-real-fixture-implementation-closeout-01",
             "prd-p1-wx-stage2-historical-label-loading-plan-closeout-01",
             "prd-p1-wx-stage2-historical-label-loading-implementation-closeout-01",
             "prd-p1-wx-stage2-ingestion-plan-closeout-01",
+            "prd-p1-wx-stage2-ingestion-implementation-closeout-01",
             "stage 2 synthetic static fixture implementation v1 is complete and closed out",
             "stage 2 real source-backed fixture implementation v1 is complete and closed out",
             "stage 2 historical-label loading/validation planning v1 is complete and closed out",
             "stage 2 static historical-label loading/validation implementation v1 is complete and closed out",
             "stage 2 ingestion boundary planning v1 is complete and closed out",
+            "stage 2 static ingestion boundary skeleton v1 is complete and closed out",
+            "meg/weather/stage2/ingestion_boundary.py` exists as static validation only",
+            "the static ingestion boundary skeleton validates caller-supplied already-human-reviewed descriptor mappings only",
+            "the static ingestion boundary skeleton is not real ingestion",
+            "the static ingestion boundary skeleton is not provider/source integration",
+            "the static ingestion boundary skeleton is not source fetching",
+            "the static ingestion boundary skeleton is not external api calls",
+            "the static ingestion boundary skeleton is not scoring/backtesting/runtime/trading",
             "the ingestion plan is planning vocabulary only",
             "the ingestion plan is not ingestion implementation",
             "the ingestion plan is not provider/source integration",
@@ -323,6 +346,7 @@ def test_weather_packet_current_gate() -> None:
             "the ingestion plan is not scoring/backtesting/runtime/trading",
             "the static loader exists at `meg/weather/stage2/historical_label_loader.py`",
             "the loader is static validation only",
+            "no real ingestion, provider/source integration, source fetching, external api calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved",
             "no ingestion implementation, provider/source integration, source fetching, external api calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved",
             "exactly three synthetic, hand-authored json fixtures",
             "exactly two real source-backed fixture json files exist",
@@ -331,7 +355,7 @@ def test_weather_packet_current_gate() -> None:
             "old real-fixture planning/approval tests are successor-aware",
             "the next default posture is hold/checkpoint",
             "the next work must be a separate approval/request/planning gate",
-            "not direct ingestion implementation/connectors/source fetching/scoring/runtime/trading",
+            "not direct real ingestion/connectors/source fetching/scoring/runtime/trading",
             "loader expansion is not approved",
             "ingestion implementation is not approved",
             "ingestion is not approved",

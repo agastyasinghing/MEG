@@ -9,7 +9,7 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 1. `AGENTS.md`
 2. `docs/meta/MEG_ACTIVE_STATE.md`
 3. Weather Bot PRDs, especially `docs/prd/PRD-P1-WX-STANDALONE_WEATHER_BOT_PRD.md`
-4. Stage 2 skeleton, fixture, loading/validation, and ingestion-boundary-planning PRDs
+4. Stage 2 skeleton, fixture, loading/validation, ingestion-boundary-planning, and static-ingestion-boundary-skeleton PRDs
 5. `docs/meta/MEG_TICKET_STYLE_GUIDE.md` and `docs/meta/MEG_PR_REVIEW_CHECKLIST.md`
 
 ## Current phase/status
@@ -21,6 +21,14 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - Stage 2 historical-label loading/validation planning v1 is complete and closed out by PR #208 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01.
 - Stage 2 static historical-label loading/validation implementation v1 is complete and closed out by PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01.
 - Stage 2 ingestion boundary planning v1 is complete and closed out by PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01.
+- Stage 2 static ingestion boundary skeleton v1 is complete and closed out by PR #221 / PRD-P1-WX-STAGE2-INGESTION-IMPLEMENTATION-CLOSEOUT-01.
+- `meg/weather/stage2/ingestion_boundary.py` exists as static validation only.
+- The static ingestion boundary skeleton validates caller-supplied already-human-reviewed descriptor mappings only.
+- The static ingestion boundary skeleton is not real ingestion.
+- The static ingestion boundary skeleton is not provider/source integration.
+- The static ingestion boundary skeleton is not source fetching.
+- The static ingestion boundary skeleton is not external API calls.
+- The static ingestion boundary skeleton is not scoring/backtesting/runtime/trading.
 - The ingestion plan is planning vocabulary only.
 - The ingestion plan is not ingestion implementation.
 - The ingestion plan is not provider/source integration.
@@ -30,6 +38,7 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - The static loader exists at `meg/weather/stage2/historical_label_loader.py`.
 - The loader is static validation only.
 - The loader is not ingestion, provider/source integration, scoring, backtesting, runtime observation, trading, or production behavior.
+- No real ingestion, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved.
 - No ingestion implementation, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved.
 - The synthetic fixture set is exactly three hand-authored JSON fixtures under `tests/fixtures/weather/stage2_historical_labels/`.
 - The real source-backed fixture set is exactly two hand-authored source-backed JSON fixtures under `tests/fixtures/weather/stage2_real_source_backed_labels/`.
@@ -50,6 +59,7 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - PR #208 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 closed out historical-label loading/validation planning v1 without creating a loader, modifying fixture files, or creating historical-label data/generated data.
 - PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 closed out static historical-label loading/validation implementation v1; the loader module exists, all three synthetic and both real source-backed fixtures load through the static loader, fixture README/JSON files were not modified, and no historical-label data/generated data was created.
 - PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 closed out ingestion boundary planning v1; the planning-only vocabulary and boundaries were captured without creating or approving ingestion implementation, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime, trading, fixture changes, historical-label data, or generated data.
+- PR #221 / PRD-P1-WX-STAGE2-INGESTION-IMPLEMENTATION-CLOSEOUT-01 closed out static ingestion boundary skeleton v1; `meg/weather/stage2/ingestion_boundary.py` exists as static validation only for caller-supplied already-human-reviewed descriptor mappings, not real ingestion, provider/source integration, source fetching, external API calls, scoring/backtesting/runtime/trading, fixture changes, historical-label data, or generated data.
 
 ## Current approved gate
 
@@ -63,6 +73,14 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - Stage 2 historical-label loading/validation planning v1 is complete and closed out.
 - Stage 2 static historical-label loading/validation implementation v1 is complete and closed out.
 - Stage 2 ingestion boundary planning v1 is complete and closed out.
+- Stage 2 static ingestion boundary skeleton v1 is complete and closed out.
+- `meg/weather/stage2/ingestion_boundary.py` exists as static validation only.
+- The static ingestion boundary skeleton validates caller-supplied already-human-reviewed descriptor mappings only.
+- The static ingestion boundary skeleton is not real ingestion.
+- The static ingestion boundary skeleton is not provider/source integration.
+- The static ingestion boundary skeleton is not source fetching.
+- The static ingestion boundary skeleton is not external API calls.
+- The static ingestion boundary skeleton is not scoring/backtesting/runtime/trading.
 - The ingestion plan is planning vocabulary only.
 - The ingestion plan is not ingestion implementation.
 - The ingestion plan is not provider/source integration.
@@ -71,14 +89,14 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - The ingestion plan is not scoring/backtesting/runtime/trading.
 - The static loader exists at `meg/weather/stage2/historical_label_loader.py`.
 - The static loader is static validation only.
-- Completion of these fixture, loading/validation, static loader, and ingestion boundary planning subphases does not authorize ingestion implementation, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime observation, trading, order placement, autonomy, production behavior, or later Weather Bot gates.
+- Completion of these fixture, loading/validation, static loader, ingestion boundary planning, and static ingestion boundary skeleton subphases does not authorize real ingestion, ingestion implementation, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime observation, trading, order placement, autonomy, production behavior, or later Weather Bot gates.
 
 ## Next possible gate
 
-- The next default Weather Bot posture is hold/checkpoint unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
-- If the user explicitly chooses to continue, the next work must be a separate approval/request/planning gate or targeted refinement if a concrete ingestion-planning gap exists, not direct ingestion implementation/connectors/source fetching/scoring/runtime/trading.
+- The next default Weather Bot posture is hold/checkpoint unless a concrete static ingestion skeleton gap is found or the user explicitly chooses a later approval/request/planning gate.
+- If the user explicitly chooses to continue, the next work must be a separate approval/request/planning gate or targeted refinement if a concrete static ingestion skeleton gap exists, not direct real ingestion/connectors/source fetching/scoring/runtime/trading.
 - Continued work must not proceed directly to ingestion implementation, connectors, provider/source integration, source fetching, scoring, backtesting, runtime observation, trading, order placement, autonomy, or production behavior.
-- Do not present ingestion implementation, connectors, source fetching, scoring, backtesting, runtime, or trading as the next default gate because ingestion boundary planning v1 is complete and closed out.
+- Do not present real ingestion, connectors, source fetching, scoring, backtesting, runtime, or trading as the next default gate because static ingestion boundary skeleton v1 is complete and closed out.
 
 ## Explicitly not approved
 
@@ -126,6 +144,10 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - Stage 2 historical-label loading/validation planning v1 is complete and closed out.
 - Stage 2 static historical-label loading/validation implementation v1 is complete and closed out.
 - Stage 2 ingestion boundary planning v1 is complete and closed out.
+- Stage 2 static ingestion boundary skeleton v1 is complete and closed out.
+- `meg/weather/stage2/ingestion_boundary.py` exists as static validation only.
+- The static ingestion boundary skeleton validates caller-supplied already-human-reviewed descriptor mappings only.
+- The static ingestion boundary skeleton is not real ingestion, provider/source integration, source fetching, external API calls, scoring/backtesting/runtime/trading, order placement, autonomy, or production behavior.
 - The ingestion plan is planning vocabulary only.
 - The ingestion plan is not ingestion implementation.
 - The ingestion plan is not provider/source integration.
@@ -134,8 +156,9 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - The ingestion plan is not scoring/backtesting/runtime/trading.
 - The static loader exists at `meg/weather/stage2/historical_label_loader.py`.
 - The loader is static validation only and is not ingestion, provider/source integration, scoring, backtesting, runtime observation, trading, or production behavior.
-- No ingestion implementation, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved by the fixture, loading/validation, static loader, or ingestion boundary planning closeouts.
-- Hold/checkpoint is the recommended posture unless a concrete ingestion-planning gap is found or the user explicitly chooses a later approval/request/planning gate.
+- No real ingestion, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved by the fixture, loading/validation, static loader, ingestion boundary planning, or static ingestion boundary skeleton closeouts.
+- No ingestion implementation, provider/source integration, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior is approved by the fixture, loading/validation, static loader, ingestion boundary planning, or static ingestion boundary skeleton closeouts.
+- Hold/checkpoint is the recommended posture unless a concrete static ingestion skeleton gap is found or the user explicitly chooses a later approval/request/planning gate.
 
 ## Closed-set/static-test pitfalls
 
@@ -151,7 +174,7 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - Include allowed files and do-not-modify lists.
 - Keep docs/static-test tickets separate from implementation tickets.
 - Preserve non-approval language for later phases.
-- Treat any continued work after fixture, historical-label loading/validation planning, static loader implementation, and ingestion boundary planning closeout as a separately approved later gate, not as ingestion/scoring/runtime/trading authority.
+- Treat any continued work after fixture, historical-label loading/validation planning, static loader implementation, ingestion boundary planning closeout, and static ingestion boundary skeleton closeout as a separately approved later gate, not as ingestion/scoring/runtime/trading authority.
 
 ## Weather Bot PR review additions
 
@@ -163,8 +186,8 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 
 - Targeted loader-validation refinement: only if a concrete gap is found and scoped as a separate gate.
 - Loader expansion: not approved unless separately requested/planned/approved.
-- Ingestion implementation: not approved by Stage 2 skeleton, fixture planning, fixture implementation, fixture closeout, historical-label loading/validation planning closeout, static loader implementation closeout, or ingestion boundary planning closeout.
-- Ingestion: not approved by Stage 2 skeleton, fixture planning, fixture implementation, fixture closeout, historical-label loading/validation planning closeout, static loader implementation closeout, or ingestion boundary planning closeout.
+- Ingestion implementation: not approved by Stage 2 skeleton, fixture planning, fixture implementation, fixture closeout, historical-label loading/validation planning closeout, static loader implementation closeout, ingestion boundary planning closeout, or static ingestion boundary skeleton closeout.
+- Ingestion: not approved by Stage 2 skeleton, fixture planning, fixture implementation, fixture closeout, historical-label loading/validation planning closeout, static loader implementation closeout, ingestion boundary planning closeout, or static ingestion boundary skeleton closeout.
 - Provider/source integration: not approved.
 - Scoring/backtesting: not approved.
 - Paper simulation: not approved.
