@@ -154,6 +154,7 @@ _SCORING_DRIFT_TERMS = (
 _TRADING_DRIFT_TERMS = (
     "autonomous",
     "autonomously",
+    "autonomy",
     "auto_execute",
     "broker position",
     "execution behavior",
