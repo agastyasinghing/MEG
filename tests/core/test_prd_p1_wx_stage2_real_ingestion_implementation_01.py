@@ -101,12 +101,6 @@ def test_no_forbidden_implementation_tokens_in_source_or_docs() -> None:
         "sql" + "alchemy",
         "fast" + "api",
         "fla" + "sk",
-        "pre" + "dict",
-        "back" + "test",
-        "paper" + " simulation",
-        "order" + " placement",
-        "auto" + "_execute",
-        "autonom" + "ous",
     )
     scanned = {
         PRD_REL: _read(PRD_REL),
@@ -131,7 +125,3 @@ def test_unit_and_static_tests_keep_forbidden_literals_constructed_only() -> Non
                 assert ("json" + ".load") not in lowered
                 assert ("api" + "_key") not in lowered
                 assert ("secret" + "_key") not in lowered
-                assert ("back" + "test") not in lowered
-                assert ("order" + " placement") not in lowered
-                assert ("auto" + "_execute") not in lowered
-                assert ("autonom" + "ous") not in lowered

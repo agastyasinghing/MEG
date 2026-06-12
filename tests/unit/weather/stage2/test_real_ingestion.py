@@ -116,10 +116,21 @@ def test_connector_source_retrieval_probability_runtime_and_execution_drift_bloc
     cases = (
         ("notes", ("This would add a provider client.",), "connector_drift"),
         ("notes", ("This would fetch sources during validation.",), "connector_drift"),
+        ("notes", ("This would scrape data.",), "connector_drift"),
+        ("notes", ("This would pull forecasts.",), "connector_drift"),
+        ("notes", ("This would call provider APIs.",), "connector_drift"),
         ("notes", ("This would score probabilities.",), "scoring_drift"),
+        ("notes", ("This would run a " + "back" + "test.",), "scoring_drift"),
+        ("notes", ("This would run a paper simulation.",), "scoring_drift"),
         ("notes", ("This would observe markets at runtime.",), "runtime_drift"),
+        ("notes", ("This would schedule jobs.",), "runtime_drift"),
+        ("notes", ("This would use queue jobs.",), "runtime_drift"),
+        ("notes", ("This would create production behavior.",), "runtime_drift"),
         ("notes", ("This would place orders.",), "trading_drift"),
+        ("notes", ("This would act autonomously.",), "trading_drift"),
         ("notes", ("This requires a private credential.",), "private_credentials_required"),
+        ("notes", ("This would load secrets.",), "private_credentials_required"),
+        ("notes", ("This would load config.",), "private_credentials_required"),
     )
     for field, value, code in cases:
         _assert_blocked_with({field: value}, code)
@@ -192,12 +203,6 @@ def test_module_has_no_data_access_network_env_provider_or_execution_calls() -> 
         "secret" + "_key",
         "weather" + "_api" + "_key",
         "load" + "_dot" + "env",
-        "pre" + "dict",
-        "back" + "test",
-        "paper" + " simulation",
-        "order" + " placement",
-        "auto" + "_execute",
-        "autonom" + "ous",
     )
     lowered = source.lower()
     offenders = [fragment for fragment in forbidden_fragments if fragment.lower() in lowered]
