@@ -28,6 +28,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     # Architecture alignment planning documents the legacy compatibility posture only.
     "docs/prd/MEG-ARCH-ALIGN-01_ARCHITECTURE_ALIGNMENT_PLANNING.md": 13,
     "tests/core/test_meg_arch_align_01.py": 4,
+    "docs/prd/MEG-ARCH-ALIGN-02_MARKET_ID_INVENTORY_CLASSIFICATION_PLANNING.md": 17,
+    "tests/core/test_meg_arch_align_02.py": 13,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
