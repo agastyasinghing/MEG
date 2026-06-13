@@ -12,6 +12,8 @@ from __future__ import annotations
 _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "docs/prd/MEG-ARCH-ALIGN-04_SHARED_RAIL_CONTRACT_REVIEW_PLANNING.md",
     "tests/core/test_meg_arch_align_04.py",
+    "docs/architecture/MEG-ARCH-ALIGN-05_SHARED_RAIL_CONTRACT_REVIEW.md",
+    "tests/core/test_meg_arch_align_05.py",
 }
 
 
@@ -76,6 +78,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Architecture alignment shared-rail review planning documents compatibility posture only.
     "docs/prd/MEG-ARCH-ALIGN-04_SHARED_RAIL_CONTRACT_REVIEW_PLANNING.md": 10,
     "tests/core/test_meg_arch_align_04.py": 3,
+    # Architecture alignment shared-rail review artifact documents compatibility posture only.
+    "docs/architecture/MEG-ARCH-ALIGN-05_SHARED_RAIL_CONTRACT_REVIEW.md": 18,
+    "tests/core/test_meg_arch_align_05.py": 1,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
