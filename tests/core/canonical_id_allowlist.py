@@ -25,6 +25,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = {
     "docs/phase0a/0A-01_CANONICAL_ID_INVENTORY.md": 59,
     # Phase 0B historical-lake doc: legacy identifier noted for compatibility mapping only.
     "docs/phase0b/0B-01_DUCKDB_HISTORICAL_LAKE_PLAN.md": 1,
+    # Architecture alignment planning documents the legacy compatibility posture only.
+    "docs/prd/MEG-ARCH-ALIGN-01_ARCHITECTURE_ALIGNMENT_PLANNING.md": 13,
+    "tests/core/test_meg_arch_align_01.py": 4,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
