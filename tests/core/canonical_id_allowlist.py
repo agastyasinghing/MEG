@@ -22,6 +22,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_meg_arch_align_08.py",
     "docs/prd/PRD-P1-WX-STAGE2-WEATHER-BOT-RETURN-TO-PLANNING-01_AFTER_ARCHITECTURE_ALIGNMENT_CLOSEOUT.md",
     "tests/core/test_prd_p1_wx_stage2_weather_bot_return_to_planning_01.py",
+    "docs/prd/PRD-P1-WX-STAGE2-PROVIDER-SOURCE-COMPATIBILITY-PLANNING-01.md",
+    "tests/core/test_prd_p1_wx_stage2_provider_source_compatibility_planning_01.py",
 }
 
 
@@ -101,6 +103,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Weather Bot return-to-planning checkpoint documents compatibility posture only.
     "docs/prd/PRD-P1-WX-STAGE2-WEATHER-BOT-RETURN-TO-PLANNING-01_AFTER_ARCHITECTURE_ALIGNMENT_CLOSEOUT.md": 3,
     "tests/core/test_prd_p1_wx_stage2_weather_bot_return_to_planning_01.py": 1,
+    # Weather Bot provider/source compatibility planning documents compatibility posture only.
+    "docs/prd/PRD-P1-WX-STAGE2-PROVIDER-SOURCE-COMPATIBILITY-PLANNING-01.md": 2,
+    "tests/core/test_prd_p1_wx_stage2_provider_source_compatibility_planning_01.py": 1,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
