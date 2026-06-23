@@ -1,5 +1,15 @@
 # Weather Bot Context Packet
 
+## Post-PR #247 source-fetching approval-request checkpoint posture
+
+- Weather Bot Stage 2 source-fetching approval-request sequence progressed through provider/source compatibility planning, provider/source compatibility closeout, source-fetching approval-request planning, source-fetching approval-request closeout, source-fetching approval-request draft planning, source-fetching approval-request draft, source-fetching approval-request draft closeout, and source-fetching approval-request hold checkpoint.
+- Latest canonical checkpoint: `PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01`.
+- Current state is `hold_checkpoint`.
+- `source_fetching_not_approved`; no source fetching is approved.
+- `implementation_not_approved`; no implementation is approved or recommended.
+- Weather Bot models the market settlement rule, not generic weather.
+- Weather Bot remains settlement-rule-first, not generic-weather-first.
+
 ## Purpose
 
 Provide compact Weather Bot context for fresh chats, ticket generation, and PR review without granting new implementation authority.

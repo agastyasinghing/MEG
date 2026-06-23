@@ -1,5 +1,13 @@
 # MEG Next Chat Bootstrap Prompt
 
+## Post-PR #247 Weather Bot bootstrap instruction
+
+- Read the latest Weather Bot hold checkpoint: `PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01`.
+- Treat stale handoff/meta state as subordinate to newer merged PRDs, closeout docs, checkpoint docs, and verified PR metadata; prefer newer merged PRDs/checkpoints/verified PR metadata over stale handoff state.
+- Default to `hold_checkpoint` after PR #247 unless the user explicitly asks for a safe docs/static-test-only meta, review, or revision ticket.
+- Do not generate provider/source implementation tickets without later explicit approval.
+- Do not proceed into provider connectors, source fetching, forecast pulls, API calls, scraping, credentials/config loading, generated data, fixtures, scoring, backtesting, runtime behavior, trading, autonomy, or production behavior without later explicit approval.
+
 Copy this prompt into a fresh chat when restarting MEG work.
 
 ```text
