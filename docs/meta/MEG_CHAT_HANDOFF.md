@@ -1,5 +1,15 @@
 # MEG Chat Handoff
 
+## Post-PR #247 Weather Bot handoff
+
+- PR #247 merged.
+- Current Weather Bot Stage 2 state is source-fetching approval-request hold checkpoint: `hold_checkpoint`.
+- Latest canonical checkpoint is `PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01`.
+- No human review is pending by default for this small gate.
+- `implementation_not_approved`; no implementation is approved or recommended.
+- `source_fetching_not_approved`; no source-fetching approval exists.
+- Next safe work, if any, must be docs/static-test-only and explicit.
+
 ## 1) What MEG is
 MEG is a prediction market intelligence and research platform. It is moving from local research infrastructure into Phase 1 weather bot planning. It emphasizes contracts, bounded research, human-reviewed outputs, and gated runtime behavior. It is not approved for live trading, production execution, autonomous behavior, or order placement.
 

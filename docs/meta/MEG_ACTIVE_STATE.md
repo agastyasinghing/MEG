@@ -1,16 +1,28 @@
 # MEG Active State
 
+## Post-PR #247 Weather Bot source-fetching approval-request hold checkpoint refresh
+
+- Current active Weather Bot Stage 2 state is post-PR #247 hold checkpoint.
+- PR #247 is merged in local history and is the latest completed Weather Bot Stage 2 source-fetching approval-request checkpoint.
+- Latest canonical checkpoint is `PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01`.
+- Current safe next state is `hold_checkpoint`.
+- Source-fetching approval-request draft sequence is paused by default; the draft artifact, draft closeout, and hold checkpoint exist.
+- `source_fetching_not_approved`; no source-fetching approval exists.
+- `implementation_not_approved`; no implementation is approved or recommended.
+- No provider connector/source fetching/forecast pull/API/scraping/credentials/config/generated-data/fixture/scoring/backtesting/runtime/trading/autonomy/production work is approved.
+- Future chats must prefer newer merged PRDs, closeout docs, checkpoint docs, and verified PR metadata over stale handoff state.
+
 This is the first working-memory file to read after `AGENTS.md`.
 
 ## Current active project
 - MEG repo-native project operations and Weather Bot gated planning.
 
 ## Current active area
-- MEG Weather Bot Stage 2 post-real-ingestion-boundary-planning closeout checkpoint track.
+- MEG Weather Bot Stage 2 source-fetching approval-request post-PR #247 hold checkpoint track.
 
 ## Current active phase
 - MEG-OPS-01 established the repo-native orchestration layer for durable project handoff.
-- The current active Weather Bot area is the post-real-ingestion-boundary-planning closeout checkpoint.
+- The current active Weather Bot area is the source-fetching approval-request post-PR #247 hold checkpoint.
 - Stage 2 skeleton v1 is complete and closed out.
 - Stage 2 synthetic static fixture implementation v1 is complete and closed out.
 - Stage 2 real source-backed fixture implementation v1 is complete and closed out.
@@ -19,6 +31,9 @@ This is the first working-memory file to read after `AGENTS.md`.
 - Stage 2 ingestion boundary planning v1 is complete and closed out.
 - Stage 2 static ingestion boundary skeleton v1 is complete and closed out.
 - Stage 2 real ingestion boundary planning v1 is complete and closed out.
+- Stage 2 provider/source compatibility planning and closeout are complete.
+- Stage 2 source-fetching approval-request planning, closeout, draft planning, draft, draft closeout, and hold checkpoint are complete at the docs/checkpoint layer only.
+- The current safe next state is `hold_checkpoint`.
 - PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out the static fixture implementation subphase after PR #198.
 - PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01 closed out the real source-backed fixture implementation subphase after PR #204.
 - PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-PLAN-CLOSEOUT-01 closed out the historical-label loading/validation planning subphase after PR #208.
@@ -42,10 +57,12 @@ This is the first working-memory file to read after `AGENTS.md`.
 - Old real-fixture planning/approval tests are successor-aware after PR #203.
 
 ## Latest merged PR
-- PR #225 / PRD-P1-WX-STAGE2-REAL-INGESTION-PLAN-CLOSEOUT-01 closed out the real ingestion boundary planning subphase.
+- PR #247 / PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01 is the latest completed Weather Bot Stage 2 source-fetching approval-request checkpoint represented by this active state.
+- PR #225 / PRD-P1-WX-STAGE2-REAL-INGESTION-PLAN-CLOSEOUT-01 remains historical as the real ingestion boundary planning closeout.
 
 ## Latest reviewed PR
-- PR #225 / PRD-P1-WX-STAGE2-REAL-INGESTION-PLAN-CLOSEOUT-01 is the latest Weather Bot closeout/checkpoint item represented by this active state.
+- PR #247 / PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01 is the latest Weather Bot closeout/checkpoint item represented by this active state.
+- PR #225 / PRD-P1-WX-STAGE2-REAL-INGESTION-PLAN-CLOSEOUT-01 remains represented as the historical real ingestion boundary planning closeout.
 - PR #221 / PRD-P1-WX-STAGE2-INGESTION-IMPLEMENTATION-CLOSEOUT-01 remains represented as the static ingestion boundary skeleton closeout.
 - PR #217 / PRD-P1-WX-STAGE2-INGESTION-PLAN-CLOSEOUT-01 remains represented as the ingestion boundary planning closeout.
 - PR #212 / PRD-P1-WX-STAGE2-HISTORICAL-LABEL-LOADING-IMPLEMENTATION-CLOSEOUT-01 remains represented as the static historical-label loading/validation implementation closeout.
@@ -104,9 +121,9 @@ This is the first working-memory file to read after `AGENTS.md`.
 - This closeout does not approve real ingestion, ingestion implementation, provider/source connector implementation, source fetching, external API calls, scoring, backtesting, runtime, trading, order placement, autonomy, production behavior, or any later Weather Bot gate.
 
 ## Next possible gate
-- Current recommended posture: hold/checkpoint unless a concrete real ingestion planning gap is found or the user explicitly chooses a later approval/request/planning gate.
-- Current next possible Weather Bot action, if the user explicitly chooses to continue, is a separately approved later gate only.
-- Examples of separately approved later gates include targeted real ingestion planning refinement if a concrete planning gap exists, or a later approval-request/planning gate chosen by the user.
+- Current recommended posture: `hold_checkpoint` after PR #247.
+- Current next possible Weather Bot action, if any, must be explicitly requested docs/static-test-only meta, review, or revision work unless later explicit approval grants a broader scope.
+- Examples of conditional later docs-only tracks include human review of the draft if explicitly requested, source-fetching approval-request draft revision if explicitly requested, or a future docs/static-test-only meta refresh if needed.
 - Do not present ingestion implementation, provider/source connectors, source fetching, scoring, backtesting, runtime, trading, order placement, autonomy, or production behavior as approved or next by default.
 
 ## Explicitly not approved
@@ -234,10 +251,11 @@ This is the first working-memory file to read after `AGENTS.md`.
 - No active ingestion boundary planning blocker is known after PR #217 closeout.
 - No active static ingestion boundary skeleton blocker is known after PR #221 closeout.
 - No active real ingestion boundary planning blocker is known after PR #225 closeout.
-- Any continued Weather Bot work requires either a concrete real ingestion planning gap or an explicit user choice of a separately approved later approval/request/planning gate.
+- No active source-fetching approval-request hold-checkpoint blocker is known after PR #247.
+- Any continued Weather Bot work defaults to `hold_checkpoint`; broader provider/source implementation work requires later explicit approval.
 
 ## Last updated by
-- Codex for MEG-OPS-WX-ACTIVE-STATE-07, after PR #225 / PRD-P1-WX-STAGE2-REAL-INGESTION-PLAN-CLOSEOUT-01.
+- Codex for PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-META-REFRESH-01, after PR #247 / PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01.
 
 ## How to use this file
 - Read this file immediately after `AGENTS.md` in a fresh chat.
