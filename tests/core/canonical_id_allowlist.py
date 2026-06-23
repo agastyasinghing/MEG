@@ -34,6 +34,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_prd_p1_wx_stage2_source_fetching_approval_request_meta_refresh_01.py",
     "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-OWNER-DISPOSITION-PLANNING-01.md",
     "tests/core/test_prd_p1_wx_stage2_source_fetching_approval_request_owner_disposition_planning_01.py",
+    "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-OWNER-DISPOSITION-01.md",
+    "tests/core/test_prd_p1_wx_stage2_source_fetching_approval_request_owner_disposition_01.py",
 }
 
 
@@ -131,6 +133,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Source-fetching approval-request owner-disposition planning documents only the negative routing guard.
     "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-OWNER-DISPOSITION-PLANNING-01.md": 1,
     "tests/core/test_prd_p1_wx_stage2_source_fetching_approval_request_owner_disposition_planning_01.py": 1,
+    # Source-fetching approval-request owner disposition documents only the negative routing guard.
+    "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-OWNER-DISPOSITION-01.md": 2,
+    "tests/core/test_prd_p1_wx_stage2_source_fetching_approval_request_owner_disposition_01.py": 1,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
