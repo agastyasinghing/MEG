@@ -58,6 +58,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_prd_p1_wx_stage2_source_fetching_runtime_approval_decision_01.py",
     "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-RUNTIME-IMPLEMENTATION-PLAN-01.md",
     "tests/core/test_prd_p1_wx_stage2_source_fetching_runtime_implementation_plan_01.py",
+    "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-RUNTIME-STATIC-SCAFFOLD-01.md",
+    "tests/core/test_prd_p1_wx_stage2_source_fetching_runtime_static_scaffold_01.py",
 }
 
 
@@ -191,6 +193,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Source-fetching runtime implementation plan documents only the negative routing guard.
     "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-RUNTIME-IMPLEMENTATION-PLAN-01.md": 1,
     "tests/core/test_prd_p1_wx_stage2_source_fetching_runtime_implementation_plan_01.py": 1,
+    # Source-fetching runtime static scaffold documents only the negative routing guard.
+    "docs/prd/PRD-P1-WX-STAGE2-SOURCE-FETCHING-RUNTIME-STATIC-SCAFFOLD-01.md": 35,
+    "tests/core/test_prd_p1_wx_stage2_source_fetching_runtime_static_scaffold_01.py": 1,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
