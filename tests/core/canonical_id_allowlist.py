@@ -68,6 +68,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_static_audit_surface_runtime_static_integration_review_01.py",
     "docs/prd/STAGE2-RUNTIME-CLOSEOUT-REVIEW-01.md",
     "tests/core/test_stage2_runtime_closeout_review_01.py",
+    "docs/prd/SOURCE-FETCHING-RUNTIME-READINESS-REVIEW-01.md",
+    "tests/core/test_source_fetching_runtime_readiness_review_01.py",
 }
 
 
@@ -216,6 +218,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Stage 2 runtime closeout documents only the negative routing guard.
     "docs/prd/STAGE2-RUNTIME-CLOSEOUT-REVIEW-01.md": 2,
     "tests/core/test_stage2_runtime_closeout_review_01.py": 3,
+    # Source-fetching runtime readiness review documents only the negative routing guard.
+    "docs/prd/SOURCE-FETCHING-RUNTIME-READINESS-REVIEW-01.md": 2,
+    "tests/core/test_source_fetching_runtime_readiness_review_01.py": 2,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
