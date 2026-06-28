@@ -62,6 +62,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_prd_p1_wx_stage2_source_fetching_runtime_static_scaffold_01.py",
     "docs/prd/SOURCE-IDENTITY-RUNTIME-STATIC-INTEGRATION-REVIEW-01.md",
     "tests/core/test_source_identity_runtime_static_integration_review_01.py",
+    "docs/prd/PROVIDER-SOURCE-FAMILY-RUNTIME-STATIC-INTEGRATION-REVIEW-01.md",
+    "tests/core/test_provider_source_family_runtime_static_integration_review_01.py",
 }
 
 
@@ -143,6 +145,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Source identity runtime static integration review documents non-routing posture only.
     "docs/prd/SOURCE-IDENTITY-RUNTIME-STATIC-INTEGRATION-REVIEW-01.md": 2,
     "tests/core/test_source_identity_runtime_static_integration_review_01.py": 2,
+    # Provider source family runtime static integration review documents non-routing posture only.
+    "docs/prd/PROVIDER-SOURCE-FAMILY-RUNTIME-STATIC-INTEGRATION-REVIEW-01.md": 2,
+    "tests/core/test_provider_source_family_runtime_static_integration_review_01.py": 2,
     "tests/core/test_prd_p1_wx_stage2_weather_bot_return_to_planning_01.py": 1,
     # Weather Bot provider/source compatibility planning documents compatibility posture only.
     "docs/prd/PRD-P1-WX-STAGE2-PROVIDER-SOURCE-COMPATIBILITY-PLANNING-01.md": 2,
