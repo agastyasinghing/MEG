@@ -1,5 +1,21 @@
 # MEG Active State
 
+## Post-PR #280 Weather Bot Phase 0A meta refresh posture
+
+- Latest merged closeout: `WEATHER-BOT-PHASE0A-HOLD-STATE-CLOSEOUT-01`.
+- Current posture: `weather_bot_phase0a_held_closed`.
+- Source-fetching runtime track: `closed_held`.
+- Closed owner decision: `hold_source_fetching_runtime_track`.
+- Source fetching: `not_implemented`.
+- Implementation approval: `not_granted`.
+- Stage 2 runtime metadata: `supplied_metadata_only`.
+- Stage 2 validation posture: `fail_closed`.
+- Future reopen condition: a later owner-decision revision must explicitly select `approve_narrow_source_fetching_runtime_implementation_plan`; otherwise the track remains held, closed, or routed to revision.
+- Weather Bot models the market settlement rule, not generic weather.
+- Stage 2 runtime metadata artifacts: `meg/weather/stage2/source_identity_runtime.py`, `meg/weather/stage2/retrieval_context_runtime.py`, `meg/weather/stage2/provider_source_family_runtime.py`, `meg/weather/stage2/manual_review_gate_runtime.py`, `meg/weather/stage2/no_lookahead_metadata_runtime.py`, `meg/weather/stage2/fail_closed_validation_runtime.py`, and `meg/weather/stage2/static_audit_surface_runtime.py`.
+- Provider connectors remain not approved; provider clients remain not created; live provider/source fetching, credentials/config loading, generated data, fixture changes, scoring/backtesting, trading/order placement/autonomy/production behavior, report writing, audit output persistence, and external export remain not approved.
+
+
 ## Post-PR #247 Weather Bot source-fetching approval-request hold checkpoint refresh
 
 - Current active Weather Bot Stage 2 state is post-PR #247 hold checkpoint.
