@@ -77,6 +77,7 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "docs/prd/SOURCE-FETCHING-RUNTIME-OWNER-DECISION-RECORD-01.md",
     "docs/prd/SOURCE-FETCHING-RUNTIME-TRACK-HOLD-CLOSEOUT-01.md",
     "docs/prd/WEATHER-BOT-PHASE0A-HOLD-STATE-REFRESH-01.md",
+    "docs/prd/WEATHER-BOT-PHASE0A-HOLD-STATE-CLOSEOUT-01.md",
 }
 
 
@@ -240,6 +241,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "docs/prd/SOURCE-FETCHING-RUNTIME-TRACK-HOLD-CLOSEOUT-01.md": 1,
     # Weather Bot Phase 0A hold-state refresh documents only the negative routing guard.
     "docs/prd/WEATHER-BOT-PHASE0A-HOLD-STATE-REFRESH-01.md": 2,
+    # Weather Bot Phase 0A hold-state closeout documents only the negative routing guard.
+    "docs/prd/WEATHER-BOT-PHASE0A-HOLD-STATE-CLOSEOUT-01.md": 2,
     # Stage 2 skeleton-03 guard doc includes the required legacy identifier audit command only.
     "docs/prd/PRD-P1-WX-STAGE2-SKELETON-03_TARGETED_MAPPING_BUILDER_VALIDATION_COVERAGE.md": 1,
     # Stage 2 fixture implementation closeout documents the fixture JSON legacy identifier guard only.
