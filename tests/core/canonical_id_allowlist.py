@@ -78,6 +78,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "docs/prd/SOURCE-FETCHING-RUNTIME-TRACK-HOLD-CLOSEOUT-01.md",
     "docs/prd/WEATHER-BOT-PHASE0A-HOLD-STATE-REFRESH-01.md",
     "docs/prd/WEATHER-BOT-PHASE0A-HOLD-STATE-CLOSEOUT-01.md",
+    "docs/prd/WEATHER-BOT-PHASE0A-META-REFRESH-01.md",
+    "tests/core/test_weather_bot_phase0a_meta_refresh_01.py",
 }
 
 
@@ -249,6 +251,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "docs/prd/PRD-P1-WX-STAGE2-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_STATIC_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Stage 2 real fixture implementation test includes a forbidden legacy identifier guard only.
     "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py": 1,
+    # Weather Bot Phase 0A meta refresh documents the no-routing boundary only.
+    "docs/prd/WEATHER-BOT-PHASE0A-META-REFRESH-01.md": 1,
+    "tests/core/test_weather_bot_phase0a_meta_refresh_01.py": 2,
     # Stage 2 real fixture implementation closeout documents fixture JSON legacy identifier guards only.
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
