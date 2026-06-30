@@ -82,6 +82,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_meta_refresh_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-META-REFRESH-SELF-REVIEW-01.md",
     "tests/core/test_weather_bot_phase0a_meta_refresh_self_review_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-01.md",
+    "tests/core/test_weather_bot_phase0a_non_source_fetching_scope_inventory_01.py",
 }
 
 
@@ -297,6 +299,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "tests/agent_core/test_risk_controller.py": 1,
     "tests/agent_core/test_trap_detector.py": 27,
     "tests/core/test_canonical_id_contract.py": 19,
+    "docs/prd/WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-01.md": 1,
+    "tests/core/test_weather_bot_phase0a_non_source_fetching_scope_inventory_01.py": 2,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
