@@ -84,6 +84,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_meta_refresh_self_review_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-01.md",
     "tests/core/test_weather_bot_phase0a_non_source_fetching_scope_inventory_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-SELF-REVIEW-01.md",
+    "tests/core/test_weather_bot_phase0a_non_source_fetching_scope_inventory_self_review_01.py",
 }
 
 
@@ -260,6 +262,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "tests/core/test_weather_bot_phase0a_meta_refresh_01.py": 2,
     "docs/prd/WEATHER-BOT-PHASE0A-META-REFRESH-SELF-REVIEW-01.md": 1,
     "tests/core/test_weather_bot_phase0a_meta_refresh_self_review_01.py": 2,
+    # Weather Bot Phase 0A non-source-fetching scope inventory self-review documents the no-routing boundary only.
+    "docs/prd/WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-SELF-REVIEW-01.md": 1,
+    "tests/core/test_weather_bot_phase0a_non_source_fetching_scope_inventory_self_review_01.py": 2,
     # Stage 2 real fixture implementation closeout documents fixture JSON legacy identifier guards only.
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
