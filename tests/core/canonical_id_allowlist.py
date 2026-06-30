@@ -82,6 +82,7 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_meta_refresh_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-META-REFRESH-SELF-REVIEW-01.md",
     "tests/core/test_weather_bot_phase0a_meta_refresh_self_review_01.py",
+    "docs/prd/SOURCE-FETCHING-RUNTIME-OWNER-DECISION-REVISION-01.md",
 }
 
 
@@ -258,6 +259,7 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "tests/core/test_weather_bot_phase0a_meta_refresh_01.py": 2,
     "docs/prd/WEATHER-BOT-PHASE0A-META-REFRESH-SELF-REVIEW-01.md": 1,
     "tests/core/test_weather_bot_phase0a_meta_refresh_self_review_01.py": 2,
+    "docs/prd/SOURCE-FETCHING-RUNTIME-OWNER-DECISION-REVISION-01.md": 1,
     # Stage 2 real fixture implementation closeout documents fixture JSON legacy identifier guards only.
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
