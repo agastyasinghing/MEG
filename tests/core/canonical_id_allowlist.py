@@ -92,6 +92,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_market_contract_static_inventory_self_review_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-CANONICAL-IDENTIFIER-STATIC-AUDIT-01.md",
     "tests/core/test_weather_bot_phase0a_canonical_identifier_static_audit_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-CANONICAL-IDENTIFIER-STATIC-AUDIT-SELF-REVIEW-01.md",
+    "tests/core/test_weather_bot_phase0a_canonical_identifier_static_audit_self_review_01.py",
 }
 
 
@@ -280,6 +282,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Weather Bot Phase 0A canonical identifier static audit documents the no-routing boundary only.
     "docs/prd/WEATHER-BOT-PHASE0A-CANONICAL-IDENTIFIER-STATIC-AUDIT-01.md": 5,
     "tests/core/test_weather_bot_phase0a_canonical_identifier_static_audit_01.py": 7,
+    # Weather Bot Phase 0A canonical identifier static audit self-review documents the no-routing boundary only.
+    "docs/prd/WEATHER-BOT-PHASE0A-CANONICAL-IDENTIFIER-STATIC-AUDIT-SELF-REVIEW-01.md": 5,
+    "tests/core/test_weather_bot_phase0a_canonical_identifier_static_audit_self_review_01.py": 4,
     # Stage 2 real fixture implementation closeout documents fixture JSON legacy identifier guards only.
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
