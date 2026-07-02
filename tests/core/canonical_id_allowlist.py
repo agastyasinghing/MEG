@@ -100,6 +100,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_manual_review_checklist_planning_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-NO-LOOKAHEAD-POLICY-DOCUMENTATION-01.md",
     "tests/core/test_weather_bot_phase0a_no_lookahead_policy_documentation_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-FAIL-CLOSED-ERROR-TAXONOMY-PLANNING-01.md",
+    "tests/core/test_weather_bot_phase0a_fail_closed_error_taxonomy_planning_01.py",
 }
 
 
@@ -300,6 +302,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Weather Bot Phase 0A no-lookahead policy documentation documents the no-routing boundary only.
     "docs/prd/WEATHER-BOT-PHASE0A-NO-LOOKAHEAD-POLICY-DOCUMENTATION-01.md": 3,
     "tests/core/test_weather_bot_phase0a_no_lookahead_policy_documentation_01.py": 4,
+    # Weather Bot Phase 0A fail-closed error taxonomy planning documents the no-routing boundary only.
+    "docs/prd/WEATHER-BOT-PHASE0A-FAIL-CLOSED-ERROR-TAXONOMY-PLANNING-01.md": 10,
+    "tests/core/test_weather_bot_phase0a_fail_closed_error_taxonomy_planning_01.py": 7,
     # Stage 2 real fixture implementation closeout documents fixture JSON legacy identifier guards only.
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-CLOSEOUT-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION_CLOSEOUT_CHECKPOINT.md": 2,
     # Known legacy runtime modules inventoried in Ticket 0A-01A.
