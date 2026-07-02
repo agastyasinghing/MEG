@@ -108,6 +108,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_paper_trade_readiness_gap_inventory_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-EVALUATION-METRICS-PLANNING-01.md",
     "tests/core/test_weather_bot_phase0a_evaluation_metrics_planning_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-OPERATOR-WORKFLOW-PLANNING-01.md",
+    "tests/core/test_weather_bot_phase0a_operator_workflow_planning_01.py",
 }
 
 
@@ -361,6 +363,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Evaluation metrics planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-EVALUATION-METRICS-PLANNING-01.md": 3,
     "tests/core/test_weather_bot_phase0a_evaluation_metrics_planning_01.py": 7,
+    # Operator workflow planning uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-PHASE0A-OPERATOR-WORKFLOW-PLANNING-01.md": 3,
+    "tests/core/test_weather_bot_phase0a_operator_workflow_planning_01.py": 7,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
