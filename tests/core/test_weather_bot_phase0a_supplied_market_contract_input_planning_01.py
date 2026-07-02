@@ -184,7 +184,8 @@ def test_required_posture_and_non_execution_boundaries_are_present() -> None:
         "does not implement runtime no-lookahead enforcement", "does not implement runtime timestamp validation",
         "does not implement runtime settlement-rule parsing or classification",
         "does not implement runtime manual-review workflow behavior", "does not implement operator decision execution",
-        "does not implement manual-review UI or persistence", "does not implement scoring, evaluation execution, metric persistence, backtesting, paper trading, trading, or autonomy"[:80],
+        "does not implement manual-review UI or persistence", "does not implement scoring",
+        "evaluation execution", "metric persistence", "backtesting", "paper trading", "trading", "autonomy",
         "does not execute paper trades", "does not create simulated orders", "persisted supplied input",
         "does not create a separate standalone self-review artifact", "Weather Bot models the market settlement rule, not generic weather",
         "Weather Bot Phase 0A remains held and closed for source-fetching runtime work", "source-fetching runtime track remains closed/held",
@@ -275,8 +276,13 @@ def test_machine_checkable_parser_is_section_scoped() -> None:
     assert _assignment_pairs(synthetic) == _assignment_pairs(_read())
 
 
-def test_forbidden_approval_phrases_are_absent() -> None:
-    assert not FORBIDDEN_APPROVAL_RE.search(_read())
+def test_forbidden_approval_phrases_are_absent_from_prd_and_static_test() -> None:
+    checked_texts = {
+        "prd": _read(),
+        "static test": TEST_PATH.read_text(encoding="utf-8"),
+    }
+    for label, text in checked_texts.items():
+        assert not FORBIDDEN_APPROVAL_RE.search(text), label
 
 
 def test_no_runtime_or_forbidden_paths_are_referenced_as_changes() -> None:
