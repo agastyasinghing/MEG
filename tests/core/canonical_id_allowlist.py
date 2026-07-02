@@ -104,6 +104,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_fail_closed_error_taxonomy_planning_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-STAGE2-METADATA-CONTRACT-DOCUMENTATION-01.md",
     "tests/core/test_weather_bot_phase0a_stage2_metadata_contract_documentation_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-PAPER-TRADE-READINESS-GAP-INVENTORY-01.md",
+    "tests/core/test_weather_bot_phase0a_paper_trade_readiness_gap_inventory_01.py",
 }
 
 
@@ -351,6 +353,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Stage 2 metadata contract documentation uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-STAGE2-METADATA-CONTRACT-DOCUMENTATION-01.md": 5,
     "tests/core/test_weather_bot_phase0a_stage2_metadata_contract_documentation_01.py": 7,
+    # Paper-trade readiness gap inventory uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-PHASE0A-PAPER-TRADE-READINESS-GAP-INVENTORY-01.md": 5,
+    "tests/core/test_weather_bot_phase0a_paper_trade_readiness_gap_inventory_01.py": 7,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
