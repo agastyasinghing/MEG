@@ -102,6 +102,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_no_lookahead_policy_documentation_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-FAIL-CLOSED-ERROR-TAXONOMY-PLANNING-01.md",
     "tests/core/test_weather_bot_phase0a_fail_closed_error_taxonomy_planning_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-STAGE2-METADATA-CONTRACT-DOCUMENTATION-01.md",
+    "tests/core/test_weather_bot_phase0a_stage2_metadata_contract_documentation_01.py",
 }
 
 
@@ -346,6 +348,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "tests/core/test_canonical_id_contract.py": 19,
     "docs/prd/WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-01.md": 1,
     "tests/core/test_weather_bot_phase0a_non_source_fetching_scope_inventory_01.py": 2,
+    # Stage 2 metadata contract documentation uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-PHASE0A-STAGE2-METADATA-CONTRACT-DOCUMENTATION-01.md": 5,
+    "tests/core/test_weather_bot_phase0a_stage2_metadata_contract_documentation_01.py": 7,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
