@@ -112,6 +112,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_operator_workflow_planning_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-SUPPLIED-MARKET-CONTRACT-INPUT-PLANNING-01.md",
     "tests/core/test_weather_bot_phase0a_supplied_market_contract_input_planning_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-SETTLEMENT-RULE-INTERPRETER-PLANNING-01.md",
+    "tests/core/test_weather_bot_phase0a_settlement_rule_interpreter_planning_01.py",
 }
 
 
@@ -371,6 +373,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Supplied market-contract input planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-SUPPLIED-MARKET-CONTRACT-INPUT-PLANNING-01.md": 3,
     "tests/core/test_weather_bot_phase0a_supplied_market_contract_input_planning_01.py": 7,
+    # Settlement-rule interpreter planning uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-PHASE0A-SETTLEMENT-RULE-INTERPRETER-PLANNING-01.md": 3,
+    "tests/core/test_weather_bot_phase0a_settlement_rule_interpreter_planning_01.py": 5,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
