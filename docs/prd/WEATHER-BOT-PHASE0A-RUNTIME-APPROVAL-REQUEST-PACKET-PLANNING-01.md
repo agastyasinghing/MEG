@@ -12,7 +12,7 @@ PR #305 is the immediate predecessor and represents `WEATHER-BOT-PHASE0A-PHASE-C
 
 ## Purpose
 
-Define a future Weather Bot Phase 0A runtime approval request packet as a planning artifact only. It describes information that would be presented before the owner can decide whether to reopen runtime/source/provider/paper-trade planning. Weather Bot models the market settlement rule, not generic weather.
+Define a future Weather Bot Phase 0A runtime approval request packet as a planning artifact only. It describes information that would be presented before any future non-owner runtime gate/hold refresh can consider whether runtime/source/provider/paper-trade planning remains held or needs revision. Weather Bot models the market settlement rule, not generic weather.
 
 ## Source-of-truth relationship
 
@@ -20,7 +20,7 @@ This artifact is subordinate to `MEG_MASTER_PRD_v4.1_patched.md`, repo meta docs
 
 ## Non-goals and non-approval boundaries
 
-This ticket does not implement source fetching, provider connectors, provider clients, API calls, scraping, file downloads, forecast pulls, SDK usage, credentials/config loading, generated data, fixture changes, schema changes, migrations, runtime ingestion, runtime loading, runtime validation, parser behavior, validator behavior, classifier behavior, interpreter behavior, manual-review runtime workflow, manual-review UI, operator decision execution, operator decision persistence, scoring, evaluation execution, metric persistence, backtesting, paper trading, order simulation, trading, autonomy, production behavior, reports, persistence, audit output, or export behavior. It does not revise the owner decision and does not open runtime/source/provider implementation planning.
+This ticket does not implement source fetching, provider connectors, provider clients, API calls, scraping, file downloads, forecast pulls, SDK usage, credentials/config loading, generated data, fixture changes, schema changes, migrations, runtime ingestion, runtime loading, runtime validation, parser behavior, validator behavior, classifier behavior, interpreter behavior, manual-review runtime workflow, manual-review UI, operator decision execution, operator decision persistence, scoring, evaluation execution, metric persistence, backtesting, paper trading, order simulation, trading, autonomy, production behavior, reports, persistence, audit output, or export behavior. It does not revise the runtime gate and does not open runtime/source/provider implementation planning.
 
 ## Runtime approval request packet overview
 
@@ -28,7 +28,7 @@ The planned packet would be a human-readable future decision aid only, not a run
 
 ## Planned request packet field groups
 
-The packet would group identity, canonical identifier summary, Phase 0A closeout reference, runtime readiness summary, owner decision options, explicit non-approval summary, source/provider posture, paper-trade/evaluation/trading posture, manual-review/operator posture, blocker summary, future gates, and PR-body completion summary.
+The packet would group identity, canonical identifier summary, Phase 0A closeout reference, runtime readiness summary, non-owner gate options, explicit non-approval summary, source/provider posture, paper-trade/evaluation/trading posture, manual-review/operator posture, blocker summary, future gates, and PR-body completion summary.
 
 ## Canonical identifier posture
 
@@ -36,23 +36,23 @@ The only canonical routing fields are `condition_id`, `token_id`, and `outcome`.
 
 ## Phase 0A closeout inventory relationship
 
-The Phase 0A closeout inventory from PR #305 is the predecessor and remains planning-only, not a runtime contract, with runtime approval not granted. Future owner decision is required before any runtime use.
+The Phase 0A closeout inventory from PR #305 is the predecessor and remains planning-only, not a runtime contract, with runtime approval not granted. Future runtime gate is required before any runtime use.
 
 ## Runtime readiness summary
 
 Runtime approval is not granted. Stage 2 metadata posture remains supplied-metadata-only and fail-closed. Runtime readiness, paper-trade readiness, and evaluation readiness are not achieved. Runtime settlement-rule interpreter, runtime no-lookahead validation, runtime fail-closed validation, runtime ingestion/loading/validation/parser/interpreter, manual-review runtime workflow, operator workflow runtime behavior, operator decision execution, and operator decision persistence are not implemented.
 
-## Owner decision option representation
+## Non-owner runtime gate hold representation
 
-Future gate posture options are limited to hold, defer, revision, or planning-only approvals for subsequent planning tracks. They do not include implementation approval values and do not grant runtime implementation, source fetching, provider/source implementation, paper trading, trading, production, persistence, reports, audit output, or exports.
+Non-owner runtime gate/hold posture options are limited to hold, defer, revision, or planning-only approvals for subsequent planning tracks. They do not include implementation approval values and do not grant runtime implementation, source fetching, provider/source implementation, paper trading, trading, production, persistence, reports, audit output, or exports.
 
 ## Explicit non-approval representation
 
-The packet must explicitly show runtime approval not granted, source-fetching approval not granted, provider/source approval not granted, paper-trade approval not granted, trading approval not granted, and production approval not granted. All future runtime use would require a later explicit owner decision plus planning/implementation gate.
+The packet must explicitly show runtime approval not granted, source-fetching approval not granted, provider/source approval not granted, paper-trade approval not granted, trading approval not granted, and production approval not granted. All future runtime use would require a later explicit runtime gate plus planning/implementation gate.
 
 ## Source-fetching and provider approval posture
 
-Source-fetching runtime work remains held/closed and not implemented. The closed owner decision remains `hold_source_fetching_runtime_track`. Provider/source implementation remains not approved; provider connectors, provider clients, API calls, forecast pulls, and credentials/config loading are not implemented.
+Source-fetching runtime work remains held/closed and not implemented. The already-closed source-fetching runtime track posture remains `hold_source_fetching_runtime_track`. Provider/source implementation remains not approved; provider connectors, provider clients, API calls, forecast pulls, and credentials/config loading are not implemented.
 
 ## Paper-trade evaluation and trading approval posture
 
@@ -84,7 +84,7 @@ Static tests must parse only the dedicated machine-checkable section, verify clo
 - request packet field group: canonical_identifier_summary
 - request packet field group: phase0a_closeout_inventory_reference
 - request packet field group: runtime_readiness_summary
-- request packet field group: owner_decision_options
+- request packet field group: non_owner_gate_options
 - request packet field group: explicit_non_approval_summary
 - request packet field group: source_fetching_provider_posture
 - request packet field group: paper_trade_evaluation_trading_posture
@@ -112,21 +112,21 @@ Static tests must parse only the dedicated machine-checkable section, verify clo
 - phase0a closeout relationship: closeout_inventory_planning_only
 - phase0a closeout relationship: closeout_inventory_not_runtime_contract
 - phase0a closeout relationship: closeout_inventory_runtime_approval_not_granted
-- phase0a closeout relationship: future_owner_decision_required
-- owner decision option: hold_runtime_track
-- owner decision option: approve_runtime_planning_only
-- owner decision option: approve_source_fetching_planning_only
-- owner decision option: approve_provider_planning_only
-- owner decision option: approve_paper_trade_planning_only
-- owner decision option: request_revision_before_decision
-- owner decision option: defer_decision
+- phase0a closeout relationship: future_runtime_gate_required
+- non owner gate option: hold_runtime_track
+- non owner gate option: approve_runtime_planning_only
+- non owner gate option: approve_source_fetching_planning_only
+- non owner gate option: approve_provider_planning_only
+- non owner gate option: approve_paper_trade_planning_only
+- non owner gate option: request_revision_before_decision
+- non owner gate option: defer_decision
 - approval posture: runtime_approval_not_granted
 - approval posture: source_fetching_approval_not_granted
 - approval posture: provider_source_approval_not_granted
 - approval posture: paper_trade_approval_not_granted
 - approval posture: trading_approval_not_granted
 - approval posture: production_approval_not_granted
-- approval posture: owner_decision_required
+- approval posture: runtime_gate_required
 - runtime readiness status: not_runtime_ready
 - runtime readiness status: not_paper_trade_ready
 - runtime readiness status: not_evaluation_ready
@@ -218,7 +218,7 @@ Static tests must parse only the dedicated machine-checkable section, verify clo
 - implementation posture: no_persistence
 - implementation posture: no_audit_output
 - implementation posture: no_export
-- implementation posture: no_owner_decision_revision
+- implementation posture: no_runtime_gate_revision
 - implementation posture: no_runtime_approval_granted
 - implementation posture: no_source_fetching_approval_granted
 - implementation posture: no_provider_source_approval_granted
