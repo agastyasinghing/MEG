@@ -92,10 +92,7 @@ def test_canonical_identifier_posture_is_exact() -> None:
     for path, text in _read_meta_docs().items():
         assert CANONICAL_FIELD_RE.search(text), path
         assert "`token_outcome_pair` remains derived only" in text, path
-        if path.name in {"MEG_CHAT_HANDOFF.md", "MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md"}:
-            assert "the legacy market identifier remains non-routing only" in text, path
-        else:
-            assert "`market" + "_id` remains non-routing only" in text, path
+        assert "`market" + "_id` remains non-routing only" in text, path
 
 
 def test_next_tracks_are_exact_and_safe() -> None:
