@@ -122,6 +122,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "docs/meta/domain_packets/WEATHER_BOT_PACKET.md",
     "docs/prd/WEATHER-BOT-PHASE0A-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md",
     "tests/core/test_weather_bot_phase0a_phase_summary_and_handoff_refresh_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-VALIDATION-OUTPUT-PACKET-PLANNING-01.md",
+    "tests/core/test_weather_bot_phase0a_validation_output_packet_planning_01.py",
 }
 
 
@@ -395,6 +397,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "docs/meta/domain_packets/WEATHER_BOT_PACKET.md": 2,
     "docs/prd/WEATHER-BOT-PHASE0A-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md": 3,
     "tests/core/test_weather_bot_phase0a_phase_summary_and_handoff_refresh_01.py": 2,
+    # Validation output packet planning uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-PHASE0A-VALIDATION-OUTPUT-PACKET-PLANNING-01.md": 6,
+    "tests/core/test_weather_bot_phase0a_validation_output_packet_planning_01.py": 6,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
