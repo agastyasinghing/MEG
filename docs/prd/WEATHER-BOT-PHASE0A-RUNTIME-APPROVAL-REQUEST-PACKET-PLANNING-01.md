@@ -44,7 +44,7 @@ Runtime approval is not granted. Stage 2 metadata posture remains supplied-metad
 
 ## Owner decision option representation
 
-Future owner decision options are limited to hold, defer, revision, or planning-only approvals for subsequent planning tracks. They do not include implementation approval values and do not grant runtime implementation, source fetching, provider/source implementation, paper trading, trading, production, persistence, reports, audit output, or exports.
+Future gate posture options are limited to hold, defer, revision, or planning-only approvals for subsequent planning tracks. They do not include implementation approval values and do not grant runtime implementation, source fetching, provider/source implementation, paper trading, trading, production, persistence, reports, audit output, or exports.
 
 ## Explicit non-approval representation
 
@@ -68,7 +68,7 @@ Blockers remain for approvals, source/provider posture, runtime ingestion and va
 
 ## Future handoff boundaries
 
-Future handoff may recommend owner-decision capture planning or revision only. It must not present either next track as a standalone self-review ticket, and neither next track grants runtime/source/provider/paper-trade implementation permission.
+Future handoff may recommend non-owner runtime gate/hold refresh planning or revision only. It must not present either next track as a standalone self-review ticket, and neither next track grants runtime/source/provider/paper-trade implementation permission.
 
 ## Static-test expectations
 
@@ -223,7 +223,7 @@ Static tests must parse only the dedicated machine-checkable section, verify clo
 - implementation posture: no_source_fetching_approval_granted
 - implementation posture: no_provider_source_approval_granted
 - implementation posture: no_paper_trade_approval_granted
-- recommended next track: weather_bot_phase0a_owner_decision_capture_planning
+- recommended next track: weather_bot_phase0a_non_owner_runtime_gate_hold_refresh_planning
 - conditional next track: weather_bot_phase0a_runtime_approval_request_packet_revision_if_scope_too_broad
 - pr body completion status: required_headings_must_be_present
 - pr body completion status: exact_commands_must_be_reported
@@ -270,7 +270,7 @@ Acceptance requires the PRD and stdlib-only static test, no `meg/` changes, no r
 
 ## Recommended next ticket
 
-recommended next track: weather_bot_phase0a_owner_decision_capture_planning
+recommended next track: weather_bot_phase0a_non_owner_runtime_gate_hold_refresh_planning
 
 conditional next track: weather_bot_phase0a_runtime_approval_request_packet_revision_if_scope_too_broad
 
