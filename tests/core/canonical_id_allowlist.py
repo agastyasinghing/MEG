@@ -12,6 +12,8 @@ from __future__ import annotations
 _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md",
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py",
+    "docs/prd/WEATHER-BOT-PHASE0A-NON-OWNER-RUNTIME-GATE-HOLD-REFRESH-PLANNING-01.md",
+    "tests/core/test_weather_bot_phase0a_non_owner_runtime_gate_hold_refresh_planning_01.py",
     "docs/prd/MEG-ARCH-ALIGN-04_SHARED_RAIL_CONTRACT_REVIEW_PLANNING.md",
     "tests/core/test_meg_arch_align_04.py",
     "docs/architecture/MEG-ARCH-ALIGN-05_SHARED_RAIL_CONTRACT_REVIEW.md",
@@ -415,6 +417,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Runtime approval request packet planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md": 2,
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py": 5,
+    # Non-owner runtime gate hold refresh planning uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-PHASE0A-NON-OWNER-RUNTIME-GATE-HOLD-REFRESH-PLANNING-01.md": 3,
+    "tests/core/test_weather_bot_phase0a_non_owner_runtime_gate_hold_refresh_planning_01.py": 4,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
