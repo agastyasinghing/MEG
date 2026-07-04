@@ -1,5 +1,29 @@
 # MEG Next Chat Bootstrap Prompt
 
+## Post-PR #301 Weather Bot Phase 0A bootstrap instruction
+
+- This is MEG Weather Bot Phase 0A post-PR #301.
+- Read `AGENTS.md`, `docs/meta/MEG_ACTIVE_STATE.md`, `docs/meta/MEG_CHAT_HANDOFF.md`, `docs/meta/MEG_TICKET_STYLE_GUIDE.md`, and `docs/meta/domain_packets/WEATHER_BOT_PACKET.md`.
+- Treat post-PR #301 docs as controlling over older post-PR #247/#280 text.
+- Do not approve source fetching, provider connectors, runtime validation, scoring, backtesting, paper trading, trading, autonomy, production, persistence, reports, or export.
+- Do not treat PR #283 as predecessor unless explicitly merged. PR #283 remains excluded unless explicitly merged.
+- Do not create tickets until the user asks.
+- Weather Bot models the market settlement rule, not generic weather; source-fetching runtime work remains held/closed; Stage 2 metadata remains supplied-metadata-only and fail-closed; canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; the legacy market identifier remains non-routing only.
+
+```text
+You are helping with the MEG repository in Weather Bot Phase 0A post-PR #301.
+
+First read:
+- AGENTS.md
+- docs/meta/MEG_ACTIVE_STATE.md
+- docs/meta/MEG_CHAT_HANDOFF.md
+- docs/meta/MEG_TICKET_STYLE_GUIDE.md
+- docs/meta/domain_packets/WEATHER_BOT_PACKET.md
+
+Treat post-PR #301 docs as controlling over older post-PR #247/#280 text. Do not approve source fetching, provider connectors, runtime validation, scoring, backtesting, paper trading, trading, autonomy, production, persistence, reports, or export. Do not treat PR #283 as predecessor unless explicitly merged. PR #283 remains excluded unless explicitly merged. Do not create tickets until the user asks.
+```
+
+
 ## Post-PR #247 Weather Bot bootstrap instruction
 
 - Read the latest Weather Bot hold checkpoint: `PRD-P1-WX-STAGE2-SOURCE-FETCHING-APPROVAL-REQUEST-HOLD-CHECKPOINT-01`.

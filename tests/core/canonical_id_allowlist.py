@@ -118,6 +118,10 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_no_lookahead_validation_planning_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-FAIL-CLOSED-VALIDATION-PLANNING-01.md",
     "tests/core/test_weather_bot_phase0a_fail_closed_validation_planning_01.py",
+    "docs/meta/MEG_ACTIVE_STATE.md",
+    "docs/meta/domain_packets/WEATHER_BOT_PACKET.md",
+    "docs/prd/WEATHER-BOT-PHASE0A-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md",
+    "tests/core/test_weather_bot_phase0a_phase_summary_and_handoff_refresh_01.py",
 }
 
 
@@ -386,6 +390,11 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Fail-closed validation planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-FAIL-CLOSED-VALIDATION-PLANNING-01.md": 3,
     "tests/core/test_weather_bot_phase0a_fail_closed_validation_planning_01.py": 7,
+    # Phase summary and handoff refresh uses market_id only as a non-routing negative boundary.
+    "docs/meta/MEG_ACTIVE_STATE.md": 2,
+    "docs/meta/domain_packets/WEATHER_BOT_PACKET.md": 2,
+    "docs/prd/WEATHER-BOT-PHASE0A-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md": 3,
+    "tests/core/test_weather_bot_phase0a_phase_summary_and_handoff_refresh_01.py": 2,
     "tests/dashboard/test_api.py": 9,
     "tests/data_layer/test_clob_client.py": 20,
     "tests/data_layer/test_polygon_feed.py": 6,
