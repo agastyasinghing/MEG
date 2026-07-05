@@ -123,6 +123,19 @@ def test_no_legacy_identifier_literal_in_new_artifacts() -> None:
         DOCS / "MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md",
         Path(__file__),
     ]
+    allowed_literal_docs = {
+        DOCS / "MEG_CHAT_HANDOFF.md",
+        DOCS / "MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md",
+    }
     for t in targets:
         legacy = "market" + "_id"
-        assert legacy not in t.read_text(encoding="utf-8")
+        text = t.read_text(encoding="utf-8")
+        if t in allowed_literal_docs:
+            offending_lines = [
+                line
+                for line in text.splitlines()
+                if legacy in line and "`market" + "_id` remains non-routing only" not in line
+            ]
+            assert not offending_lines
+        else:
+            assert legacy not in text

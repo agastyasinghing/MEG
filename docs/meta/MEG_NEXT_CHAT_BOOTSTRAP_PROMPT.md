@@ -1,5 +1,21 @@
 # MEG Next Chat Bootstrap Prompt
 
+## Post-PR #308 Weather Bot Phase 0A bootstrap instruction
+
+- PR #308 merged `WEATHER-BOT-PHASE0A-STATIC-PLANNING-LANE-CLOSEOUT-REFRESH-01`; Weather Bot Phase 0A static planning lane closed out.
+- PR #307 remains predecessor context; PR #283 remains excluded unless explicitly merged and is not a predecessor.
+- Runtime/source/provider/paper-trade/trading remain unapproved: runtime approval remains not granted; source-fetching approval remains not granted; provider/source approval remains not granted; paper-trade approval remains not granted; trading/production approval remains not granted.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `market_id` remains non-routing only; `token_outcome_pair` remains derived only.
+- Source-fetching runtime track remains closed/held with `hold_source_fetching_runtime_track`; source fetching remains not implemented; provider/source implementation remains not approved.
+- No owner-decision capture lane is active; do not reopen owner-decision capture.
+- No runtime/source/provider/paper-trade/trading implementation lane is active; continue only with meta/handoff maintenance or narrow revision unless explicitly instructed otherwise.
+- Next safe track: `weather_bot_phase0a_meta_state_handoff_revision_if_needed`.
+- Conditional revision track if this handoff scope is too broad: `weather_bot_phase0a_meta_handoff_refresh_revision_if_scope_too_broad`.
+
+```text
+You are helping with the MEG repository in Weather Bot Phase 0A post-PR #308. PR #308 merged WEATHER-BOT-PHASE0A-STATIC-PLANNING-LANE-CLOSEOUT-REFRESH-01, and the Weather Bot Phase 0A static planning lane is closed out. PR #307 remains predecessor context. Do not treat PR #283 as predecessor unless explicitly merged. Runtime/source/provider/paper-trade/trading remain unapproved. Canonical routing fields remain exactly condition_id, token_id, and outcome; `market_id` remains non-routing only; token_outcome_pair remains derived only. Source-fetching runtime track remains closed/held with hold_source_fetching_runtime_track. No owner-decision capture lane is active. Continue only with meta/handoff maintenance or narrow revision unless explicitly instructed otherwise.
+```
+
 ## Post-PR #301 Weather Bot Phase 0A bootstrap instruction
 
 - This is MEG Weather Bot Phase 0A post-PR #301.
@@ -8,7 +24,7 @@
 - Do not approve source fetching, provider connectors, runtime validation, scoring, backtesting, paper trading, trading, autonomy, production, persistence, reports, or export.
 - Do not treat PR #283 as predecessor unless explicitly merged. PR #283 remains excluded unless explicitly merged.
 - Do not create tickets until the user asks.
-- Weather Bot models the market settlement rule, not generic weather; source-fetching runtime work remains held/closed; Stage 2 metadata remains supplied-metadata-only and fail-closed; canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; the legacy market identifier remains non-routing only.
+- Weather Bot models the market settlement rule, not generic weather; source-fetching runtime work remains held/closed; Stage 2 metadata remains supplied-metadata-only and fail-closed; canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `market_id` remains non-routing only.
 
 ```text
 You are helping with the MEG repository in Weather Bot Phase 0A post-PR #301.

@@ -1,5 +1,21 @@
 # Weather Bot Context Packet
 
+## Post-PR #308 Weather Bot Phase 0A packet status
+
+- Latest Weather Bot static planning closeout: PR #308 / `WEATHER-BOT-PHASE0A-STATIC-PLANNING-LANE-CLOSEOUT-REFRESH-01` merged the static planning lane closeout.
+- Predecessor context: PR #307 / `WEATHER-BOT-PHASE0A-NON-OWNER-RUNTIME-GATE-HOLD-REFRESH-PLANNING-01` remains predecessor context; PR #283 remains excluded unless explicitly merged and is not treated as a predecessor.
+- Current lane status: Weather Bot Phase 0A static planning lane closed out.
+- Weather Bot models the market settlement rule, not generic weather.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `token_outcome_pair` remains derived only; `market_id` remains non-routing only.
+- Runtime approval remains not granted; source-fetching approval remains not granted; provider/source approval remains not granted; paper-trade approval remains not granted; trading/production approval remains not granted.
+- Source-fetching runtime track remains closed/held; the already-closed source-fetching runtime track posture remains `hold_source_fetching_runtime_track`; source fetching remains not implemented; provider/source implementation remains not approved.
+- No owner-decision capture lane is active; do not reopen owner-decision capture and do not create owner capture as a next track.
+- No runtime/source/provider/paper-trade/trading implementation lane is active.
+- Runtime implementation, source/provider implementation, evaluation execution, paper trading, trading, autonomy, and production remain blocked and unapproved.
+- Runtime settlement-rule interpreter, runtime no-lookahead validation, runtime fail-closed validation, manual-review runtime workflow, operator decision execution, and operator decision persistence remain not implemented.
+- Next safe track: `weather_bot_phase0a_meta_state_handoff_revision_if_needed`.
+- Conditional revision track if this handoff scope is too broad: `weather_bot_phase0a_meta_handoff_refresh_revision_if_scope_too_broad`.
+
 ## Post-PR #301 Phase 0A planning status
 
 - Latest merged PR: PR #301.

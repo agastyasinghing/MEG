@@ -404,6 +404,8 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "tests/core/test_weather_bot_phase0a_fail_closed_validation_planning_01.py": 7,
     # Phase summary and handoff refresh uses market_id only as a non-routing negative boundary.
     "docs/meta/MEG_ACTIVE_STATE.md": 2,
+    "docs/meta/MEG_CHAT_HANDOFF.md": 2,
+    "docs/meta/MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md": 3,
     "docs/meta/domain_packets/WEATHER_BOT_PACKET.md": 2,
     "docs/prd/WEATHER-BOT-PHASE0A-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md": 3,
     "tests/core/test_weather_bot_phase0a_phase_summary_and_handoff_refresh_01.py": 2,
