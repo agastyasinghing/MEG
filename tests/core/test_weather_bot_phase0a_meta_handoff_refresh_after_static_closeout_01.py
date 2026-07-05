@@ -95,6 +95,16 @@ def test_canonical_identifier_posture_is_exact() -> None:
         assert "`market" + "_id` remains non-routing only" in text, path
 
 
+def test_changed_handoff_bootstrap_content_uses_literal_non_routing_market_field() -> None:
+    docs = _read_meta_docs()
+    for path in (
+        ROOT / "docs/meta/MEG_CHAT_HANDOFF.md",
+        ROOT / "docs/meta/MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md",
+    ):
+        assert "legacy market identifier" not in docs[path].lower(), path
+        assert "`market" + "_id` remains non-routing only" in docs[path], path
+
+
 def test_next_tracks_are_exact_and_safe() -> None:
     text = _combined()
     assert RECOMMENDED_NEXT_TRACK in text
