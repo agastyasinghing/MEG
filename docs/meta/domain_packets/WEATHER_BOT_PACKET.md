@@ -26,7 +26,7 @@
 - Weather Bot models the market settlement rule, not generic weather.
 - Weather Bot Phase 0A remains held and closed for source-fetching runtime work; source-fetching runtime track remains closed/held; closed owner decision remains `hold_source_fetching_runtime_track`; source fetching remains not implemented; implementation approval remains not granted.
 - Stage 2 runtime metadata scaffolds remain supplied-metadata-only and fail-closed.
-- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `token_outcome_pair` remains a derived relationship; `market_id` remains non-routing only; no routing on `market_id` is introduced or approved.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `token_outcome_pair` remains a derived relationship; the legacy market identifier remains non-routing only; no routing on that identifier is introduced or approved.
 - Paper-trade readiness and evaluation readiness remain not achieved; operator workflow, supplied market-contract input, settlement-rule interpreter, no-lookahead validation, and fail-closed validation runtime behavior remain not implemented.
 - Source fetching, provider connectors, provider clients, live provider/source fetching, forecast pulls, API calls, scraping, file downloads, provider SDK usage, credentials/config loading, generated data, fixtures, schema changes, DB migrations, runtime validation, runtime parser/interpreter, runtime ingestion, scoring, evaluation execution, metric persistence, backtesting, paper trading, order simulation, trading, autonomy, production, reports, persistence, audit output, and exports remain not approved.
 - Completed Phase 0A planning artifacts: `WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-01`, `WEATHER-BOT-PHASE0A-MARKET-CONTRACT-STATIC-INVENTORY-01`, `WEATHER-BOT-PHASE0A-CANONICAL-IDENTIFIER-STATIC-AUDIT-01`, `WEATHER-BOT-PHASE0A-NO-LOOKAHEAD-POLICY-DOCUMENTATION-01`, `WEATHER-BOT-PHASE0A-FAIL-CLOSED-ERROR-TAXONOMY-PLANNING-01`, `WEATHER-BOT-PHASE0A-STAGE2-METADATA-CONTRACT-DOCUMENTATION-01`, `WEATHER-BOT-PHASE0A-PAPER-TRADE-READINESS-GAP-INVENTORY-01`, `WEATHER-BOT-PHASE0A-EVALUATION-METRICS-PLANNING-01`, `WEATHER-BOT-PHASE0A-OPERATOR-WORKFLOW-PLANNING-01`, `WEATHER-BOT-PHASE0A-SUPPLIED-MARKET-CONTRACT-INPUT-PLANNING-01`, `WEATHER-BOT-PHASE0A-SETTLEMENT-RULE-INTERPRETER-PLANNING-01`, `WEATHER-BOT-PHASE0A-NO-LOOKAHEAD-VALIDATION-PLANNING-01`, `WEATHER-BOT-PHASE0A-FAIL-CLOSED-VALIDATION-PLANNING-01`.
@@ -284,3 +284,27 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - Paper simulation: not approved.
 - Runtime observation: not approved.
 - Trading/order/autonomy: not approved.
+
+## Weather Bot Stage 2 Runtime Foundation — Supplied Input Track closeout/readiness
+
+- The Weather Bot Stage 2 Runtime Foundation — Supplied Input Track is code-complete for the current approved scope.
+- The track is in-memory and supplied-input-only; it validates caller-supplied records from supplied market contract through full-chain positive and negative smokes.
+- The supplied-input chain includes supplied market contract runtime, supplied market review packet runtime, supplied evidence packet runtime, review/evidence composition runtime, supplied runtime validation bundle, supplied runtime dry-run packet, supplied runtime dry-run report, supplied runtime end-to-end smoke, supplied runtime trace packet, supplied runtime operator-review handoff, supplied runtime operator-review ack packet, supplied runtime operator-review queue packet, supplied runtime operator-review queue entry, supplied runtime operator-review queue summary, supplied runtime operator-review final packet, supplied runtime operator-review final bundle, supplied runtime operator-review completion seal, supplied runtime operator-review completion summary, supplied runtime full-chain integration smoke, and supplied runtime full-chain negative smoke.
+- The full-chain integration smoke confirms the valid supplied-input chain can pass.
+- The full-chain negative smoke confirms expected fail-closed behavior is representable and test-covered.
+- Weather Bot models market settlement rules, not generic weather.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`.
+- `market_id` remains non-routing and must not be introduced as a routing key.
+- `token_outcome_pair` remains derived only.
+- Source fetching remains held/not approved.
+- Provider/source implementation remains held/not approved.
+- Paper trading remains not approved.
+- Trading/execution remains not approved.
+- Persistence and export writing are not implemented in this track.
+- Queue/service/scheduler/broker behavior is not implemented in this track.
+- Owner-decision capture and operator decision execution are not implemented in this track.
+- Durable workflow-completion side effects are not implemented in this track.
+- Production readiness is not achieved by this closeout/readiness inventory.
+- The next safe phase should be an explicit approval request before any source/provider/runtime/persistence/paper-trading/trading behavior is added.
+- Recommended next phase name: `WEATHER-BOT-STAGE2-SOURCE-PROVIDER-RUNTIME-APPROVAL-REQUEST-01`.
+- The next phase is an approval/request/planning gate, not implementation.
