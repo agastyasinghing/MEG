@@ -294,7 +294,7 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - The full-chain negative smoke confirms expected fail-closed behavior is representable and test-covered.
 - Weather Bot models market settlement rules, not generic weather.
 - Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`.
-- `market_id` remains non-routing and must not be introduced as a routing key.
+- The legacy market identifier remains non-routing and must not be introduced as a routing key.
 - `token_outcome_pair` remains derived only.
 - Source fetching remains held/not approved.
 - Provider/source implementation remains held/not approved.
@@ -308,3 +308,35 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - The next safe phase should be an explicit approval request before any source/provider/runtime/persistence/paper-trading/trading behavior is added.
 - Recommended next phase name: `WEATHER-BOT-STAGE2-SOURCE-PROVIDER-RUNTIME-APPROVAL-REQUEST-01`.
 - The next phase is an approval/request/planning gate, not implementation.
+
+## Weather Bot Stage 2 Source/Provider Runtime Approval Request
+
+- This is an approval/request/planning gate only.
+- No source/provider implementation is approved by this PR.
+- No source fetching is implemented by this PR.
+- No provider clients, API calls, scraping, forecast pulls, downloads, SDK usage, credentials/config loading, or live ingestion are implemented by this PR.
+- The supplied-input runtime track is closed/code-complete for its approved scope.
+- The supplied-input track remains in-memory and supplied-input-only.
+- Positive and negative full-chain smokes exist and validate supplied-input pass/fail-closed behavior.
+- Canonical routing fields remain exactly:
+  - `condition_id`
+  - `token_id`
+  - `outcome`
+- `market_id` remains non-routing only, and any future source/provider runtime must not route on `market_id`.
+- `token_outcome_pair` remains derived only.
+- Any future source/provider runtime must preserve fail-closed behavior.
+- Any future source/provider runtime must preserve no-lookahead constraints.
+- Any future source/provider runtime must not bypass operator review.
+- Any future source/provider runtime must not enable paper trading, trading, order placement, autonomy, or production behavior.
+- Any future source/provider runtime must not add persistence/export writing unless separately approved.
+- Required approval decision options are closed-set and explicit:
+  - `hold_source_provider_runtime_track`
+  - `approve_source_provider_planning_only`
+  - `approve_fixture_only_source_provider_runtime`
+  - `approve_live_source_provider_runtime`
+- The recommended default decision is `hold_source_provider_runtime_track`.
+- The next step after this approval request depends on the explicit approval decision.
+- If no approval is granted, the track remains held.
+- If only planning is approved, the next work must be planning/static documentation only.
+- If fixture-only runtime is approved, the next work must use local/static caller-supplied or fixture-like data only and must not call live providers.
+- If live source/provider runtime is approved, the next work must still require a separate implementation ticket with exact allowed providers, allowed fields, no-lookahead rules, fail-closed rules, and test scope.
