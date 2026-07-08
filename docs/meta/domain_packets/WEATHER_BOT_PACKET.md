@@ -340,3 +340,31 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - If only planning is approved, the next work must be planning/static documentation only.
 - If fixture-only runtime is approved, the next work must use local/static caller-supplied or fixture-like data only and must not call live providers.
 - If live source/provider runtime is approved, the next work must still require a separate implementation ticket with exact allowed providers, allowed fields, no-lookahead rules, fail-closed rules, and test scope.
+
+
+## Weather Bot Stage 2 Source/Provider Runtime Approval Decision
+
+- This is a project approval-decision record for the source/provider runtime track only.
+- It is not owner-decision capture.
+- It is not operator decision execution.
+- It is not trading approval.
+- It is not paper-trading approval.
+- It is not production approval.
+- Recorded decision:
+  - source_provider_runtime_decision: hold_source_provider_runtime_track
+- Because the recorded decision is `hold_source_provider_runtime_track`, source/provider runtime implementation remains held.
+- Source fetching remains not approved.
+- Provider/source implementation remains not approved.
+- Live provider clients, API calls, scraping, forecast pulls, downloads, SDK usage, credentials/config loading, or live ingestion remain not approved.
+- Fixture-only source/provider runtime is not approved by this decision.
+- Live source/provider runtime is not approved by this decision.
+- Planning-only source/provider follow-up may be allowed only if it remains static documentation/planning and does not add runtime behavior.
+- Canonical routing fields remain exactly:
+  - `condition_id`
+  - `token_id`
+  - `outcome`
+- market\_id remains non-routing only.
+- token_outcome_pair remains derived only.
+- No-lookahead and fail-closed constraints remain mandatory for any future approval.
+- Any future move out of hold requires a separate explicit approval PR.
+- Recommended next ticket: `WEATHER-BOT-STAGE2-SOURCE-PROVIDER-RUNTIME-HOLD-CLOSEOUT-01`.
