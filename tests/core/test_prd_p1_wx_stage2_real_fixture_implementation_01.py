@@ -101,6 +101,7 @@ ALLOWED_CHANGED_PATHS = {
     "docs/meta/domain_packets/WEATHER_BOT_PACKET.md",
     "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py",
     "tests/core/test_weather_stage2_source_provider_runtime_approval_decision.py",
+    "tests/core/test_weather_stage2_source_provider_runtime_hold_closeout.py",
     "tests/core/canonical_id_allowlist.py",
     "tests/fixtures/weather/stage2_real_source_backed_labels/README.md",
     "tests/fixtures/weather/stage2_real_source_backed_labels/polymarket_nyc_may_2026_precipitation_less_than_2_no.json",
