@@ -1,5 +1,34 @@
 # MEG Next Chat Bootstrap Prompt
 
+## Post-PR #334 Weather Bot Stage 2 bootstrap instruction
+
+- Weather Bot Stage 2 supplied-input runtime foundation is code-complete for its approved in-memory supplied-input scope.
+- PR #331 created the source/provider runtime approval request; PR #332 recorded `source_provider_runtime_decision: hold_source_provider_runtime_track`; PR #333 completed the source/provider runtime hold closeout; PR #334 completed the post-hold static roadmap.
+- Source/provider runtime remains held.
+- Source fetching remains not approved.
+- Provider/source implementation remains not approved.
+- Fixture-only source/provider runtime remains not approved.
+- Live source/provider runtime remains not approved.
+- Paper trading remains not approved.
+- Trading/execution remains not approved.
+- Persistence/export writing remain not implemented and not approved.
+- Queue/service/scheduler/broker behavior remains not implemented and not approved.
+- Owner-decision capture and operator decision execution remain not implemented and not approved.
+- Durable workflow-completion side effects remain not implemented and not approved.
+- Production readiness is not achieved.
+- Weather Bot models market settlement rules, not generic weather.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`.
+- market\_id remains non-routing only.
+- `token_outcome_pair` remains derived only.
+- Any future source/provider, fixture-only, live-provider, persistence, paper-trading, operator-workflow, or production lane requires a separate explicit approval PR before implementation.
+- Recommended next action: pause implementation in this lane unless an explicit future approval PR changes the hold decision.
+- If the project owner wants real implementation next, the next valid ticket must be an explicit approval-change request, not implementation.
+
+```text
+You are helping with the MEG repository in Weather Bot Stage 2 post-PR #334. The supplied-input runtime foundation is code-complete only for its approved in-memory supplied-input scope. The source/provider runtime approval request was created, the recorded decision is source_provider_runtime_decision: hold_source_provider_runtime_track, the hold closeout was completed, and the post-hold static roadmap was completed. Source/provider runtime remains held. Source fetching, provider/source implementation, fixture-only source/provider runtime, live source/provider runtime, paper trading, trading/execution, persistence/export writing, queue/service/scheduler/broker behavior, owner-decision capture, operator decision execution, durable workflow-completion side effects, and production readiness remain not approved or not achieved as applicable. Canonical routing fields remain exactly condition_id, token_id, and outcome; market\_id remains non-routing only; token_outcome_pair remains derived only. Future source/provider, fixture-only, live-provider, persistence, paper-trading, operator-workflow, or production implementation requires a separate explicit approval PR. Pause implementation in this lane unless an explicit future approval PR changes the hold decision; if real implementation is desired next, the next valid ticket is an approval-change request, not implementation.
+```
+
+
 ## Post-PR #308 Weather Bot Phase 0A bootstrap instruction
 
 - PR #308 merged `WEATHER-BOT-PHASE0A-STATIC-PLANNING-LANE-CLOSEOUT-REFRESH-01`; Weather Bot Phase 0A static planning lane closed out.
