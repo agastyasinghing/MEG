@@ -398,3 +398,39 @@ Provide compact Weather Bot context for fresh chats, ticket generation, and PR r
 - No-lookahead and fail-closed constraints remain mandatory for any future approval.
 - Any future move out of hold requires a separate explicit approval PR.
 - Recommended next ticket: `WEATHER-BOT-STAGE2-POST-HOLD-STATIC-ROADMAP-01`.
+
+## Weather Bot Stage 2 Post-Hold Static Roadmap
+
+- This is a static roadmap only.
+- It does not reopen source/provider runtime implementation.
+- It does not approve source fetching.
+- It does not approve provider/source implementation.
+- It does not approve fixture-only source/provider runtime.
+- It does not approve live source/provider runtime.
+- It does not approve paper trading.
+- It does not approve trading/execution.
+- It does not approve persistence/export writing.
+- It does not approve queue/service/scheduler/broker behavior.
+- It does not approve owner-decision capture or operator decision execution.
+- It does not approve production behavior.
+- The recorded source/provider runtime decision remains:
+  - source_provider_runtime_decision: hold_source_provider_runtime_track
+- Source/provider runtime remains held until a separate explicit approval PR changes the decision.
+- The supplied-input runtime track remains the only code-complete approved runtime foundation for Weather Bot Stage 2.
+- Canonical routing fields remain exactly:
+  - `condition_id`
+  - `token_id`
+  - `outcome`
+- market\_id remains non-routing only.
+- token_outcome_pair remains derived only.
+- No-lookahead and fail-closed constraints remain mandatory for any future phase.
+- Safe future lanes must be approval-gated and may include only:
+  - source/provider planning-only gate
+  - fixture-only source/provider runtime approval gate
+  - live source/provider runtime approval gate
+  - persistence/export approval gate
+  - operator workflow approval gate
+  - paper-trade/evaluation approval gate
+  - production readiness approval gate
+- Each future lane requires a separate explicit approval PR before implementation.
+- Recommended next ticket: `WEATHER-BOT-STAGE2-POST-HOLD-HANDOFF-REFRESH-01`.
