@@ -99,7 +99,11 @@ ALLOWED_CHANGED_PATHS = {
     # Weather Bot packet plus their focused static test while preserving the
     # no-runtime/source/provider/trading scope enforced below.
     "docs/meta/domain_packets/WEATHER_BOT_PACKET.md",
+    "docs/meta/MEG_ACTIVE_STATE.md",
+    "docs/meta/MEG_CHAT_HANDOFF.md",
+    "docs/meta/MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md",
     "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py",
+    "tests/core/test_weather_stage2_post_hold_handoff_refresh.py",
     "tests/core/test_weather_stage2_source_provider_runtime_approval_decision.py",
     "tests/core/test_weather_stage2_source_provider_runtime_hold_closeout.py",
     "tests/core/canonical_id_allowlist.py",
