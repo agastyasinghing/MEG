@@ -95,7 +95,12 @@ FORBIDDEN_TEST_FRAGMENTS = (
 )
 ALLOWED_CHANGED_PATHS = {
     "docs/prd/PRD-P1-WX-STAGE2-REAL-FIXTURE-IMPLEMENTATION-01_REAL_SOURCE_BACKED_FIXTURE_IMPLEMENTATION.md",
+    # Later docs/meta approval-decision repairs may intentionally touch the
+    # Weather Bot packet plus their focused static test while preserving the
+    # no-runtime/source/provider/trading scope enforced below.
+    "docs/meta/domain_packets/WEATHER_BOT_PACKET.md",
     "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py",
+    "tests/core/test_weather_stage2_source_provider_runtime_approval_decision.py",
     "tests/core/canonical_id_allowlist.py",
     "tests/fixtures/weather/stage2_real_source_backed_labels/README.md",
     "tests/fixtures/weather/stage2_real_source_backed_labels/polymarket_nyc_may_2026_precipitation_less_than_2_no.json",
