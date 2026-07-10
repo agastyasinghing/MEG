@@ -7,10 +7,11 @@
 - PR #332 recorded `source_provider_runtime_decision: hold_source_provider_runtime_track`.
 - PR #333 completed the source/provider runtime hold closeout.
 - PR #334 completed the Weather Bot Stage 2 post-hold static roadmap.
-- Source/provider runtime remains held.
+- Source/provider runtime decision is now `source_provider_runtime_decision: approve_fixture_only_source_provider_runtime`.
+- Fixture-only source/provider runtime planning and implementation may proceed only in a separate future implementation PR; live providers/source fetching remain not approved.
 - Source fetching remains not approved.
 - Provider/source implementation remains not approved.
-- Fixture-only source/provider runtime remains not approved.
+- Fixture-only source/provider runtime implementation is not implemented by this approval-change PR.
 - Live source/provider runtime remains not approved.
 - Paper trading remains not approved.
 - Trading/execution remains not approved.
@@ -24,8 +25,45 @@
 - market\_id remains non-routing only.
 - `token_outcome_pair` remains derived only.
 - Any future source/provider, fixture-only, live-provider, persistence, paper-trading, operator-workflow, or production lane requires a separate explicit approval PR before implementation.
-- Recommended next action: pause implementation in this lane unless an explicit future approval PR changes the hold decision.
-- If the project owner wants real implementation next, the next valid ticket must be an explicit approval-change request, not implementation.
+- Recommended next action: use the separate fixture-only implementation ticket; do not start live provider runtime.
+- Next valid implementation ticket: `WEATHER-BOT-STAGE2-FIXTURE-ONLY-SOURCE-PROVIDER-RUNTIME-SCAFFOLD-01`.
+
+## Weather Bot Stage 2 Fixture-Only Source/Provider Runtime Approval Change
+
+- This is an explicit approval-change record for the Weather Bot Stage 2 source/provider runtime lane.
+- Previous recorded decision was: source_provider_runtime_decision: hold_source_provider_runtime_track
+- Historical post-hold handoff wording said: Source/provider runtime remains held.
+- Historical post-hold handoff wording said: Fixture-only source/provider runtime remains not approved.
+- Historical post-hold handoff wording said the next valid ticket must be an explicit approval-change request, not implementation.
+- New recorded decision is: source_provider_runtime_decision: approve_fixture_only_source_provider_runtime
+- The approval is limited to fixture-only/local-static/caller-supplied source-provider runtime planning and implementation in a future PR.
+- This PR does not implement fixture-only runtime.
+- This PR does not approve live source/provider runtime; live source/provider runtime remains not approved.
+- Live providers remain not approved.
+- Live source fetching remains not approved.
+- Provider clients/API calls/scraping/forecast pulls/downloads/SDK usage/credentials/config loading/live ingestion remain not approved.
+- Provider clients, API calls, scraping, forecast pulls, downloads, SDK usage, credentials/config loading, and live ingestion remain not approved.
+- Paper trading remains not approved.
+- Trading/execution remains not approved.
+- Persistence/export writing remain not approved by this decision.
+- Queue/service/scheduler/broker behavior remains not approved by this decision.
+- Owner-decision capture/operator decision execution remain not approved by this decision.
+- Owner-decision capture and operator decision execution remain not approved by this decision.
+- Durable workflow-completion side effects remain not approved by this decision.
+- Production readiness is not achieved.
+- Any fixture-only runtime implementation must preserve fail-closed behavior.
+- Any fixture-only runtime implementation must preserve no-lookahead constraints.
+- Any fixture-only runtime implementation must not route on market\_id.
+- Any fixture-only runtime implementation must preserve canonical routing fields exactly:
+  - condition_id
+  - token_id
+  - outcome
+- token_outcome_pair remains derived only.
+- Any fixture-only runtime implementation must not bypass operator review.
+- Any fixture-only runtime implementation must not enable paper trading, trading, order placement, autonomy, persistence/export writing, live provider calls, or production behavior.
+- Fixture-only implementation may proceed only in a separate implementation PR.
+- The next implementation ticket is fixture-only, not live provider runtime.
+- The next valid implementation ticket is: WEATHER-BOT-STAGE2-FIXTURE-ONLY-SOURCE-PROVIDER-RUNTIME-SCAFFOLD-01
 
 
 ## Post-PR #308 Weather Bot Phase 0A static planning lane closeout handoff
