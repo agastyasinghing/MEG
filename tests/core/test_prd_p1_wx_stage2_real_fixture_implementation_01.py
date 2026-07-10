@@ -104,6 +104,7 @@ ALLOWED_CHANGED_PATHS = {
     "docs/meta/MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md",
     "tests/core/test_prd_p1_wx_stage2_real_fixture_implementation_01.py",
     "tests/core/test_weather_stage2_post_hold_handoff_refresh.py",
+    "tests/core/test_weather_stage2_fixture_only_source_provider_runtime_approval_change.py",
     "tests/core/test_weather_stage2_source_provider_runtime_approval_decision.py",
     "tests/core/test_weather_stage2_source_provider_runtime_hold_closeout.py",
     "tests/core/canonical_id_allowlist.py",
