@@ -1,5 +1,19 @@
 # Weather Bot Context Packet
 
+## Post-PR #355 Stage 2 fixture-only completion packet (controlling)
+
+- Stage 2 approved fixture-only/local-static/caller-supplied source/provider runtime scope is complete and closed.
+- PR #355 is the latest completed Stage 2 checkpoint and closed the fixture-only runtime scope at the documentation/readiness layer.
+- This post-PR #355 Stage 2 packet controls over stale post-PR #334, Phase 0A, source-fetching-hold, and older Stage 2 sections retained below.
+- All 18 runtime objects landed in PRs #337 through #354.
+- Positive full-chain validation path and expected negative fail-closed validation path are complete as metadata representation only. Positive validation requires `runtime_gate_ready`; correctly represented expected failure can validate as `PASSED` while retaining `runtime_gate_blocked`; the intentionally invalid nested integration smoke is not directly required to pass.
+- Live provider/source fetching is not approved. Stage 3 is not approved. Paper simulation, runtime observation, and execution are not approved.
+- Current evidence-ladder boundary remains at the completed approved Stage 2 fixture-only scope.
+- Weather Bot models market settlement rules, not generic weather; canonical routing fields are exactly `condition_id`, `token_id`, and `outcome`; `market_id` is non-routing only; `token_outcome_pair` is derived only.
+- Persistence/export writing, real queues/services, schedulers, brokers, handoff delivery, owner-decision capture, operator-decision execution, durable workflow-completion side effects, trading, autonomy, and production behavior remain unapproved.
+- The next chat may assess Stage 3 planning readiness only after user direction. No later stage begins automatically.
+
+
 ## Post-PR #308 Weather Bot Phase 0A packet status
 
 - Latest Weather Bot static planning closeout: PR #308 / `WEATHER-BOT-PHASE0A-STATIC-PLANNING-LANE-CLOSEOUT-REFRESH-01` merged the static planning lane closeout.

@@ -1,5 +1,20 @@
 # MEG Active State
 
+## Post-PR #355 Weather Bot Stage 2 final handoff refresh (controlling)
+
+- Newest controlling Weather Bot Stage 2 checkpoint: PR #355 / `WEATHER-BOT-STAGE2-FIXTURE-ONLY-SOURCE-PROVIDER-RUNTIME-CLOSEOUT-READINESS-01`, verified in repository history as merge commit `9f8d5bb`.
+- This post-PR #355 Stage 2 handoff controls over stale post-PR #334, Phase 0A, source-fetching-hold, and older Stage 2 sections retained below.
+- Stage 2 approved fixture-only/local-static/caller-supplied source/provider runtime scope is code-complete and closed.
+- All 18 fixture-only runtime-chain objects landed in PRs #337 through #354.
+- Positive full-chain validation and expected-negative fail-closed validation paths landed; positive representation requires `runtime_gate_ready`, while correct expected-failure representation can validate as `PASSED` and retain `runtime_gate_blocked`.
+- The intentionally invalid nested integration smoke is not directly required to pass. No smoke is executed or generated, and no failure is injected or generated.
+- Live-provider/source-fetching runtime remains unapproved; Stage 3 remains unapproved.
+- Weather Bot models market settlement rules, not generic weather. Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `market_id` remains non-routing only; `token_outcome_pair` remains derived only.
+- Persistence/export writing, real queue services, schedulers, brokers, handoff delivery, owner-decision capture, operator-decision execution, durable workflow-completion side effects, paper simulation, runtime observation, trading, execution, autonomy, and production behavior remain unapproved.
+- Repository is ready for a fresh chat. The next action is fresh-chat bootstrap, not another runtime bridge, not a standalone self-review ticket, and not automatic Stage 3 work.
+- No repository ticket should be created automatically in the new chat; wait for explicit user direction.
+
+
 ## Post-PR #334 Weather Bot Stage 2 post-hold handoff refresh
 
 - Weather Bot Stage 2 supplied-input runtime foundation is code-complete for its approved in-memory supplied-input scope.
