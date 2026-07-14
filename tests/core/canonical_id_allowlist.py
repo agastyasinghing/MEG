@@ -134,6 +134,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_phase0a_manual_review_decision_record_planning_01.py",
     "docs/prd/WEATHER-BOT-PHASE0A-PHASE-CLOSEOUT-AND-RUNTIME-APPROVAL-READINESS-INVENTORY-01.md",
     "tests/core/test_weather_bot_phase0a_phase_closeout_runtime_approval_readiness_inventory_01.py",
+    "docs/prd/WEATHER-BOT-STAGE2-FIXTURE-ONLY-SOURCE-PROVIDER-RUNTIME-CLOSEOUT-READINESS-01.md",
+    "tests/core/test_weather_bot_stage2_fixture_only_source_provider_runtime_closeout_readiness_01.py",
 }
 
 
@@ -418,6 +420,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Phase closeout runtime approval readiness inventory uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-PHASE-CLOSEOUT-AND-RUNTIME-APPROVAL-READINESS-INVENTORY-01.md": 3,
     "tests/core/test_weather_bot_phase0a_phase_closeout_runtime_approval_readiness_inventory_01.py": 6,
+    # Stage 2 fixture-only runtime closeout readiness uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-STAGE2-FIXTURE-ONLY-SOURCE-PROVIDER-RUNTIME-CLOSEOUT-READINESS-01.md": 2,
+    "tests/core/test_weather_bot_stage2_fixture_only_source_provider_runtime_closeout_readiness_01.py": 2,
     # Runtime approval request packet planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md": 2,
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py": 5,
