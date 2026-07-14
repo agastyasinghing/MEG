@@ -400,8 +400,22 @@ def test_exact_observed_market_id_counts_match_allowlist_for_new_files() -> None
 
 
 def test_changed_path_inventory_is_limited_to_allowed_paths_for_self_review() -> None:
-    modified = subprocess.run(
-        ["git", "diff", "--name-only", "HEAD"],
+    subprocess.run(
+        ["git", "cat-file", "-e", f"{MERGE_COMMIT}^{{commit}}"],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "merge-base", "--is-ancestor", MERGE_COMMIT, "HEAD"],
+        cwd=REPO_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+    committed = subprocess.run(
+        ["git", "diff", "--name-only", "--diff-filter=ACMRTD", f"{MERGE_COMMIT}...HEAD"],
         cwd=REPO_ROOT,
         check=True,
         text=True,
@@ -414,5 +428,11 @@ def test_changed_path_inventory_is_limited_to_allowed_paths_for_self_review() ->
         text=True,
         capture_output=True,
     ).stdout.splitlines()
-    changed = {line.strip() for line in [*modified, *untracked] if line.strip()}
-    assert changed <= ALLOWED_CHANGED_PATHS
+    changed = {line.strip() for line in [*committed, *untracked] if line.strip()}
+    missing = ALLOWED_CHANGED_PATHS - changed
+    unexpected = changed - ALLOWED_CHANGED_PATHS
+    assert changed, "predecessor-to-head path inventory unexpectedly empty"
+    assert changed == ALLOWED_CHANGED_PATHS, (
+        "predecessor-to-head path inventory mismatch: "
+        f"missing={sorted(missing)}, unexpected={sorted(unexpected)}, observed={sorted(changed)}"
+    )
