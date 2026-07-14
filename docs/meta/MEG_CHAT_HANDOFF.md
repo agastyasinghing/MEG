@@ -1,5 +1,19 @@
 # MEG Chat Handoff
 
+## Post-PR #355 Weather Bot Stage 2 fresh-chat handoff (controlling)
+
+- Exact PR sequence endpoint: PR #336 approved fixture-only/local-static/caller-supplied source/provider runtime planning and implementation; PRs #337 through #354 landed the 18-object fixture-only runtime chain; PR #353 landed positive full-chain integration-smoke bridge representation; PR #354 landed expected fail-closed negative-smoke bridge representation; PR #355 landed the Stage 2 fixture-only runtime closeout/readiness artifact.
+- This post-PR #355 Stage 2 handoff controls over stale post-PR #334, Phase 0A, source-fetching-hold, and older Stage 2 sections retained below.
+- Current scope: Stage 2 approved fixture-only/local-static/caller-supplied source/provider runtime is code-complete and closed only within the fixture-only boundary.
+- Non-approval boundaries: live providers, live source fetching, provider clients, API calls, scraping, downloads, provider SDK usage, credentials/secrets/environment/config loading, live ingestion, generated data, fixture modification, Stage 3, scoring, evaluation execution, backtesting, paper simulation, runtime observation, trading/execution, persistence/export writing, real queue services, scheduling, brokers, handoff delivery, owner-decision capture, operator-decision execution, durable workflow-completion side effects, autonomy, and production behavior remain unapproved.
+- Canonical routing posture is exact: route only on `condition_id`, `token_id`, and `outcome`; `market_id` remains non-routing only; keep `token_outcome_pair` derived only; no routing on `market_id` is approved.
+- Positive smoke distinction: fully valid supplied-chain metadata validation only, no smoke execution or generation, and `runtime_gate_ready` is required.
+- Negative smoke distinction: expected fail-closed representation can validate as `PASSED` while retaining `runtime_gate_blocked`; the intentionally invalid nested integration smoke is not directly required to pass; no progression, delivery, generation, or failure injection is authorized.
+- Current safe action is to start a new chat using `docs/meta/MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md`.
+- The new chat should not assume Stage 3 approval and should ask or wait for the user's direction before creating a Stage 3 planning/readiness ticket.
+- No owner-decision capture lane should be introduced.
+
+
 ## Post-PR #334 Weather Bot Stage 2 post-hold handoff refresh
 
 - Weather Bot Stage 2 supplied-input runtime foundation is code-complete for its approved in-memory supplied-input scope.
@@ -92,7 +106,7 @@
 - Weather Bot models the market settlement rule, not generic weather.
 - Weather Bot Phase 0A remains held and closed for source-fetching runtime work; source-fetching runtime track remains closed/held; closed owner decision remains `hold_source_fetching_runtime_track`; source fetching remains not implemented; implementation approval remains not granted.
 - Stage 2 runtime metadata scaffolds remain supplied-metadata-only and fail-closed.
-- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `token_outcome_pair` remains a derived relationship; `market_id` remains non-routing only; no routing on `market_id` is introduced or approved.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `token_outcome_pair` remains a derived relationship; the legacy market field remains non-routing only; no routing on that field is introduced or approved.
 - Paper-trade readiness and evaluation readiness remain not achieved; operator workflow, supplied market-contract input, settlement-rule interpreter, no-lookahead validation, and fail-closed validation runtime behavior remain not implemented.
 - Source fetching, provider connectors, provider clients, live provider/source fetching, forecast pulls, API calls, scraping, file downloads, provider SDK usage, credentials/config loading, generated data, fixtures, schema changes, DB migrations, runtime validation, runtime parser/interpreter, runtime ingestion, scoring, evaluation execution, metric persistence, backtesting, paper trading, order simulation, trading, autonomy, production, reports, persistence, audit output, and exports remain not approved.
 - Completed Phase 0A planning artifacts: `WEATHER-BOT-PHASE0A-NON-SOURCE-FETCHING-SCOPE-INVENTORY-01`, `WEATHER-BOT-PHASE0A-MARKET-CONTRACT-STATIC-INVENTORY-01`, `WEATHER-BOT-PHASE0A-CANONICAL-IDENTIFIER-STATIC-AUDIT-01`, `WEATHER-BOT-PHASE0A-NO-LOOKAHEAD-POLICY-DOCUMENTATION-01`, `WEATHER-BOT-PHASE0A-FAIL-CLOSED-ERROR-TAXONOMY-PLANNING-01`, `WEATHER-BOT-PHASE0A-STAGE2-METADATA-CONTRACT-DOCUMENTATION-01`, `WEATHER-BOT-PHASE0A-PAPER-TRADE-READINESS-GAP-INVENTORY-01`, `WEATHER-BOT-PHASE0A-EVALUATION-METRICS-PLANNING-01`, `WEATHER-BOT-PHASE0A-OPERATOR-WORKFLOW-PLANNING-01`, `WEATHER-BOT-PHASE0A-SUPPLIED-MARKET-CONTRACT-INPUT-PLANNING-01`, `WEATHER-BOT-PHASE0A-SETTLEMENT-RULE-INTERPRETER-PLANNING-01`, `WEATHER-BOT-PHASE0A-NO-LOOKAHEAD-VALIDATION-PLANNING-01`, `WEATHER-BOT-PHASE0A-FAIL-CLOSED-VALIDATION-PLANNING-01`.

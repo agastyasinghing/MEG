@@ -1,5 +1,20 @@
 # MEG Next Chat Bootstrap Prompt
 
+## Post-PR #355 Weather Bot Stage 2 bootstrap (controlling)
+
+Copy this into the next chat after the handoff-refresh PR merges:
+
+```text
+You are working in agastyasinghing/MEG. Read AGENTS.md first. Then read the four refreshed handoff documents: docs/meta/MEG_ACTIVE_STATE.md, docs/meta/MEG_CHAT_HANDOFF.md, docs/meta/MEG_NEXT_CHAT_BOOTSTRAP_PROMPT.md, and docs/meta/domain_packets/WEATHER_BOT_PACKET.md. Also read docs/prd/WEATHER-BOT-STAGE2-FIXTURE-ONLY-SOURCE-PROVIDER-RUNTIME-CLOSEOUT-READINESS-01.md and docs/prd/WEATHER-BOT-STAGE2-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md.
+
+Before naming PR numbers, verify current GitHub/repository state. Treat PR #355 and the handoff-refresh PR as controlling over stale post-PR #334, Phase 0A, source-fetching-hold, or older Stage 2 sections. Recognize that Stage 2's approved fixture-only/local-static/caller-supplied source/provider runtime scope is complete and closed, with all 18 runtime-chain objects landed and positive plus expected-negative validation paths represented.
+
+Recognize that live-provider/source-fetching runtime and Stage 3 remain unapproved. Preserve canonical routing fields exactly: condition_id, token_id, and outcome. `market_id` remains non-routing only; avoid market_id routing. Preserve token_outcome_pair as derived only. Avoid owner-decision capture. Do not create a repository ticket until the user explicitly asks. When the user asks to proceed, begin with Stage 3 planning/readiness analysis rather than implementation. Never infer scoring, backtesting, simulation, paper trading, runtime observation, execution, autonomy, or production approval.
+```
+
+This post-PR #355 Stage 2 bootstrap controls over stale initial-scaffold, Phase 0A, source-fetching-hold, and older Stage 2 recommendations retained below.
+
+
 ## Post-PR #334 Weather Bot Stage 2 bootstrap instruction
 
 - Weather Bot Stage 2 supplied-input runtime foundation is code-complete for its approved in-memory supplied-input scope.
@@ -72,7 +87,7 @@ You are helping with the MEG repository in Weather Bot Stage 2 after WEATHER-BOT
 - PR #308 merged `WEATHER-BOT-PHASE0A-STATIC-PLANNING-LANE-CLOSEOUT-REFRESH-01`; Weather Bot Phase 0A static planning lane closed out.
 - PR #307 remains predecessor context; PR #283 remains excluded unless explicitly merged and is not a predecessor.
 - Runtime/source/provider/paper-trade/trading remain unapproved: runtime approval remains not granted; source-fetching approval remains not granted; provider/source approval remains not granted; paper-trade approval remains not granted; trading/production approval remains not granted.
-- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; `market_id` remains non-routing only; `token_outcome_pair` remains derived only.
+- Canonical routing fields remain exactly `condition_id`, `token_id`, and `outcome`; the legacy market field remains non-routing only; `token_outcome_pair` remains derived only.
 - Source-fetching runtime track remains closed/held with `hold_source_fetching_runtime_track`; source fetching remains not implemented; provider/source implementation remains not approved.
 - No owner-decision capture lane is active; do not reopen owner-decision capture.
 - No runtime/source/provider/paper-trade/trading implementation lane is active; continue only with meta/handoff maintenance or narrow revision unless explicitly instructed otherwise.
