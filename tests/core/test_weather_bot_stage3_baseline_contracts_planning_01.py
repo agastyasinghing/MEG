@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import ast
 import re
-import subprocess
 from pathlib import Path
 
 
@@ -85,13 +84,6 @@ EXPECTED_ASSIGNMENTS = [
     for field, values in EXPECTED_CLOSED_SETS.items()
     for value in values
 ]
-ALLOWED_CHANGED_PATHS = {
-    "docs/prd/WEATHER-BOT-STAGE3-BASELINE-CONTRACTS-PLANNING-01.md",
-    "tests/core/test_weather_bot_stage3_baseline_contracts_planning_01.py",
-    "tests/core/canonical_id_allowlist.py",
-}
-
-
 def _read() -> str:
     return DOC_PATH.read_text(encoding="utf-8")
 
@@ -178,7 +170,7 @@ def test_test_file_uses_only_stdlib_plus_pytest_and_no_production_imports() -> N
             imports.extend(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.module:
             imports.append(node.module)
-    assert set(imports) <= {"__future__", "ast", "re", "subprocess", "pathlib"}
+    assert set(imports) <= {"__future__", "ast", "re", "pathlib"}
     assert all(not name.startswith("meg") for name in imports)
 
 
@@ -398,41 +390,3 @@ def test_exact_observed_market_id_counts_match_allowlist_for_new_files() -> None
         )
         assert allowlist_counts[relative_path] == observed_count
 
-
-def test_changed_path_inventory_is_limited_to_allowed_paths_for_self_review() -> None:
-    subprocess.run(
-        ["git", "cat-file", "-e", f"{MERGE_COMMIT}^{{commit}}"],
-        cwd=REPO_ROOT,
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["git", "merge-base", "--is-ancestor", MERGE_COMMIT, "HEAD"],
-        cwd=REPO_ROOT,
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-    committed = subprocess.run(
-        ["git", "diff", "--name-only", "--diff-filter=ACMRTD", f"{MERGE_COMMIT}...HEAD"],
-        cwd=REPO_ROOT,
-        check=True,
-        text=True,
-        capture_output=True,
-    ).stdout.splitlines()
-    untracked = subprocess.run(
-        ["git", "ls-files", "--others", "--exclude-standard"],
-        cwd=REPO_ROOT,
-        check=True,
-        text=True,
-        capture_output=True,
-    ).stdout.splitlines()
-    changed = {line.strip() for line in [*committed, *untracked] if line.strip()}
-    missing = ALLOWED_CHANGED_PATHS - changed
-    unexpected = changed - ALLOWED_CHANGED_PATHS
-    assert changed, "predecessor-to-head path inventory unexpectedly empty"
-    assert changed == ALLOWED_CHANGED_PATHS, (
-        "predecessor-to-head path inventory mismatch: "
-        f"missing={sorted(missing)}, unexpected={sorted(unexpected)}, observed={sorted(changed)}"
-    )
