@@ -88,6 +88,7 @@ CLOSED_SETS = {
 }
 
 ASSIGNMENT_RE = re.compile(r"^- (?P<field>[a-z0-9 ][a-z0-9 -]*): (?P<value>[a-z0-9_]+)$", re.MULTILINE)
+CLOSED_SET_RE = re.compile(r"^- (?P<field>[a-z0-9 ][a-z0-9 -]*): (?P<values>[a-z0-9_, ]+)$", re.MULTILINE)
 
 
 def _read() -> str:
@@ -106,6 +107,21 @@ def _assignment_pairs(text: str) -> set[tuple[str, str]]:
     machine = _section(text, MACHINE_HEADING)
     actual = machine.split("Actual assignments:", 1)[1].split("Hybrid/custom values", 1)[0]
     return {(m.group("field"), m.group("value")) for m in ASSIGNMENT_RE.finditer(actual)}
+
+
+def _declared_closed_sets(text: str) -> dict[str, set[str]]:
+    machine = _section(text, MACHINE_HEADING)
+    assert "Closed sets:" in machine
+    assert machine.index("Closed sets:") < machine.index("Actual assignments:")
+    closed = machine.split("Closed sets:", 1)[1].split("Actual assignments:", 1)[0]
+    declared: dict[str, set[str]] = {}
+    for match in CLOSED_SET_RE.finditer(closed):
+        field = match.group("field")
+        values = {value.strip() for value in match.group("values").split(",")}
+        assert field not in declared
+        assert values
+        declared[field] = values
+    return declared
 
 
 def test_document_exists_canonical_id_and_required_sections() -> None:
@@ -245,7 +261,8 @@ def test_non_approvals_canonical_routing_and_next_ticket() -> None:
 
 
 def test_machine_checkable_assignments_are_exact_closed_sets() -> None:
-    pairs = _assignment_pairs(_read())
+    text = _read()
+    pairs = _assignment_pairs(text)
     assert pairs == REQUIRED_ASSIGNMENTS
     by_field: dict[str, set[str]] = {}
     for field, value in pairs:
@@ -253,3 +270,15 @@ def test_machine_checkable_assignments_are_exact_closed_sets() -> None:
     assert set(by_field) == set(CLOSED_SETS)
     for field, values in by_field.items():
         assert values == CLOSED_SETS[field]
+
+
+def test_declared_closed_sets_are_complete_and_precede_actual_assignments() -> None:
+    declared = _declared_closed_sets(_read())
+    assert declared == CLOSED_SETS
+    declared_pairs = {
+        (field, value)
+        for field, values in declared.items()
+        for value in values
+    }
+    assert declared_pairs == REQUIRED_ASSIGNMENTS
+    assert _assignment_pairs(_read()) == declared_pairs

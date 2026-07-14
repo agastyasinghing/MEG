@@ -78,6 +78,30 @@ Recommend exactly `WEATHER-BOT-STAGE3-STRICT-OOS-SPLIT-CONTRACT-PLANNING-01`. It
 
 ## Machine-checkable assignments
 
+Closed sets:
+
+- weather bot planning stage: weather_bot_stage3_probability_record_contract_planning
+- immediate predecessor pr: pr_358
+- ticket lifecycle status: docs_static_test_only, contract_planning_only
+- record contract status: requirements_defined, runtime_schema_not_created
+- scoring target posture: venue_defined_settlement_outcome
+- record immutability posture: immutable_after_accepted_creation_required
+- correction posture: superseding_record_required
+- probability domain: closed_unit_interval
+- prediction representation: binary_outcome_probability, full_predictive_distribution, finite_ensemble
+- time availability posture: prediction_as_of_required, input_publication_availability_required
+- label join posture: canonical_route_and_target_rule_required
+- mismatch posture: fail_closed
+- scoring execution posture: not_approved
+- probability generation posture: not_approved
+- persistence posture: not_approved
+- canonical routing field: condition_id, token_id, outcome
+- non routing field: market_id
+- derived identifier field: token_outcome_pair
+- next ticket recommendation: stage3_strict_oos_split_contract_planning
+- evidence status: probability_record_contract_planning_recorded
+- label confidence: confirmed
+
 Actual assignments:
 
 - weather bot planning stage: weather_bot_stage3_probability_record_contract_planning
