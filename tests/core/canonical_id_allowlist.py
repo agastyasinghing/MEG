@@ -138,6 +138,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_stage2_fixture_only_source_provider_runtime_closeout_readiness_01.py",
     "docs/prd/WEATHER-BOT-STAGE2-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md",
     "tests/core/test_weather_bot_stage2_phase_summary_and_handoff_refresh_01.py",
+    "docs/prd/WEATHER-BOT-STAGE3-READINESS-INVENTORY-01.md",
+    "tests/core/test_weather_bot_stage3_readiness_inventory_01.py",
 }
 
 
@@ -428,6 +430,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Stage 2 phase summary and handoff refresh uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-STAGE2-PHASE-SUMMARY-AND-HANDOFF-REFRESH-01.md": 3,
     "tests/core/test_weather_bot_stage2_phase_summary_and_handoff_refresh_01.py": 3,
+    # Stage 3 readiness inventory uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-STAGE3-READINESS-INVENTORY-01.md": 5,
+    "tests/core/test_weather_bot_stage3_readiness_inventory_01.py": 4,
     # Runtime approval request packet planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md": 2,
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py": 5,
