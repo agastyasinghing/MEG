@@ -117,9 +117,13 @@ def test_exact_split_roles_and_secondary_generalization_matrix() -> None:
     for line in roles.splitlines():
         if line.startswith("| ") and "---" not in line and "Split role" not in line:
             cells = [cell.strip() for cell in line.strip("|").split("|")]
+            assert len(cells) == 2
             rows[cells[0]] = cells[1]
-    assert set(rows) == {"train", "calibration", "test"}
-    assert "never used for fitting" in rows["test"]
+    assert rows == {
+        "train": "fitting and feature-selection role using only information permitted before the applicable fold cutoff",
+        "calibration": "separate calibration role when the method or diagnostic requires calibration, using only isolated permitted information",
+        "test": "strict holdout role whose records are never used for fitting, feature selection, threshold selection, calibration tuning, hyperparameter tuning, bin selection, or split redesign",
+    }
 
     modes = _section(_read(), "Secondary generalization-mode matrix")
     mode_rows = {}
