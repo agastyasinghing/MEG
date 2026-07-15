@@ -152,6 +152,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_stage3_scoring_and_diagnostics_contract_planning_01.py",
     "docs/prd/WEATHER-BOT-STAGE3-EVALUATION-RESULT-RECORD-CONTRACT-PLANNING-01.md",
     "tests/core/test_weather_bot_stage3_evaluation_result_record_contract_planning_01.py",
+    "docs/prd/WEATHER-BOT-STAGE3-EVALUATION-CLAIM-CONTRACT-PLANNING-01.md",
+    "tests/core/test_weather_bot_stage3_evaluation_claim_contract_planning_01.py",
 }
 
 
@@ -463,6 +465,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Stage 3 evaluation result record planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-STAGE3-EVALUATION-RESULT-RECORD-CONTRACT-PLANNING-01.md": 3,
     "tests/core/test_weather_bot_stage3_evaluation_result_record_contract_planning_01.py": 6,
+    # Stage 3 evaluation claim contract planning uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-STAGE3-EVALUATION-CLAIM-CONTRACT-PLANNING-01.md": 3,
+    "tests/core/test_weather_bot_stage3_evaluation_claim_contract_planning_01.py": 5,
     # Runtime approval request packet planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md": 2,
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py": 5,
