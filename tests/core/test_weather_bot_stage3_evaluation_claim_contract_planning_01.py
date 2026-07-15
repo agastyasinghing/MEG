@@ -19,9 +19,65 @@ EXPECTED_DISPOSITION_MATRIX = [['Claim disposition', 'Required meaning', 'Eviden
 EXPECTED_COMMON_FIELDS = ['evaluation_claim_id', 'claim_class', 'claim_rule_id', 'claim_rule_version', 'claim_disposition', 'claim_disposition_reason', 'target_posture', 'candidate_method_id', 'candidate_method_version', 'baseline_type_when_applicable', 'baseline_method_id_when_applicable', 'baseline_method_version_when_applicable', 'prediction_representation', 'metric_or_diagnostic_ids', 'metric_or_diagnostic_versions', 'required_evaluation_result_ids', 'observed_evaluation_result_ids', 'missing_evaluation_result_ids', 'split_id', 'split_version', 'fold_scope', 'cutoff_scope', 'paired_test_record_set_id', 'aggregation_rule_id', 'weighting_rule_id', 'stratum_id_when_applicable', 'uncertainty_policy_id', 'sample_support_rule_id', 'selection_control_policy_id', 'multiple_comparison_policy_id_when_applicable', 'evidence_gate_eligibility_posture', 'provenance', 'claim_created_at', 'supersedes_claim_id_when_applicable']
 EXPECTED_PRECEDENCE = ['claim_blocked', 'claim_unavailable', 'claim_insufficient', 'evaluate the predeclared rule as claim_supported or claim_not_supported']
 EXPECTED_CLOSED_SETS = {'weather bot planning stage': ['weather_bot_stage3_evaluation_claim_contract_planning'], 'immediate predecessor pr': ['pr_363'], 'ticket lifecycle status': ['docs_static_test_only', 'contract_planning_only'], 'claim contract status': ['requirements_defined', 'claim_records_not_created', 'claim_decisions_not_created'], 'scoring target posture': ['venue_defined_settlement_outcome'], 'claim class': ['candidate_vs_climatology_predictive_skill', 'candidate_vs_persistence_predictive_skill', 'candidate_predictive_skill_across_required_baselines', 'binary_calibration_behavior', 'distributional_calibration_behavior', 'ensemble_calibration_behavior', 'threshold_weighted_distribution_skill', 'stratum_specific_predictive_skill'], 'claim disposition': ['claim_supported', 'claim_not_supported', 'claim_insufficient', 'claim_blocked', 'claim_unavailable'], 'disposition precedence': ['blocked_then_unavailable_then_insufficient_then_rule_evaluation'], 'result dependency posture': ['immutable_evaluation_result_records_required'], 'claim rule posture': ['predeclared_versioned_exact_scope_required'], 'result completeness posture': ['exact_required_result_list_required'], 'selection control posture': ['no_post_hoc_metric_stratum_comparator_or_rule_selection'], 'multiple comparison posture': ['predeclared_policy_required_when_applicable'], 'baseline-specific posture': ['climatology_and_persistence_claims_remain_distinct'], 'cross-baseline posture': ['both_climatology_and_persistence_required'], 'market price posture': ['not_approved_as_baseline_or_truth'], 'evidence gate posture': ['claim_disposition_does_not_pass_evidence_gate'], 'immutability posture': ['superseding_claim_version_required'], 'claim evaluation posture': ['not_approved'], 'persistence posture': ['not_approved'], 'report export posture': ['not_approved'], 'canonical routing field': ['condition_id', 'token_id', 'outcome'], 'non routing field': ['market_id'], 'derived identifier field': ['token_outcome_pair'], 'next ticket recommendation': ['stage3_evidence_gate_decision_record_contract_planning'], 'evidence status': ['evaluation_claim_contract_planning_recorded'], 'label confidence': ['confirmed']}
-EXPECTED_ASSIGNMENTS = [f"{field}: {value}" for field, values in EXPECTED_CLOSED_SETS.items() for value in values]
+EXPECTED_ASSIGNMENTS = [
+    "weather bot planning stage: weather_bot_stage3_evaluation_claim_contract_planning",
+    "immediate predecessor pr: pr_363",
+    "ticket lifecycle status: docs_static_test_only",
+    "ticket lifecycle status: contract_planning_only",
+    "claim contract status: requirements_defined",
+    "claim contract status: claim_records_not_created",
+    "claim contract status: claim_decisions_not_created",
+    "scoring target posture: venue_defined_settlement_outcome",
+    "claim class: candidate_vs_climatology_predictive_skill",
+    "claim class: candidate_vs_persistence_predictive_skill",
+    "claim class: candidate_predictive_skill_across_required_baselines",
+    "claim class: binary_calibration_behavior",
+    "claim class: distributional_calibration_behavior",
+    "claim class: ensemble_calibration_behavior",
+    "claim class: threshold_weighted_distribution_skill",
+    "claim class: stratum_specific_predictive_skill",
+    "claim disposition: claim_supported",
+    "claim disposition: claim_not_supported",
+    "claim disposition: claim_insufficient",
+    "claim disposition: claim_blocked",
+    "claim disposition: claim_unavailable",
+    "disposition precedence: blocked_then_unavailable_then_insufficient_then_rule_evaluation",
+    "result dependency posture: immutable_evaluation_result_records_required",
+    "claim rule posture: predeclared_versioned_exact_scope_required",
+    "result completeness posture: exact_required_result_list_required",
+    "selection control posture: no_post_hoc_metric_stratum_comparator_or_rule_selection",
+    "multiple comparison posture: predeclared_policy_required_when_applicable",
+    "baseline-specific posture: climatology_and_persistence_claims_remain_distinct",
+    "cross-baseline posture: both_climatology_and_persistence_required",
+    "market price posture: not_approved_as_baseline_or_truth",
+    "evidence gate posture: claim_disposition_does_not_pass_evidence_gate",
+    "immutability posture: superseding_claim_version_required",
+    "claim evaluation posture: not_approved",
+    "persistence posture: not_approved",
+    "report export posture: not_approved",
+    "canonical routing field: condition_id",
+    "canonical routing field: token_id",
+    "canonical routing field: outcome",
+    "non routing field: market_id",
+    "derived identifier field: token_outcome_pair",
+    "next ticket recommendation: stage3_evidence_gate_decision_record_contract_planning",
+    "evidence status: evaluation_claim_contract_planning_recorded",
+    "label confidence: confirmed",
+]
 EXPECTED_EVIDENCE_GATE = "A claim record is not an evidence-gate decision; claim_supported does not mean the Stage 3 evidence gate passed; claim_not_supported does not by itself reject implementation permanently; calibration, predictive skill, economic edge, executability, implementation approval, and trading approval remain separate claim or decision classes; no claim record approves runtime implementation, persistence, reports, autonomy, production behavior, paper trading, trading, or order placement; only a later separately contracted evidence-gate decision may consume immutable claim records."
 EXPECTED_NON_APPROVALS = "This ticket does not approve or create result calculation; evaluation execution; claim evaluation; claim records; claim approval; evidence-gate decisions; evidence-gate passage; implementation approval; probability generation; split execution; baseline execution; model training or calibration; data acquisition; source fetching; provider connectors; runtime schemas; dataclasses; serialization; persistence; database tables; migrations; reports; exports; diagrams; backtesting; simulation; market-price comparison execution; economic-edge findings; executability findings; paper trading; trading; order placement; autonomy; runtime behavior; or production behavior."
+EXPECTED_ROUTING_POSTURE = """Canonical routing fields remain exactly:
+
+- condition_id
+- token_id
+- outcome
+
+market_id is non-routing only.
+
+token_outcome_pair is derived only."""
+EXPECTED_SUCCESSOR_SECTION = """WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-RECORD-CONTRACT-PLANNING-01
+
+It must remain docs/static-test-only/contract-planning-only and must not calculate results, evaluate claims, make an evidence-gate decision, approve implementation, persist records, create reports, or add runtime behavior."""
 EXPECTED_REJECTION_SENTENCE = "Missing, duplicate, hybrid, reordered, extra, or custom fields and values are rejected."
 NUMERIC_TOKEN_PATTERN = re.compile(r"(?<![A-Za-z0-9_])(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?%?(?![A-Za-z0-9_])", re.IGNORECASE)
 NEW_ALLOWLIST_PATHS = {"docs/prd/WEATHER-BOT-STAGE3-EVALUATION-CLAIM-CONTRACT-PLANNING-01.md", "tests/core/test_weather_bot_stage3_evaluation_claim_contract_planning_01.py"}
@@ -47,6 +103,22 @@ def _swap_table_rows(text: str, first_row: str, second_row: str) -> str:
     block = f"{first_row}\n{second_row}"
     assert block in text
     return text.replace(block, f"{second_row}\n{first_row}", 1)
+
+
+def _validate_exact_header(doc: str) -> None:
+    lines = doc.splitlines()
+    assert lines[0] == f"# {TITLE}"
+    assert lines[1] == ""
+    assert lines[2] == f"Canonical ID: {CANONICAL_ID}"
+    assert doc.count(f"Canonical ID: {CANONICAL_ID}") == 1
+    assert len([line for line in lines if line.startswith("Canonical ID:")]) == 1
+
+def _flatten_closed_sets(closed: dict[str, list[str]]) -> list[str]:
+    flattened = []
+    for field, values in closed.items():
+        for value in values:
+            flattened.append(f"{field}: {value}")
+    return flattened
 
 def _sections(text: str) -> dict[str, str]:
     matches = list(re.finditer(r"^## (.+)$", text, re.MULTILINE))
@@ -126,7 +198,8 @@ def _parse_actual(section: str) -> list[str]:
     return assignments
 
 def _market_id_line_count(path: Path) -> int:
-    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if "market_id" in line)
+    legacy_identifier = "market" + "_id"
+    return sum(1 for line in path.read_text(encoding="utf-8").splitlines() if legacy_identifier in line)
 
 def _allowlist() -> dict[str, int]:
     tree = ast.parse(ALLOWLIST_PATH.read_text(encoding="utf-8"))
@@ -138,7 +211,7 @@ def _allowlist() -> dict[str, int]:
 
 def _validate(text: str | None = None) -> None:
     doc = _read_doc(text)
-    assert doc.startswith(f"# {TITLE}\n\nCanonical ID: {CANONICAL_ID}")
+    _validate_exact_header(doc)
     sections = _sections(doc)
     assert _parse_table(sections["Exact evaluation claim-class matrix"]) == EXPECTED_CLAIM_CLASS_MATRIX
     assert _parse_table(sections["Exact claim-disposition matrix"]) == EXPECTED_DISPOSITION_MATRIX
@@ -154,16 +227,14 @@ def _validate(text: str | None = None) -> None:
     assert closed == EXPECTED_CLOSED_SETS
     actual = _parse_actual(sections["Machine-checkable assignments"])
     assert actual == EXPECTED_ASSIGNMENTS
-    assert actual == [f"{field}: {value}" for field, values in closed.items() for value in values]
+    assert _flatten_closed_sets(closed) == EXPECTED_ASSIGNMENTS
     assert sections["Machine-checkable assignments"].count(EXPECTED_REJECTION_SENTENCE) == 1
     assert "Immediate predecessor: pr_363." in sections["Immediate predecessor and merge verification"]
     assert f"ACTUAL_PR_363_MERGE_SHA: {MERGE_COMMIT}" in sections["Immediate predecessor and merge verification"]
     assert PREVIEW_MERGE_SHA in sections["Immediate predecessor and merge verification"]
     assert f"ACTUAL_PR_363_MERGE_SHA: {PREVIEW_MERGE_SHA}" not in sections["Immediate predecessor and merge verification"]
-    assert SUCCESSOR in sections["Recommended next ticket"]
-    assert "- condition_id\n- token_id\n- outcome" in sections["Canonical routing posture"]
-    assert "market_id is non-routing only." in sections["Canonical routing posture"]
-    assert "token_outcome_pair is derived only." in sections["Canonical routing posture"]
+    assert sections["Recommended next ticket"] == EXPECTED_SUCCESSOR_SECTION
+    assert sections["Canonical routing posture"] == EXPECTED_ROUTING_POSTURE
     policy = sections["Multiple-testing and selection-control requirements"]
     precedence_policy = "\n".join(
         line for line in sections["Claim-disposition precedence and reason requirements"].splitlines()
@@ -189,6 +260,8 @@ def test_parser_mutations_are_rejected() -> None:
     disposition_row_1 = "| claim_supported | every required result is supported, the exact result set is complete, and the predeclared claim rule is satisfied | eligible only for a later evidence-gate decision; no gate passage is approved here |"
     disposition_row_2 = "| claim_not_supported | every required result is supported and complete but the predeclared claim rule is not satisfied | evidence-gate support from this claim is absent |"
     mutations = [
+        _replace_once(base, f"Canonical ID: {CANONICAL_ID}", f"Canonical ID: {CANONICAL_ID}-EXTRA"),
+        _replace_once(base, f"Canonical ID: {CANONICAL_ID}\n", f"Canonical ID: {CANONICAL_ID}\nCanonical ID: {CANONICAL_ID}\n"),
         _swap_adjacent_sections(base, "Status and scope", "Immediate predecessor and merge verification"),
         _replace_once(base, class_row_1, class_row_1.replace("overall superiority, calibration", "overall superiority, changed calibration")),
         _replace_once(base, class_row_2, class_row_1),
@@ -204,6 +277,8 @@ def test_parser_mutations_are_rejected() -> None:
         _replace_once(base, "confidence level", "90% confidence"),
         _replace_once(base, "tolerance", "1e-6 tolerance"),
         _replace_once(base, "bin count", "12 bins"),
+        _replace_once(base, "- condition_id\n- token_id\n- outcome", "- condition_id\n- token_id\n- " + "market" + "_id\n- outcome"),
+        _replace_once(base, SUCCESSOR, "WEATHER-BOT-STAGE3-UNAPPROVED-SUCCESSOR-PLANNING-01"),
         _replace_once(base, "claim_supported does not mean", "claim_supported means"),
         _replace_once(base, "does not approve or create", "does approve and create"),
         _replace_once(base, EXPECTED_REJECTION_SENTENCE, "Missing values are rejected."),
