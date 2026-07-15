@@ -20,6 +20,22 @@ EXPECTED_SUPPORT_STATUS_MATRIX = [['Support status', 'Required meaning', 'Claim 
 EXPECTED_COMMON_FIELDS = ['evaluation_result_id', 'result_kind', 'artifact_id', 'artifact_version', 'evaluation_definition_id', 'evaluation_definition_version', 'evaluation_run_id', 'method_role', 'method_id', 'method_version', 'prediction_representation', 'target_posture', 'split_id', 'split_version', 'fold_id', 'cutoff_identity', 'paired_test_record_set_id', 'eligibility_policy_id', 'aggregation_rule_id', 'weighting_rule_id', 'stratum_id', 'eligible_record_count', 'excluded_record_count', 'blocked_record_count', 'total_considered_record_count', 'exclusion_block_reason_summary', 'uncertainty_method_id', 'uncertainty_level_id', 'support_status', 'result_payload', 'provenance', 'result_created_at', 'supersedes_result_id_when_applicable']
 EXPECTED_CLOSED_SETS = {'weather bot planning stage': ['weather_bot_stage3_evaluation_result_record_contract_planning'], 'immediate predecessor pr': ['pr_362'], 'ticket lifecycle status': ['docs_static_test_only', 'contract_planning_only'], 'result record contract status': ['requirements_defined', 'runtime_schema_not_created', 'result_values_not_created'], 'scoring target posture': ['venue_defined_settlement_outcome'], 'result kind': ['scalar_score_result', 'calibration_bin_result', 'decomposition_result', 'distribution_diagnostic_result', 'ensemble_diagnostic_result', 'paired_comparison_result'], 'result support status': ['supported', 'insufficient', 'blocked', 'unavailable'], 'scope identity posture': ['exact_single_scope_required'], 'sample accounting posture': ['eligible_excluded_blocked_total_identity_required'], 'terminal category posture': ['mutually_exclusive_required'], 'exclusion block posture': ['explicit_reason_required'], 'uncertainty posture': ['predeclared_method_level_and_support_rule_required'], 'paired comparison posture': ['exact_common_test_record_set_required'], 'baseline comparison posture': ['climatology_or_persistence_only'], 'market price posture': ['not_approved_as_baseline_or_truth'], 'immutability posture': ['superseding_result_version_required'], 'claim posture': ['result_records_do_not_approve_claims'], 'result calculation posture': ['not_approved'], 'persistence posture': ['not_approved'], 'report export posture': ['not_approved'], 'canonical routing field': ['condition_id', 'token_id', 'outcome'], 'non routing field': ['market_id'], 'derived identifier field': ['token_outcome_pair'], 'next ticket recommendation': ['stage3_evaluation_claim_contract_planning'], 'evidence status': ['evaluation_result_record_contract_planning_recorded'], 'label confidence': ['confirmed']}
 EXPECTED_ASSIGNMENTS = ['weather bot planning stage: weather_bot_stage3_evaluation_result_record_contract_planning', 'immediate predecessor pr: pr_362', 'ticket lifecycle status: docs_static_test_only', 'ticket lifecycle status: contract_planning_only', 'result record contract status: requirements_defined', 'result record contract status: runtime_schema_not_created', 'result record contract status: result_values_not_created', 'scoring target posture: venue_defined_settlement_outcome', 'result kind: scalar_score_result', 'result kind: calibration_bin_result', 'result kind: decomposition_result', 'result kind: distribution_diagnostic_result', 'result kind: ensemble_diagnostic_result', 'result kind: paired_comparison_result', 'result support status: supported', 'result support status: insufficient', 'result support status: blocked', 'result support status: unavailable', 'scope identity posture: exact_single_scope_required', 'sample accounting posture: eligible_excluded_blocked_total_identity_required', 'terminal category posture: mutually_exclusive_required', 'exclusion block posture: explicit_reason_required', 'uncertainty posture: predeclared_method_level_and_support_rule_required', 'paired comparison posture: exact_common_test_record_set_required', 'baseline comparison posture: climatology_or_persistence_only', 'market price posture: not_approved_as_baseline_or_truth', 'immutability posture: superseding_result_version_required', 'claim posture: result_records_do_not_approve_claims', 'result calculation posture: not_approved', 'persistence posture: not_approved', 'report export posture: not_approved', 'canonical routing field: condition_id', 'canonical routing field: token_id', 'canonical routing field: outcome', 'non routing field: market_id', 'derived identifier field: token_outcome_pair', 'next ticket recommendation: stage3_evaluation_claim_contract_planning', 'evidence status: evaluation_result_record_contract_planning_recorded', 'label confidence: confirmed']
+EXPECTED_CLAIM_SEPARATION = "A result record is not a claim; supported does not mean evidence-gate passage; a lower score does not by itself establish ranking superiority; calibration diagnostics do not establish economic edge; paired baseline improvement does not establish executability; no result approves trading, implementation, autonomy, or production behavior; later claim review must consume immutable result records under a separate contract."
+EXPECTED_EXPLICIT_NON_APPROVALS = "This ticket does not approve or create result calculation; scoring execution; diagnostic execution; evaluation execution; probability generation; split execution; baseline execution; model training or calibration; data acquisition; corpus or dataset creation; source fetching; provider connectors; runtime schemas; dataclasses; serialization; persistence; database tables; migrations; reports; exports; diagrams; backtesting; simulation; market-price comparison execution; paper trading; trading; order placement; autonomy; runtime behavior; or production behavior."
+EXPECTED_REJECTION_SENTENCE = "Missing, duplicate, hybrid, reordered, extra, or custom fields and values are rejected."
+NUMERIC_TOKEN_PATTERN = re.compile(r"(?<![A-Za-z0-9_])(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?%?(?![A-Za-z0-9_])")
+PRESCRIBED_NUMERIC_FORMS = [
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in [
+        r"\b\d+(?:\.\d+)?%?\s+confidence\b",
+        r"\bsample\s+minimum\s+(?:of\s+)?\d+\b",
+        r"\b\d+\s+bins?\b",
+        r"\btolerance\s+(?:of\s+)?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?%?\b",
+        r"\bweighting\s+constant\s+(?:of\s+)?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?%?\b",
+        r"\b(?:resampling|bootstrap)\s+length\s+(?:of\s+)?\d+\b",
+        r"\bpooling\s+threshold\s+(?:of\s+)?(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?%?\b",
+    ]
+]
 NEW_ALLOWLIST_PATHS = {
     "docs/prd/WEATHER-BOT-STAGE3-EVALUATION-RESULT-RECORD-CONTRACT-PLANNING-01.md",
     "tests/core/test_weather_bot_stage3_evaluation_result_record_contract_planning_01.py",
@@ -117,12 +133,15 @@ def _validate(text: str | None = None) -> None:
     assert _parse_table(sections["Exact evaluation result-kind matrix"]) == EXPECTED_RESULT_KIND_MATRIX
     assert _parse_table(sections["Exact result-support status matrix"]) == EXPECTED_SUPPORT_STATUS_MATRIX
     assert "No custom, hybrid, or additional support status is allowed." in sections["Exact result-support status matrix"]
+    assert sections["Claim separation and interpretation boundaries"] == EXPECTED_CLAIM_SEPARATION
+    assert sections["Explicit non-approvals"] == EXPECTED_EXPLICIT_NON_APPROVALS
     assert _parse_bullets(sections["Common result-record requirements"].split("Include exactly this ordered semantic-field list:\n\n", 1)[1]) == EXPECTED_COMMON_FIELDS
     closed = _parse_closed_sets(sections["Machine-checkable assignments"])
     assert list(closed) == list(EXPECTED_CLOSED_SETS)
     assert closed == EXPECTED_CLOSED_SETS
     assignments = _parse_actual(sections["Machine-checkable assignments"])
     assert assignments == EXPECTED_ASSIGNMENTS == _flatten(closed)
+    assert sections["Machine-checkable assignments"].count(EXPECTED_REJECTION_SENTENCE) == 1
     assert "total_considered_record_count =\neligible_record_count + excluded_record_count + blocked_record_count" in sections["Scope identity and sample accounting"]
     assert "Immediate predecessor: pr_362." in sections["Immediate predecessor and merge verification"]
     assert f"ACTUAL_PR_362_MERGE_SHA: {MERGE_COMMIT}" in sections["Immediate predecessor and merge verification"]
@@ -132,7 +151,8 @@ def _validate(text: str | None = None) -> None:
     assert "market_id is non-routing only." in sections["Canonical routing posture"]
     assert "token_outcome_pair is derived only." in sections["Canonical routing posture"]
     scoped = "\n".join(sections[name] for name in ["Scope identity and sample accounting", "Uncertainty and support-status requirements"])
-    assert not re.search(r"\b(?:95%|0\.95|10|100|minimum of)\b", scoped)
+    assert not NUMERIC_TOKEN_PATTERN.search(scoped)
+    assert not any(pattern.search(scoped) for pattern in PRESCRIBED_NUMERIC_FORMS)
     assert not any(term in doc for term in FORBIDDEN_TERMS)
 
 def test_document_contract_is_exact() -> None:
@@ -155,8 +175,15 @@ def test_parser_mutations_are_rejected() -> None:
         base.replace("- label confidence: confirmed", "- label confidence: confirmed\n- label confidence: confirmed", 1),
         base.replace("- label confidence: confirmed", "- label confidence confirmed", 1),
         base.replace("| unavailable | a required permitted input", "| pending | a required permitted input", 1),
+        base.replace("no fabricated confidence level", "90% confidence", 1),
+        base.replace("no fabricated confidence level", "1e-6 tolerance", 1),
+        base.replace("no fabricated confidence level", "12 bins", 1),
+        base.replace("does not approve or create", "does approve and create", 1),
+        base.replace(EXPECTED_REJECTION_SENTENCE, "Missing values are rejected.", 1),
+        base.replace("supported does not mean evidence-gate passage", "supported means evidence-gate passage", 1),
     ]
     for mutated in mutations:
+        assert mutated != base
         try:
             _validate(mutated)
         except AssertionError:
