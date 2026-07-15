@@ -86,6 +86,13 @@ EXPECTED_CLOSED_SETS = {
     "label confidence": ["confirmed"],
 }
 
+EXPECTED_CLOSED_SET_ITEMS = list(EXPECTED_CLOSED_SETS.items())
+EXPECTED_ASSIGNMENTS = [
+    f"{field}: {value}"
+    for field, values in EXPECTED_CLOSED_SETS.items()
+    for value in values
+]
+
 EXPECTED_STRATA = [
     "market_family",
     "threshold_distance",
@@ -121,35 +128,53 @@ def _parse_table(section: str) -> list[list[str]]:
     return parsed
 
 
-def _parse_closed_sets(section: str) -> dict[str, list[str]]:
+def _parse_closed_set_items(section: str) -> list[tuple[str, list[str]]]:
     before_actual = section.split("\nActual assignments:\n", 1)[0]
-    result: dict[str, list[str]] = {}
-    current: str | None = None
+    result: list[tuple[str, list[str]]] = []
+    seen_fields: set[str] = set()
+    current_field: str | None = None
+    current_values: list[str] | None = None
     for line in before_actual.splitlines():
+        if line in {"", "Closed sets:"}:
+            continue
         if line.startswith("Closed set for ") and line.endswith(":"):
-            current = line.removeprefix("Closed set for ").removesuffix(":")
-            assert current not in result
-            result[current] = []
-        elif current and line.startswith("- "):
+            current_field = line.removeprefix("Closed set for ").removesuffix(":")
+            assert current_field not in seen_fields
+            seen_fields.add(current_field)
+            current_values = []
+            result.append((current_field, current_values))
+        elif line.startswith("- "):
+            assert current_field is not None
+            assert current_values is not None
             value = line[2:]
-            assert value not in result[current]
-            result[current].append(value)
+            assert value not in current_values
+            current_values.append(value)
+        else:
+            raise AssertionError(f"Malformed closed-set line: {line}")
     return result
 
 
-def _parse_assignments(section: str) -> dict[str, list[str]]:
+def _flatten_closed_set_items(items: list[tuple[str, list[str]]]) -> list[str]:
+    return [f"{field}: {value}" for field, values in items for value in values]
+
+
+def _parse_assignments(section: str) -> list[str]:
     after_actual = section.split("\nActual assignments:\n", 1)[1]
     assignments_text = after_actual.split("\nMissing, duplicate", 1)[0]
-    result: dict[str, list[str]] = {}
-    seen: set[tuple[str, str]] = set()
+    result: list[str] = []
+    seen: set[str] = set()
     for line in assignments_text.splitlines():
-        if not line.startswith("- "):
+        if line == "":
             continue
-        field, value = line[2:].split(": ", 1)
-        pair = (field, value)
-        assert pair not in seen
-        seen.add(pair)
-        result.setdefault(field, []).append(value)
+        assert line.startswith("- "), f"Malformed assignment line: {line}"
+        assignment = line[2:]
+        assert ": " in assignment, f"Malformed assignment line: {line}"
+        field, value = assignment.split(": ", 1)
+        assert field
+        assert value
+        assert assignment not in seen
+        seen.add(assignment)
+        result.append(assignment)
     return result
 
 
@@ -193,10 +218,11 @@ def test_applicability_matrix_is_exact_structural_contract() -> None:
 
 def test_closed_sets_equal_actual_assignments_and_expected_constants() -> None:
     section = _section(_doc(), "Machine-checkable assignments")
-    closed_sets = _parse_closed_sets(section)
+    closed_set_items = _parse_closed_set_items(section)
     assignments = _parse_assignments(section)
-    assert closed_sets == EXPECTED_CLOSED_SETS
-    assert assignments == EXPECTED_CLOSED_SETS
+    assert closed_set_items == EXPECTED_CLOSED_SET_ITEMS
+    assert _flatten_closed_set_items(closed_set_items) == EXPECTED_ASSIGNMENTS
+    assert assignments == EXPECTED_ASSIGNMENTS
     assert "Missing, duplicate, hybrid, extra, or custom fields and values are rejected." in section
 
 
