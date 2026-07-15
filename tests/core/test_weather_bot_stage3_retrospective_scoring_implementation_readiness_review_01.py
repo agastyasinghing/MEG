@@ -313,6 +313,86 @@ def _replace_in_section(text: str, section_name: str, anchor: str, replacement: 
     return mutated
 
 
+def _replace_section_body(text: str, section_name: str, old_body: str, new_body: str) -> str:
+    assert old_body != new_body
+    start = text.index(f"## {section_name}\n\n") + len(f"## {section_name}\n\n")
+    following = [h for h in EXPECTED_HEADINGS[EXPECTED_HEADINGS.index(section_name) + 1:]]
+    end = min([text.index(f"\n\n## {h}\n", start) for h in following] or [len(text)])
+    assert text[start:end].strip() == old_body
+    mutated = text[:start] + new_body + text[end:]
+    assert mutated != text
+    assert _sections(mutated)[section_name] == new_body.strip()
+    return mutated
+
+
+def _duplicate_exact_table_row_in_section(text: str, section_name: str, row: str) -> str:
+    section = _sections(text)[section_name]
+    assert section.count(row) == 1
+    base_rows = _table(section)
+    parsed_row = [cell.strip() for cell in row.strip().strip("|").split("|")]
+    assert base_rows.count(parsed_row) == 1
+    mutated = _replace_in_section(text, section_name, row, f"{row}\n{row}")
+    mutated_section = _sections(mutated)[section_name]
+    mutated_rows = _table(mutated_section)
+    assert mutated_section.count(row) == 2
+    assert mutated_rows.count(parsed_row) == 2
+    assert len(mutated_rows) == len(base_rows) + 1
+    assert all(cell_a == cell_b for cell_a, cell_b in zip(parsed_row, parsed_row))
+    return mutated
+
+
+def _swap_adjacent_exact_table_rows_in_section(
+    text: str, section_name: str, first_row: str, second_row: str
+) -> str:
+    section = _sections(text)[section_name]
+    assert section.count(first_row) == 1
+    assert section.count(second_row) == 1
+    base_rows = _table(section)
+    first_cells = [cell.strip() for cell in first_row.strip().strip("|").split("|")]
+    second_cells = [cell.strip() for cell in second_row.strip().strip("|").split("|")]
+    first_index = base_rows.index(first_cells)
+    assert base_rows[first_index + 1] == second_cells
+    mutated = _replace_in_section(text, section_name, f"{first_row}\n{second_row}", f"{second_row}\n{first_row}")
+    mutated_rows = _table(_sections(mutated)[section_name])
+    assert len(mutated_rows) == len(base_rows)
+    assert sorted(mutated_rows) == sorted(base_rows)
+    assert mutated_rows[first_index] == second_cells
+    assert mutated_rows[first_index + 1] == first_cells
+    return mutated
+
+
+def _remove_exact_table_row_from_section(text: str, section_name: str, row: str) -> str:
+    section = _sections(text)[section_name]
+    assert section.count(f"{row}\n") == 1
+    base_rows = _table(section)
+    parsed_row = [cell.strip() for cell in row.strip().strip("|").split("|")]
+    assert base_rows.count(parsed_row) == 1
+    mutated = _replace_in_section(text, section_name, f"{row}\n", "")
+    mutated_rows = _table(_sections(mutated)[section_name])
+    assert parsed_row not in mutated_rows
+    assert len(mutated_rows) == len(base_rows) - 1
+    assert [row_ for row_ in base_rows if row_ != parsed_row] == mutated_rows
+    return mutated
+
+
+def _swap_exact_closed_set_blocks(text: str, first_block: str, second_block: str) -> str:
+    section_name = "Machine-checkable assignments"
+    section = _sections(text)[section_name]
+    closed_text, actual_text = section.split("\n\nActual assignments:\n", 1)
+    assert closed_text.count(first_block) == 1
+    assert closed_text.count(second_block) == 1
+    assert closed_text.index(first_block) < closed_text.index(second_block)
+    new_closed_text = closed_text.replace(first_block, "__FIRST_BLOCK__", 1)
+    new_closed_text = new_closed_text.replace(second_block, first_block, 1)
+    new_closed_text = new_closed_text.replace("__FIRST_BLOCK__", second_block, 1)
+    assert new_closed_text.index(second_block) < new_closed_text.index(first_block)
+    assert sorted(new_closed_text.splitlines()) == sorted(closed_text.splitlines())
+    new_section = f"{new_closed_text}\n\nActual assignments:\n{actual_text}"
+    mutated = _replace_section_body(text, section_name, section, new_section)
+    assert _sections(mutated)[section_name].split("\n\nActual assignments:\n", 1)[1] == actual_text
+    return mutated
+
+
 def _assert_rejected(mutated: str) -> None:
     try:
         _validate(mutated)
@@ -391,6 +471,106 @@ def test_oracles_are_literal_ast() -> None:
 def test_numeric_regex_examples() -> None:
     for token in ["90%", "1e-6", "12", ".5", "0.25"]:
         assert NUMERIC_TOKEN_RE.search(token)
+
+
+def test_required_direct_mutations_are_rejected() -> None:
+    base = _read()
+    canonical_declaration = f"Canonical ID: {CANONICAL_ID}"
+    assert base.splitlines()[0] == CANONICAL_ID
+    assert base.count(canonical_declaration) == 1
+    canonical_suffix_mutation = base.replace(canonical_declaration, f"{canonical_declaration}-X", 1)
+    assert canonical_suffix_mutation.splitlines()[0] == CANONICAL_ID
+    assert f"{canonical_declaration}-X" in canonical_suffix_mutation
+    assert canonical_suffix_mutation != base
+    _assert_rejected(canonical_suffix_mutation)
+
+    prerequisite_row = (
+        "| strict_oos_split_contract | "
+        "WEATHER-BOT-STAGE3-STRICT-OOS-SPLIT-CONTRACT-PLANNING-01 | "
+        "defines strict OOS split, cutoff, no-lookahead, and replay boundaries | "
+        "present_and_coherent | "
+        "block when future-information or split-scope protections are incomplete |"
+    )
+    duplicate_prerequisite = _duplicate_exact_table_row_in_section(
+        base, "Exact prerequisite artifact matrix", prerequisite_row
+    )
+    _assert_critical_unchanged_except(base, duplicate_prerequisite, None)
+    _assert_rejected(duplicate_prerequisite)
+
+    readiness_row = (
+        "| strict_oos_and_no_lookahead_defined | "
+        "split, cutoff, as-of, publication-time, revision, finality, and future-information boundaries are explicit | "
+        "passed | "
+        "block because retrospective scoring could leak unavailable information |"
+    )
+    duplicate_readiness = _duplicate_exact_table_row_in_section(
+        base, "Exact readiness-gate matrix", readiness_row
+    )
+    readiness_rows = _table(_sections(duplicate_readiness)["Exact readiness-gate matrix"])
+    assert readiness_rows.count([cell.strip() for cell in readiness_row.strip().strip("|").split("|")]) == 2
+    _assert_critical_unchanged_except(base, duplicate_readiness, None)
+    _assert_rejected(duplicate_readiness)
+
+    first_disposition_row = (
+        "| ready_for_separate_implementation_approval_request | "
+        "every required readiness gate passed and no missing, conflicting, superseded, or weakly enforced contract boundary remains | "
+        "recommend one later separate explicit implementation-approval request; implementation remains unapproved |"
+    )
+    second_disposition_row = (
+        "| needs_targeted_contract_refinement | "
+        "the foundation is broadly coherent but one or more narrow document or static-test defects must be corrected | "
+        "recommend one targeted refinement ticket and do not request implementation approval yet |"
+    )
+    swapped_dispositions = _swap_adjacent_exact_table_rows_in_section(
+        base, "Exact review-disposition matrix", first_disposition_row, second_disposition_row
+    )
+    _assert_critical_unchanged_except(base, swapped_dispositions, None)
+    _assert_rejected(swapped_dispositions)
+
+    first_closed_set_block = (
+        "- weather bot planning stage:\n"
+        "  - weather_bot_stage3_retrospective_scoring_implementation_readiness_review"
+    )
+    second_closed_set_block = "- immediate predecessor pr:\n  - pr_365"
+    swapped_closed_sets = _swap_exact_closed_set_blocks(
+        base, first_closed_set_block, second_closed_set_block
+    )
+    swapped_closed_section = _sections(swapped_closed_sets)["Machine-checkable assignments"]
+    swapped_closed_text, swapped_actual_text = swapped_closed_section.split("\n\nActual assignments:\n", 1)
+    base_closed_text, base_actual_text = _sections(base)["Machine-checkable assignments"].split(
+        "\n\nActual assignments:\n", 1
+    )
+    assert swapped_closed_text.index(second_closed_set_block) < swapped_closed_text.index(first_closed_set_block)
+    assert sorted(swapped_closed_text.splitlines()) == sorted(base_closed_text.splitlines())
+    assert swapped_actual_text == base_actual_text
+    _assert_critical_unchanged_except(base, swapped_closed_sets, None)
+    _assert_rejected(swapped_closed_sets)
+
+    removed_prerequisite = _remove_exact_table_row_from_section(
+        base, "Exact prerequisite artifact matrix", prerequisite_row
+    )
+    _assert_critical_unchanged_except(base, removed_prerequisite, None)
+    _assert_rejected(removed_prerequisite)
+
+    readiness_status_mutation = _replace_in_section(
+        base,
+        "Exact readiness-gate matrix",
+        readiness_row,
+        readiness_row.replace(" | passed | ", " | mystery_status | "),
+    )
+    base_status_cells = [cell.strip() for cell in readiness_row.strip().strip("|").split("|")]
+    mutated_status_row = readiness_row.replace(" | passed | ", " | mystery_status | ")
+    mutated_status_cells = [cell.strip() for cell in mutated_status_row.strip().strip("|").split("|")]
+    assert len(mutated_status_cells) == 4
+    assert base_status_cells[:2] == mutated_status_cells[:2]
+    assert base_status_cells[2] == "passed"
+    assert mutated_status_cells[2] == "mystery_status"
+    assert base_status_cells[3] == mutated_status_cells[3]
+    assert _sections(readiness_status_mutation)["Machine-checkable assignments"] == _sections(base)[
+        "Machine-checkable assignments"
+    ]
+    _assert_critical_unchanged_except(base, readiness_status_mutation, None)
+    _assert_rejected(readiness_status_mutation)
 
 
 def test_mutations_are_rejected() -> None:
