@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -10,7 +11,7 @@ ALLOWLIST_PATH = REPO_ROOT / "tests/core/canonical_id_allowlist.py"
 TEST_PATH = Path(__file__).resolve()
 
 TITLE = "WEATHER-BOT-STAGE3-SCORING-AND-DIAGNOSTICS-CONTRACT-PLANNING-01"
-CANONICAL_ID = "weather_bot_stage3_scoring_and_diagnostics_contract_planning_01"
+CANONICAL_ID = "WEATHER-BOT-STAGE3-SCORING-AND-DIAGNOSTICS-CONTRACT-PLANNING-01"
 MERGE_COMMIT = "9b0457495db3274ef957ab4c08e0e3cb6fb02fe3"
 SUCCESSOR = "WEATHER-BOT-STAGE3-EVALUATION-RESULT-RECORD-CONTRACT-PLANNING-01"
 
@@ -178,6 +179,7 @@ def test_title_canonical_id_headings_and_predecessor() -> None:
     assert headings == HEADINGS
     for heading in HEADINGS:
         assert text.count(f"## {heading}\n") == 1
+        assert _section(text, heading).strip()
     assert "Immediate predecessor: pr_361." in text
     assert text.count(MERGE_COMMIT) >= 3
     assert "actual merge commit" in text
@@ -245,23 +247,35 @@ def test_section_specific_prohibited_fabricated_numbers_are_absent() -> None:
         "Binning sparse-bucket and sample-sufficiency requirements",
         "Uncertainty requirements",
     ]
-    prohibited = [
+    numeric_token = re.compile(
+        r"(?<![A-Za-z0-9_])(?:\d+(?:\.\d+)?|\.\d+)(?:e[+-]?\d+)?%?(?![A-Za-z0-9_])",
+        re.IGNORECASE,
+    )
+    prohibited_concepts = [
         "epsilon =",
         "epsilon:",
+        "tolerance =",
+        "tolerance:",
         "confidence level of",
         "fixed bin count of",
         "minimum of ",
-        "at least 10",
-        "at least 20",
+        "minimum sample size:",
+        "numeric sample minimum of",
         "bootstrap block length of",
+        "resampling block length of",
         "tie constant of",
         "weighting constant of",
+        "pooling threshold of",
+        "numeric pooling threshold of",
     ]
     for section_name in sections:
-        section = _section(text, section_name).lower()
-        for phrase in prohibited:
-            assert phrase not in section
+        section = _section(text, section_name)
+        assert not numeric_token.search(section), section_name
+        lower_section = section.lower()
+        for phrase in prohibited_concepts:
+            assert phrase not in lower_section
     assert "does not choose a clipping epsilon" in _section(text, "Proper scoring-rule requirements")
+    assert "numeric probability tolerance" in _section(text, "Proper scoring-rule requirements")
     assert "Do not invent a numeric minimum" in _section(text, "Binning sparse-bucket and sample-sufficiency requirements")
 
 

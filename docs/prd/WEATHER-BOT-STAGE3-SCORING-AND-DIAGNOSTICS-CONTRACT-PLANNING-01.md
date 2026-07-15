@@ -1,6 +1,6 @@
 # WEATHER-BOT-STAGE3-SCORING-AND-DIAGNOSTICS-CONTRACT-PLANNING-01
 
-Canonical ID: weather_bot_stage3_scoring_and_diagnostics_contract_planning_01
+Canonical ID: WEATHER-BOT-STAGE3-SCORING-AND-DIAGNOSTICS-CONTRACT-PLANNING-01
 
 ## Status and scope
 
