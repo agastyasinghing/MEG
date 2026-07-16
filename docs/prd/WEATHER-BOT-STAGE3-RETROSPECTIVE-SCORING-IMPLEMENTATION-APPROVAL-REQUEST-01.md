@@ -13,7 +13,7 @@ ACTUAL_PR_366_MERGE_SHA: 24c229970392096dc8a61124f6e80ac724244a08
 PR #366 merged at actual merge commit 24c229970392096dc8a61124f6e80ac724244a08, which is reachable from the current branch base. The former open-PR preview merge SHA 53822e5dc3115b7989c7f015c6120b9faa5a2a54 is not the actual merge commit and must not be used. No newer controlling Weather Bot artifact supersedes PR #366 for this approval-request scope.
 
 ## Approval-request purpose and decision boundary
-This document requests a human decision only. This document does not approve implementation. No implementation work may begin because this document exists. A later implementation ticket requires an explicit human approval outside this document. The proposed slice is limited to one immutable in-memory binary probability-record boundary, accepts caller-supplied values only, and does not generate or infer any probability, determine scoring readiness, join labels, calculate a metric, establish evidence sufficiency, make or pass an evidence-gate decision, or approve persistence, reporting, runtime behavior, or trading. The target remains the venue-defined settlement outcome, not generic weather.
+This document requests a human decision only. This document does not approve implementation. No implementation work may begin because this document exists. A later implementation ticket requires an explicit human approval outside this document. The proposed slice is limited to one immutable in-memory binary probability-record boundary, accepts caller-supplied values only, and does not generate or infer any probability, determine scoring readiness, join labels, calculate a metric, establish evidence sufficiency, make or pass an evidence-gate decision, or approve persistence, reporting, runtime behavior, or trading. The target remains the venue-defined settlement outcome, not generic weather. No existing file may be modified by the later implementation slice.
 
 ## Readiness-review basis
 The PR #366 readiness review found the Stage 3 planning chain coherent enough only to request a separate human approval for one narrow implementation slice; it did not approve implementation or evidence-gate passage.
@@ -29,8 +29,6 @@ The requested slice is limited to three future files, seven future public symbol
 | meg/weather/stage3/__init__.py | create | declare the Stage 3 package boundary only | no imports with runtime side effects and no re-export of unrelated capabilities |
 | meg/weather/stage3/binary_probability_record.py | create | define the immutable caller-supplied binary probability-record container and pure validation boundary | no probability generation, scoring, label joining, persistence, file access, service access, or runtime orchestration |
 | tests/core/test_weather_bot_stage3_binary_probability_record.py | create | test only the approved immutable record and fail-closed validation boundary | no network, subprocess, Git, database, fixture mutation, environment dependency, or production execution |
-
-No existing file may be modified by the later implementation slice.
 
 ## Exact future public-symbol matrix
 | Future public symbol | Kind | Permitted responsibility | Explicit limit |
@@ -116,7 +114,24 @@ No existing file may be modified by the later implementation slice.
 | deterministic_result | preserve exact validation-code ordering | same input produces equal result | no sets, nondeterministic iteration, or environment-dependent output |
 
 ## Exact future test matrix
-Focused tests must use no services or runtime imports.
+| Future test group | Required coverage | Prohibited shortcut |
+| --- | --- | --- |
+| import boundary | module imports with standard library only | no service, database, runtime, provider, or Stage 2 loader import |
+| package boundary | Stage 3 package has no import side effects | no startup or registration behavior |
+| accepted record | one complete valid caller-supplied mapping creates a frozen record and passed result | no fixture or file dependency |
+| exact mapping keys | missing and unexpected keys fail with exact ordered codes | no permissive get-based defaults |
+| canonical routing | missing route fields fail and market_id or token_outcome_pair inputs are rejected | no substring-only assertion |
+| representation | only binary_outcome_probability is accepted | no alternate representation accepted |
+| probability boundaries | exact zero and exact one pass | no approximate comparison |
+| probability failures | below-zero, above-one, malformed, bool, int, float, NaN, and Infinity fail as specified | no silent Decimal coercion from float |
+| timestamp parsing | aware valid timestamps pass and naive or malformed values fail | no system-time dependency |
+| no-lookahead | input availability after prediction fails | no current-time comparison |
+| creation ordering | created_at before prediction fails | no current-time comparison |
+| provenance | empty, scalar, blank, and non-string entries fail | no implicit tuple creation from scalar text |
+| immutability | frozen record and result reject mutation | no custom mutator |
+| correction linkage | self-supersession fails and distinct supersession passes | no generated predecessor identity |
+| deterministic codes | multiple failures return the exact expected code order | no set or sorted substitute |
+| non-goals | source contains no file, network, database, persistence, scoring, label-join, report, simulation, trading, or runtime behavior | no broad keyword-only substitute without AST/import inspection |
 
 ## Dependency and import boundary
 Only dataclasses, datetime, decimal, enum, typing, and collections.abc when needed; no third-party or MEG production dependencies.
@@ -178,21 +193,113 @@ WEATHER-BOT-STAGE3-BINARY-PROBABILITY-RECORD-IMPLEMENTATION-01
 This ticket may be created only after an explicit human approval outside this approval-request artifact. If approved, it must remain limited exactly to the three proposed future files and the immutable_binary_outcome_probability_record_boundary. Without explicit human approval, no implementation ticket may be created.
 
 ## Machine-checkable assignments
-Closed sets precede Actual assignments. Missing, duplicate, hybrid, reordered, extra, or custom fields and values are rejected.
+Closed sets:
+- weather bot planning stage:
+  - weather_bot_stage3_retrospective_scoring_implementation_approval_request
+- immediate predecessor pr:
+  - pr_366
+- ticket lifecycle status:
+  - docs_static_test_only
+  - approval_request_only
+- request status:
+  - request_prepared
+  - implementation_not_approved
+  - human_decision_required
+- requested implementation slice:
+  - immutable_binary_outcome_probability_record_boundary
+- proposed future file:
+  - meg/weather/stage3/__init__.py
+  - meg/weather/stage3/binary_probability_record.py
+  - tests/core/test_weather_bot_stage3_binary_probability_record.py
+- proposed future public symbol:
+  - PredictionRepresentation
+  - ProbabilityRecordValidationSeverity
+  - ProbabilityRecordValidationCode
+  - BinaryOutcomeProbabilityRecord
+  - ProbabilityRecordValidationResult
+  - binary_outcome_probability_record_from_mapping
+  - validate_binary_outcome_probability_record
+- prediction representation:
+  - binary_outcome_probability
+- scoring target posture:
+  - venue_defined_settlement_outcome
+- mapping input posture:
+  - exact_key_set_only
+  - caller_supplied_values_only
+  - no_implicit_defaults
+- probability domain:
+  - closed_unit_interval
+  - finite_decimal_only
+- temporal posture:
+  - timezone_aware_timestamps_required
+  - input_availability_not_after_prediction
+  - creation_not_before_prediction
+- immutability posture:
+  - frozen_record_required
+  - frozen_result_required
+  - explicit_supersession_only
+- approval decision posture:
+  - not_decided_in_document
+- implementation approval posture:
+  - not_approved
+- probability generation posture:
+  - not_approved
+- scoring execution posture:
+  - not_approved
+- label join posture:
+  - not_approved
+- persistence posture:
+  - not_approved
+- report export posture:
+  - not_approved
+- canonical routing field:
+  - condition_id
+  - token_id
+  - outcome
+- non routing field:
+  - market_id
+- derived identifier field:
+  - token_outcome_pair
+- next ticket recommendation:
+  - stage3_binary_probability_record_implementation
+- evidence status:
+  - stage3_binary_probability_record_implementation_approval_request_recorded
+- label confidence:
+  - confirmed
+
+Actual assignments:
 
 - weather bot planning stage: weather_bot_stage3_retrospective_scoring_implementation_approval_request
 - immediate predecessor pr: pr_366
-- ticket lifecycle status: docs_static_test_only; approval_request_only
-- request status: request_prepared; implementation_not_approved; human_decision_required
+- ticket lifecycle status: docs_static_test_only
+- ticket lifecycle status: approval_request_only
+- request status: request_prepared
+- request status: implementation_not_approved
+- request status: human_decision_required
 - requested implementation slice: immutable_binary_outcome_probability_record_boundary
-- proposed future file: meg/weather/stage3/__init__.py; meg/weather/stage3/binary_probability_record.py; tests/core/test_weather_bot_stage3_binary_probability_record.py
-- proposed future public symbol: PredictionRepresentation; ProbabilityRecordValidationSeverity; ProbabilityRecordValidationCode; BinaryOutcomeProbabilityRecord; ProbabilityRecordValidationResult; binary_outcome_probability_record_from_mapping; validate_binary_outcome_probability_record
+- proposed future file: meg/weather/stage3/__init__.py
+- proposed future file: meg/weather/stage3/binary_probability_record.py
+- proposed future file: tests/core/test_weather_bot_stage3_binary_probability_record.py
+- proposed future public symbol: PredictionRepresentation
+- proposed future public symbol: ProbabilityRecordValidationSeverity
+- proposed future public symbol: ProbabilityRecordValidationCode
+- proposed future public symbol: BinaryOutcomeProbabilityRecord
+- proposed future public symbol: ProbabilityRecordValidationResult
+- proposed future public symbol: binary_outcome_probability_record_from_mapping
+- proposed future public symbol: validate_binary_outcome_probability_record
 - prediction representation: binary_outcome_probability
 - scoring target posture: venue_defined_settlement_outcome
-- mapping input posture: exact_key_set_only; caller_supplied_values_only; no_implicit_defaults
-- probability domain: closed_unit_interval; finite_decimal_only
-- temporal posture: timezone_aware_timestamps_required; input_availability_not_after_prediction; creation_not_before_prediction
-- immutability posture: frozen_record_required; frozen_result_required; explicit_supersession_only
+- mapping input posture: exact_key_set_only
+- mapping input posture: caller_supplied_values_only
+- mapping input posture: no_implicit_defaults
+- probability domain: closed_unit_interval
+- probability domain: finite_decimal_only
+- temporal posture: timezone_aware_timestamps_required
+- temporal posture: input_availability_not_after_prediction
+- temporal posture: creation_not_before_prediction
+- immutability posture: frozen_record_required
+- immutability posture: frozen_result_required
+- immutability posture: explicit_supersession_only
 - approval decision posture: not_decided_in_document
 - implementation approval posture: not_approved
 - probability generation posture: not_approved
@@ -200,16 +307,16 @@ Closed sets precede Actual assignments. Missing, duplicate, hybrid, reordered, e
 - label join posture: not_approved
 - persistence posture: not_approved
 - report export posture: not_approved
-- canonical routing field: condition_id; token_id; outcome
+- canonical routing field: condition_id
+- canonical routing field: token_id
+- canonical routing field: outcome
 - non routing field: market_id
 - derived identifier field: token_outcome_pair
 - next ticket recommendation: stage3_binary_probability_record_implementation
 - evidence status: stage3_binary_probability_record_implementation_approval_request_recorded
 - label confidence: confirmed
 
-Actual assignments:
-weather bot planning stage=weather_bot_stage3_retrospective_scoring_implementation_approval_request
-immediate predecessor pr=pr_366
+Missing, duplicate, hybrid, reordered, extra, or custom fields and values are rejected.
 
 ## Acceptance criteria
 The artifact remains docs/static-test-only and approval-request-only; it preserves the exact requested slice, three future files, canonical routing, and human decision boundary.
