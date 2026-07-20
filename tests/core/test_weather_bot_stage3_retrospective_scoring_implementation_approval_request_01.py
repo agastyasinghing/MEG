@@ -776,12 +776,30 @@ MIXED_AFFIRMATIVE_SAFETY_EXAMPLES = [
     "No implementation is approved, yet runtime behavior may proceed.",
     "Scoring is not authorized while persistence is enabled.",
     "Trading may proceed only after a later explicit approval, but autonomy is approved now.",
+    "Implementation is not approved, and trading is approved.",
+    "Implementation is not approved: trading is approved.",
+    "Implementation is not approved, trading is approved.",
+    "Without explicit human approval, implementation may not proceed and trading is approved.",
+    "No implementation is approved — trading is approved.",
+    "Trading is approved and implementation is not approved.",
+    "Implementation is not approved because trading is approved.",
+    "Scoring is not authorized; persistence has been authorized.",
+    "Production behavior is not approved / autonomy is approved.",
+    "Runtime behavior may not proceed, whereas paper trading is authorized.",
+    "This document does not approve scoring and this request authorizes persistence.",
+    "No production modules are enabled, plus model execution is approved.",
 ]
 MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES = [
     "Implementation is not approved, and trading is not authorized.",
     "This document does not approve scoring; production modules are not authorized.",
     "No runtime behavior is created, and no production behavior is approved.",
     "Without explicit human approval, implementation may not proceed and production modules may not be created.",
+    "Implementation is not approved: trading is not authorized.",
+    "No implementation is approved — no trading is authorized.",
+    "Trading is not approved and implementation is not authorized.",
+    "This document does not approve scoring and this request does not authorize persistence.",
+    "Neither runtime behavior nor paper trading is approved.",
+    "Production modules are not enabled; model execution is not approved.",
 ]
 FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES = [
     "Implementation is now approved.",
@@ -798,43 +816,36 @@ FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES = [
     "Implementation approval is granted.",
     "Authorization for production behavior is granted.",
 ]
+LOCAL_NEGATIVE_SAFETY_EXAMPLES = [
+    "trading is not approved;",
+    "trading is not currently approved;",
+    "trading has not been authorized;",
+    "trading may not proceed;",
+    "trading cannot proceed;",
+    "no trading is approved;",
+    "without explicit human approval, trading may not proceed;",
+    "trading may proceed only after explicit approval, and no such approval exists;",
+]
+LOCAL_AFFIRMATIVE_SAFETY_EXAMPLES = [
+    "trading is approved;",
+    "trading is now approved;",
+    "trading has been authorized;",
+    "trading may proceed;",
+    "trading can proceed;",
+    "trading may now proceed;",
+    "trading is conditionally approved;",
+    "trading remains approved;",
+    "trading is approved unless later revoked;",
+]
 
 def _sentences(text: str):
     return [part.strip() for part in re.split(r"[.\n]+", text.lower()) if part.strip()]
 
 def _clauses(sentence: str):
-    return [part.strip(" ,") for part in re.split(r"\s*(?:;|,\s*(?:but|however|yet|although|while)\b|\b(?:but|however|yet|although|while)\b)\s*", sentence) if part.strip(" ,")]
+    return [part.strip(" ,") for part in re.split(r"\s*(?:;|:|/|—|,\s*(?:but|however|yet|although|while|whereas|plus)\b|\b(?:but|however|yet|although|while|whereas|plus)\b)\s*", sentence) if part.strip(" ,")]
 
-def _is_negated_or_conditional(clause: str) -> bool:
-    safe_fragments = [
-        "does not approve",
-        "does not create",
-        "is not approved",
-        "are not approved",
-        "is not authorized",
-        "are not authorized",
-        "is not enabled",
-        "are not enabled",
-        "is not created",
-        "are not created",
-        "not authorized",
-        "no implementation",
-        "no runtime behavior",
-        "no production behavior",
-        "only after explicit human approval",
-        "only after a later explicit approval",
-        "without explicit approval",
-        "without explicit human approval",
-        "later separately approved ticket may create",
-        "may proceed only after",
-        "may not proceed",
-        "may not be created",
-        "no such approval exists",
-    ]
-    return any(fragment in clause for fragment in safe_fragments)
-
-def _has_affirmative_safety_claim(sentence: str) -> bool:
-    capabilities = [
+def _capabilities():
+    return [
         "stage 3 package",
         "production modules",
         "implementation",
@@ -855,25 +866,66 @@ def _has_affirmative_safety_claim(sentence: str) -> bool:
         "autonomy",
         "production behavior",
     ]
-    predicate_forms = [
-        r"(?:is|are)\s+(?:now\s+|hereby\s+|explicitly\s+)?(?:approved|authorized|enabled|created|implemented)",
+
+def _predicate_forms():
+    return [
+        r"(?:is|are)\s+(?:now\s+|hereby\s+|explicitly\s+|conditionally\s+|currently\s+)?(?:approved|authorized|enabled|created|implemented)",
         r"(?:has|have)\s+been\s+(?:approved|authorized|enabled|created|implemented)",
         r"(?:can|may)\s+(?:now\s+)?proceed",
         r"(?:can|may)\s+(?:now\s+)?be\s+(?:created|implemented)",
         r"will\s+(?:now\s+)?be\s+(?:created|implemented)",
+        r"remains\s+(?:approved|authorized|enabled|created|implemented)",
     ]
+
+def _claim_is_negated_or_conditional(clause: str, capability: str, claim_start: int, claim_end: int) -> bool:
+    local = clause[max(0, claim_start - 80):min(len(clause), claim_end + 120)]
+    cap = re.escape(capability)
+    local_patterns = [
+        rf"\bno\s+{cap}\s+(?:is|are)\s+(?:approved|authorized|enabled|created|implemented)",
+        rf"\bneither\b[^.;,]*\b{cap}\b[^.;,]*(?:approved|authorized|enabled|created|implemented)",
+        rf"\b{cap}\s+(?:is|are)\s+not\s+(?:currently\s+)?(?:approved|authorized|enabled|created|implemented)",
+        rf"\b{cap}\s+(?:has|have)\s+not\s+been\s+(?:approved|authorized|enabled|created|implemented)",
+        rf"\b{cap}\s+(?:may\s+not|cannot)\s+proceed",
+        rf"\b{cap}\s+may\s+not\s+be\s+(?:created|implemented)",
+        rf"without\s+explicit\s+human\s+approval[^.;,]*\b{cap}\b[^.;,]*(?:may\s+not|cannot)",
+        rf"\b{cap}\s+may\s+proceed\s+only\s+after.*no\s+such\s+approval\s+exists",
+        rf"\bthis\s+(?:document|request|ticket)\s+does\s+not\s+(?:approve|authorize|enable|create)\s+{cap}\b",
+    ]
+    return any(re.search(pattern, local) for pattern in local_patterns)
+
+def _active_document_claim_is_affirmative(clause: str, capability: str) -> bool:
+    cap = re.escape(capability)
+    active = re.search(rf"\bthis\s+(?:request|ticket|document)\s+(?:approves|authorizes|enables|creates)\s+{cap}\b", clause)
+    if active is None:
+        return False
+    return not _claim_is_negated_or_conditional(clause, capability, active.start(), active.end())
+
+def _capability_claim_is_affirmative(clause: str, capability: str) -> bool:
+    for capability_match in re.finditer(rf"\b{re.escape(capability)}\b", clause):
+        after = clause[capability_match.end():]
+        for predicate in _predicate_forms():
+            predicate_match = re.search(r"^\s+" + predicate, after)
+            if predicate_match is not None:
+                claim_start = capability_match.start()
+                claim_end = capability_match.end() + predicate_match.end()
+                if not _claim_is_negated_or_conditional(clause, capability, claim_start, claim_end):
+                    return True
+    if capability == "implementation" and re.search(r"\bimplementation\s+approval\s+is\s+granted\b", clause):
+        claim = re.search(r"\bimplementation\s+approval\s+is\s+granted\b", clause)
+        if claim is not None and not _claim_is_negated_or_conditional(clause, capability, claim.start(), claim.end()):
+            return True
+    authorization = re.search(rf"\bauthorization\s+for\s+{re.escape(capability)}\s+is\s+granted\b", clause)
+    if authorization is not None and not _claim_is_negated_or_conditional(clause, capability, authorization.start(), authorization.end()):
+        return True
+    return False
+
+def _has_affirmative_safety_claim(sentence: str) -> bool:
     for clause in _clauses(sentence):
-        if _is_negated_or_conditional(clause):
-            continue
-        if "implementation approval is granted" in clause:
-            return True
-        if re.search(r"authorization\s+for\s+(?:[a-z0-9 -]+)\s+is\s+granted", clause):
-            if any(capability in clause for capability in capabilities):
+        for capability in _capabilities():
+            if _active_document_claim_is_affirmative(clause, capability):
                 return True
-        if re.search(r"\bthis\s+(?:request|ticket|document)\s+(?:approves|authorizes|enables|creates)\b", clause):
-            return True
-        if any(capability in clause for capability in capabilities) and any(re.search(pattern, clause) for pattern in predicate_forms):
-            return True
+            if _capability_claim_is_affirmative(clause, capability):
+                return True
     return False
 
 def _audit_static_test_source(source: str):
@@ -882,10 +934,8 @@ def _audit_static_test_source(source: str):
     forbidden_import_roots = {"sub" + "process", "os", "socket", "requests", "urllib", "http", "meg"}
     dangerous_calls = {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect", "__import__"}
     command_patterns = [
-        r"\bgit\s+(?:log|show|rev-parse|merge-base|cat-file)\b",
-        r"\bgit\s+diff\s+--name-only\b",
-        r"\bgit\s+ls-files\b",
-        r"\bgh\s+(?:pr|api)\b",
+        r"^\s*git\s+",
+        r"^\s*gh\s+",
     ]
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -896,6 +946,12 @@ def _audit_static_test_source(source: str):
             _require(node.module is not None, "prohibited_behavior_absent")
             root = node.module.split(".")[0]
             _require(root in allowed_imports and root not in forbidden_import_roots, "prohibited_behavior_absent")
+        if isinstance(node, ast.Name):
+            _require(node.id not in {"environ", "getenv"}, "prohibited_behavior_absent")
+        if isinstance(node, ast.Subscript):
+            value = node.value
+            _require(not (isinstance(value, ast.Name) and value.id == "environ"), "prohibited_behavior_absent")
+            _require(not (isinstance(value, ast.Attribute) and value.attr == "environ"), "prohibited_behavior_absent")
         if isinstance(node, ast.Call):
             function = node.func
             if isinstance(function, ast.Name):
@@ -1619,7 +1675,7 @@ def _assert_safety_error_from_source(source: str):
 
 def test_adversarial_safety_examples_are_clause_aware():
     base = _read()
-    rejecting = MIXED_AFFIRMATIVE_SAFETY_EXAMPLES + FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES
+    rejecting = MIXED_AFFIRMATIVE_SAFETY_EXAMPLES + FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES + LOCAL_AFFIRMATIVE_SAFETY_EXAMPLES
     for example in rejecting:
         mutated = _insert_noncritical_sentence(base, example)
         _critical_sections_equal_except(base, mutated, [])
@@ -1636,7 +1692,7 @@ def test_adversarial_safety_examples_are_clause_aware():
         except ContractCheckError as error:
             complete = error
         _require(complete is not None, "section_nonempty")
-    allowed = MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES + NEGATIVE_SAFETY_EXAMPLES
+    allowed = MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES + NEGATIVE_SAFETY_EXAMPLES + LOCAL_NEGATIVE_SAFETY_EXAMPLES
     for example in allowed:
         mutated = _insert_noncritical_sentence(base, example)
         _critical_sections_equal_except(base, mutated, [])
@@ -1665,15 +1721,27 @@ def test_static_test_source_audit_rejects_prohibited_snippets():
         "request(\"GET\")",
         "connect(())",
         "from pathlib import Path\nPath(\"." + "git\")",
+        "command = \"git " + "status\"",
+        "command = \"git " + "fetch\"",
+        "command = \"git " + "checkout\"",
+        "command = \"git " + "branch\"",
         "command = \"git " + "log\"",
         "command = \"git " + "show\"",
         "command = \"git " + "rev-parse\"",
         "command = \"git " + "merge-base\"",
         "command = \"git " + "cat-file\"",
-        "command = \"git diff --" + "name-only\"",
+        "command = \"git " + "diff\"",
         "command = \"git " + "ls-files\"",
         "command = \"gh " + "pr view\"",
         "command = \"gh " + "api repos\"",
+        "command = \"gh " + "issue list\"",
+        "command = \"gh " + "workflow list\"",
+        "command = \"gh " + "run list\"",
+        "command = \"gh " + "repo view\"",
+        "environ[\"HOME\"]",
+        "environ.get(\"HOME\")",
+        "os.environ[\"HOME\"]",
+        "os.getenv(\"HOME\")",
     ]
     for source in prohibited:
         _assert_safety_error_from_source(source)
