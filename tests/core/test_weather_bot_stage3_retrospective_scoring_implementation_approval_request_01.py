@@ -327,6 +327,75 @@ EXPECTED_CLOSED_SETS = {'weather bot planning stage': ['weather_bot_stage3_retro
  'next ticket recommendation': ['stage3_binary_probability_record_implementation'],
  'evidence status': ['stage3_binary_probability_record_implementation_approval_request_recorded'],
  'label confidence': ['confirmed']}
+EXPECTED_REMAINING_SECTION_BODIES = {'Status and scope': 'This is a docs/static-test-only, approval-request-only artifact. It requests a human decision only and does not '
+                     'approve implementation.',
+ 'Approval-request purpose and decision boundary': 'This document requests a human decision only. This document does not approve '
+                                                   'implementation. No implementation work may begin because this document exists. A later '
+                                                   'implementation ticket requires an explicit human approval outside this document. The '
+                                                   'proposed slice is limited to one immutable in-memory binary probability-record '
+                                                   'boundary, accepts caller-supplied values only, and does not generate or infer any '
+                                                   'probability, determine scoring readiness, join labels, calculate a metric, establish '
+                                                   'evidence sufficiency, make or pass an evidence-gate decision, or approve persistence, '
+                                                   'reporting, runtime behavior, or trading. The target remains the venue-defined '
+                                                   'settlement outcome, not generic weather. No existing file may be modified by the later '
+                                                   'implementation slice.',
+ 'Readiness-review basis': 'The PR #366 readiness review found the Stage 3 planning chain coherent enough only to request a separate human '
+                           'approval for one narrow implementation slice; it did not approve implementation or evidence-gate passage.',
+ 'Dependency and import boundary': 'Only dataclasses, datetime, decimal, enum, typing, and collections.abc when needed; no third-party or '
+                                   'MEG production dependencies.',
+ 'Canonical routing and target boundary': 'Canonical routing is condition_id, token_id, and outcome; market_id is non-routing and '
+                                          'token_outcome_pair is derived only. The target is venue-defined settlement outcome.',
+ 'Probability-domain boundary': 'Probability is caller-supplied finite Decimal in the closed unit interval; no coercion, clipping, '
+                                'normalization, or generation.',
+ 'Temporal availability and no-lookahead boundary': 'All timestamps are timezone-aware; input availability must not be after prediction '
+                                                    'and creation must not be before prediction.',
+ 'Provenance and immutability boundary': 'Provenance is caller supplied and immutable; no dereference, generated identity, or mutation is '
+                                         'permitted.',
+ 'Failure posture and deterministic output': 'Validation is deterministic, pure, ordered, and fail closed.',
+ 'Explicit future implementation non-goals': 'The future slice may not create or perform probability generation; model execution; model '
+                                             'loading; feature calculation; source fetching; provider connectors; file reading; file '
+                                             'writing; fixture loading; fixture creation or modification; data acquisition; corpus '
+                                             'expansion; split generation or execution; baseline calculation; metric calculation; '
+                                             'calibration diagnostics; label joining; result-record creation; claim evaluation; '
+                                             'claim-record creation; evidence-gate evaluation; decision-record creation; persistence; '
+                                             'serialization formats; database tables; migrations; API endpoints; reports; exports; '
+                                             'scheduling; queues; background tasks; runtime observation; simulation; paper trading; '
+                                             'trading; order placement; autonomy; or production behavior.',
+ 'Fail-closed requirements': 'Fail closed for missing required field, unexpected field, blank required text, market_id input, '
+                             'token_outcome_pair input, unknown or hybrid representation, invalid probability type including bool, int, '
+                             'float, malformed decimal text, non-finite or out-of-range probability, malformed or timezone-naive '
+                             'timestamp, lookahead, contradictory creation order, empty or malformed provenance, self-supersession, '
+                             'nondeterministic ordering, implicit defaults, generated values, clipping, mutation, and scope expansion.',
+ 'Acceptance criteria': 'The artifact remains docs/static-test-only and approval-request-only; it preserves the exact requested slice, '
+                        'three future files, canonical routing, and human decision boundary.'}
+EXACT_TABLE_SECTION_HEADINGS = ['Exact future changed-file matrix',
+ 'Exact future public-symbol matrix',
+ 'Exact future record-field matrix',
+ 'Exact mapping-input matrix',
+ 'Exact validation-code matrix',
+ 'Exact validation-rule matrix',
+ 'Exact future test matrix',
+ 'Approval decision options']
+EXACT_CRITICAL_SECTION_HEADINGS = ['Immediate predecessor and merge verification',
+ 'Requested implementation slice identity',
+ 'Current request status',
+ 'Human decision and separate-approval boundary',
+ 'Explicit non-approvals',
+ 'Canonical routing posture',
+ 'Recommended next ticket']
+EXACT_REMAINING_SECTION_HEADINGS = ['Status and scope',
+ 'Approval-request purpose and decision boundary',
+ 'Readiness-review basis',
+ 'Dependency and import boundary',
+ 'Canonical routing and target boundary',
+ 'Probability-domain boundary',
+ 'Temporal availability and no-lookahead boundary',
+ 'Provenance and immutability boundary',
+ 'Failure posture and deterministic output',
+ 'Explicit future implementation non-goals',
+ 'Fail-closed requirements',
+ 'Acceptance criteria']
+MACHINE_SECTION_HEADINGS = ['Machine-checkable assignments']
 EXPECTED_ASSIGNMENTS = ['- weather bot planning stage: weather_bot_stage3_retrospective_scoring_implementation_approval_request',
  '- immediate predecessor pr: pr_366',
  '- ticket lifecycle status: docs_static_test_only',
@@ -716,6 +785,11 @@ def oracle_literals_exact(text: str):
         "EXPECTED_APPROVAL_DECISION_OPTIONS",
         "EXPECTED_CRITICAL_SECTIONS",
         "EXPECTED_CLOSED_SETS",
+        "EXPECTED_REMAINING_SECTION_BODIES",
+        "EXACT_TABLE_SECTION_HEADINGS",
+        "EXACT_CRITICAL_SECTION_HEADINGS",
+        "EXACT_REMAINING_SECTION_HEADINGS",
+        "MACHINE_SECTION_HEADINGS",
         "EXPECTED_ASSIGNMENTS",
         "REJECTION_SENTENCE",
         "REQUIRED_CHECK_CODES",
@@ -741,192 +815,37 @@ def oracle_literals_exact(text: str):
     for key, value in zip(closed_node.keys, closed_node.values):
         _require(isinstance(key, ast.Constant) and isinstance(key.value, str), "oracle_literals_exact")
         _require(_literal_string_list(value), "oracle_literals_exact")
+    remaining_node = _assignment_for(tree, "EXPECTED_REMAINING_SECTION_BODIES")
+    _require(isinstance(remaining_node, ast.Dict), "oracle_literals_exact")
+    for key, value in zip(remaining_node.keys, remaining_node.values):
+        _require(isinstance(key, ast.Constant) and isinstance(key.value, str), "oracle_literals_exact")
+        _require(isinstance(value, ast.Constant) and isinstance(value.value, str), "oracle_literals_exact")
+    for name in ["EXACT_TABLE_SECTION_HEADINGS", "EXACT_CRITICAL_SECTION_HEADINGS", "EXACT_REMAINING_SECTION_HEADINGS", "MACHINE_SECTION_HEADINGS"]:
+        _require(_literal_string_list(_assignment_for(tree, name)), "oracle_literals_exact")
+    _validate_heading_partition("oracle_literals_exact")
     rejection_node = _assignment_for(tree, "REJECTION_SENTENCE")
     _require(isinstance(rejection_node, ast.Constant) and isinstance(rejection_node.value, str), "oracle_literals_exact")
 
-AFFIRMATIVE_SAFETY_EXAMPLES = [
-    "The Stage 3 package is approved.",
-    "Production modules are authorized.",
-    "Implementation may now proceed.",
-    "Probability generation is enabled.",
-    "Model execution is approved.",
-    "Scoring may proceed.",
-    "Label joining is authorized.",
-    "Persistence is now enabled.",
-    "Serialization is approved.",
-    "Database behavior is authorized.",
-    "Reports and exports may be created.",
-    "Simulation is approved.",
-    "Runtime behavior may proceed.",
-    "Paper trading is authorized.",
-    "Trading and order placement are enabled.",
-    "Autonomy is approved.",
-    "Production behavior is authorized.",
-]
-NEGATIVE_SAFETY_EXAMPLES = [
-    "Implementation is not approved.",
-    "This document does not approve scoring.",
-    "No runtime behavior is created.",
-    "Trading may proceed only after a later explicit approval, and no such approval exists.",
-    "Without explicit human approval, production modules may not be created.",
-]
-MIXED_AFFIRMATIVE_SAFETY_EXAMPLES = [
-    "Implementation is not approved, but trading is approved.",
-    "This document does not approve scoring; however, production modules are authorized.",
-    "No implementation is approved, yet runtime behavior may proceed.",
-    "Scoring is not authorized while persistence is enabled.",
-    "Trading may proceed only after a later explicit approval, but autonomy is approved now.",
-    "Implementation is not approved, and trading is approved.",
-    "Implementation is not approved: trading is approved.",
-    "Implementation is not approved, trading is approved.",
-    "Without explicit human approval, implementation may not proceed and trading is approved.",
-    "No implementation is approved — trading is approved.",
-    "Trading is approved and implementation is not approved.",
-    "Implementation is not approved because trading is approved.",
-    "Scoring is not authorized; persistence has been authorized.",
-    "Production behavior is not approved / autonomy is approved.",
-    "Runtime behavior may not proceed, whereas paper trading is authorized.",
-    "This document does not approve scoring and this request authorizes persistence.",
-    "No production modules are enabled, plus model execution is approved.",
-]
-MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES = [
-    "Implementation is not approved, and trading is not authorized.",
-    "This document does not approve scoring; production modules are not authorized.",
-    "No runtime behavior is created, and no production behavior is approved.",
-    "Without explicit human approval, implementation may not proceed and production modules may not be created.",
-    "Implementation is not approved: trading is not authorized.",
-    "No implementation is approved — no trading is authorized.",
-    "Trading is not approved and implementation is not authorized.",
-    "This document does not approve scoring and this request does not authorize persistence.",
-    "Neither runtime behavior nor paper trading is approved.",
-    "Production modules are not enabled; model execution is not approved.",
-]
-FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES = [
-    "Implementation is now approved.",
-    "Trading is hereby approved.",
-    "Probability generation is explicitly authorized.",
-    "Persistence has been authorized.",
-    "Production modules have been enabled.",
-    "Runtime behavior can now proceed.",
-    "The Stage 3 package can now be created.",
-    "Scoring will now be implemented.",
-    "This request approves scoring.",
-    "This ticket authorizes persistence.",
-    "This document enables runtime behavior.",
-    "Implementation approval is granted.",
-    "Authorization for production behavior is granted.",
-]
-LOCAL_NEGATIVE_SAFETY_EXAMPLES = [
-    "trading is not approved;",
-    "trading is not currently approved;",
-    "trading has not been authorized;",
-    "trading may not proceed;",
-    "trading cannot proceed;",
-    "no trading is approved;",
-    "without explicit human approval, trading may not proceed;",
-    "trading may proceed only after explicit approval, and no such approval exists;",
-]
-LOCAL_AFFIRMATIVE_SAFETY_EXAMPLES = [
-    "trading is approved;",
-    "trading is now approved;",
-    "trading has been authorized;",
-    "trading may proceed;",
-    "trading can proceed;",
-    "trading may now proceed;",
-    "trading is conditionally approved;",
-    "trading remains approved;",
-    "trading is approved unless later revoked;",
-]
-
-def _sentences(text: str):
-    return [part.strip() for part in re.split(r"[.\n]+", text.lower()) if part.strip()]
-
-def _clauses(sentence: str):
-    return [part.strip(" ,") for part in re.split(r"\s*(?:;|:|/|—|,\s*(?:but|however|yet|although|while|whereas|plus)\b|\b(?:but|however|yet|although|while|whereas|plus)\b)\s*", sentence) if part.strip(" ,")]
-
-def _capabilities():
-    return [
-        "stage 3 package",
-        "production modules",
-        "implementation",
-        "probability generation",
-        "model execution",
-        "scoring",
-        "label joining",
-        "persistence",
-        "serialization",
-        "database behavior",
-        "reports",
-        "exports",
-        "simulation",
-        "runtime behavior",
-        "paper trading",
-        "trading",
-        "order placement",
-        "autonomy",
-        "production behavior",
-    ]
-
-def _predicate_forms():
-    return [
-        r"(?:is|are)\s+(?:now\s+|hereby\s+|explicitly\s+|conditionally\s+|currently\s+)?(?:approved|authorized|enabled|created|implemented)",
-        r"(?:has|have)\s+been\s+(?:approved|authorized|enabled|created|implemented)",
-        r"(?:can|may)\s+(?:now\s+)?proceed",
-        r"(?:can|may)\s+(?:now\s+)?be\s+(?:created|implemented)",
-        r"will\s+(?:now\s+)?be\s+(?:created|implemented)",
-        r"remains\s+(?:approved|authorized|enabled|created|implemented)",
-    ]
-
-def _claim_is_negated_or_conditional(clause: str, capability: str, claim_start: int, claim_end: int) -> bool:
-    local = clause[max(0, claim_start - 80):min(len(clause), claim_end + 120)]
-    cap = re.escape(capability)
-    local_patterns = [
-        rf"\bno\s+{cap}\s+(?:is|are)\s+(?:approved|authorized|enabled|created|implemented)",
-        rf"\bneither\b[^.;,]*\b{cap}\b[^.;,]*(?:approved|authorized|enabled|created|implemented)",
-        rf"\b{cap}\s+(?:is|are)\s+not\s+(?:currently\s+)?(?:approved|authorized|enabled|created|implemented)",
-        rf"\b{cap}\s+(?:has|have)\s+not\s+been\s+(?:approved|authorized|enabled|created|implemented)",
-        rf"\b{cap}\s+(?:may\s+not|cannot)\s+proceed",
-        rf"\b{cap}\s+may\s+not\s+be\s+(?:created|implemented)",
-        rf"without\s+explicit\s+human\s+approval[^.;,]*\b{cap}\b[^.;,]*(?:may\s+not|cannot)",
-        rf"\b{cap}\s+may\s+proceed\s+only\s+after.*no\s+such\s+approval\s+exists",
-        rf"\bthis\s+(?:document|request|ticket)\s+does\s+not\s+(?:approve|authorize|enable|create)\s+{cap}\b",
-    ]
-    return any(re.search(pattern, local) for pattern in local_patterns)
-
-def _active_document_claim_is_affirmative(clause: str, capability: str) -> bool:
-    cap = re.escape(capability)
-    active = re.search(rf"\bthis\s+(?:request|ticket|document)\s+(?:approves|authorizes|enables|creates)\s+{cap}\b", clause)
-    if active is None:
-        return False
-    return not _claim_is_negated_or_conditional(clause, capability, active.start(), active.end())
-
-def _capability_claim_is_affirmative(clause: str, capability: str) -> bool:
-    for capability_match in re.finditer(rf"\b{re.escape(capability)}\b", clause):
-        after = clause[capability_match.end():]
-        for predicate in _predicate_forms():
-            predicate_match = re.search(r"^\s+" + predicate, after)
-            if predicate_match is not None:
-                claim_start = capability_match.start()
-                claim_end = capability_match.end() + predicate_match.end()
-                if not _claim_is_negated_or_conditional(clause, capability, claim_start, claim_end):
-                    return True
-    if capability == "implementation" and re.search(r"\bimplementation\s+approval\s+is\s+granted\b", clause):
-        claim = re.search(r"\bimplementation\s+approval\s+is\s+granted\b", clause)
-        if claim is not None and not _claim_is_negated_or_conditional(clause, capability, claim.start(), claim.end()):
-            return True
-    authorization = re.search(rf"\bauthorization\s+for\s+{re.escape(capability)}\s+is\s+granted\b", clause)
-    if authorization is not None and not _claim_is_negated_or_conditional(clause, capability, authorization.start(), authorization.end()):
-        return True
-    return False
-
-def _has_affirmative_safety_claim(sentence: str) -> bool:
-    for clause in _clauses(sentence):
-        for capability in _capabilities():
-            if _active_document_claim_is_affirmative(clause, capability):
-                return True
-            if _capability_claim_is_affirmative(clause, capability):
-                return True
-    return False
+def _validate_heading_partition(check_code: str):
+    _require(EXACT_CRITICAL_SECTION_HEADINGS == list(EXPECTED_CRITICAL_SECTIONS), check_code)
+    _require(EXACT_REMAINING_SECTION_HEADINGS == list(EXPECTED_REMAINING_SECTION_BODIES), check_code)
+    _require(EXACT_TABLE_SECTION_HEADINGS == [
+        "Exact future changed-file matrix",
+        "Exact future public-symbol matrix",
+        "Exact future record-field matrix",
+        "Exact mapping-input matrix",
+        "Exact validation-code matrix",
+        "Exact validation-rule matrix",
+        "Exact future test matrix",
+        "Approval decision options",
+    ], check_code)
+    _require(MACHINE_SECTION_HEADINGS == ["Machine-checkable assignments"], check_code)
+    categories = EXACT_TABLE_SECTION_HEADINGS + EXACT_CRITICAL_SECTION_HEADINGS + EXACT_REMAINING_SECTION_HEADINGS + MACHINE_SECTION_HEADINGS
+    projected = [heading for heading in EXPECTED_HEADINGS if heading in categories]
+    _require(projected == EXPECTED_HEADINGS, check_code)
+    _require(len(categories) == len(EXPECTED_HEADINGS), check_code)
+    _require(all(categories.count(heading) == 1 for heading in EXPECTED_HEADINGS), check_code)
+    _require(all(heading in EXPECTED_HEADINGS for heading in categories), check_code)
 
 def _audit_static_test_source(source: str):
     tree = ast.parse(source)
@@ -934,8 +853,8 @@ def _audit_static_test_source(source: str):
     forbidden_import_roots = {"sub" + "process", "os", "socket", "requests", "urllib", "http", "meg"}
     dangerous_calls = {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect", "__import__"}
     command_patterns = [
-        r"^\s*git\s+",
-        r"^\s*gh\s+",
+        r"^\s*git\s+(?:status|fetch|checkout|branch|log|show|rev-parse|merge-base|cat-file|diff|ls-files)\b",
+        r"^\s*gh\s+(?:pr|api|issue|workflow|run|repo)\b",
     ]
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -967,10 +886,9 @@ def _audit_static_test_source(source: str):
                 _require(re.search(pattern, lowered) is None, "prohibited_behavior_absent")
 
 def prohibited_behavior_absent(text: str):
-    for name, expected in EXPECTED_CRITICAL_SECTIONS.items():
+    _validate_heading_partition("prohibited_behavior_absent")
+    for name, expected in EXPECTED_REMAINING_SECTION_BODIES.items():
         _require(_section(text, name) == expected, "prohibited_behavior_absent")
-    for sentence in _sentences(text):
-        _require(not _has_affirmative_safety_claim(sentence), "prohibited_behavior_absent")
     _audit_static_test_source(Path(__file__).read_text())
 
 VALIDATORS = {
@@ -1637,33 +1555,6 @@ def _insert_noncritical_sentence(text: str, sentence: str) -> str:
     body = _section(text, "Status and scope") + "\n\n" + sentence
     return _replace_section_body(text, "Status and scope", body)
 
-def test_affirmative_safety_examples_are_rejected():
-    base = _read()
-    for example in AFFIRMATIVE_SAFETY_EXAMPLES:
-        mutated = _insert_noncritical_sentence(base, example)
-        _require(mutated != base, "section_nonempty")
-        _critical_sections_equal_except(base, mutated, [])
-        raised = None
-        try:
-            prohibited_behavior_absent(mutated)
-        except ContractCheckError as error:
-            raised = error
-        _require(raised is not None, "section_nonempty")
-        _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
-        complete = None
-        try:
-            validate(mutated)
-        except ContractCheckError as error:
-            complete = error
-        _require(complete is not None, "section_nonempty")
-
-def test_negative_safety_examples_are_allowed_by_safety_detector():
-    base = _read()
-    for example in NEGATIVE_SAFETY_EXAMPLES:
-        mutated = _insert_noncritical_sentence(base, example)
-        prohibited_behavior_absent(mutated)
-
-
 def _assert_safety_error_from_source(source: str):
     raised = None
     try:
@@ -1673,30 +1564,81 @@ def _assert_safety_error_from_source(source: str):
     _require(raised is not None, "section_nonempty")
     _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
 
-def test_adversarial_safety_examples_are_clause_aware():
+def _mutate_remaining_section_body(body: str, mutation_name: str) -> str:
+    if mutation_name == "append_affirmative":
+        return body + "\n\nThis frozen section approves implementation."
+    if mutation_name == "append_negative":
+        return body + "\n\nThis frozen section does not approve implementation."
+    if mutation_name == "delete_final_line":
+        lines = body.splitlines()
+        nonblank = [line for line in lines if line.strip() != ""]
+        if len(nonblank) == 1:
+            return nonblank[0].rsplit(" ", 1)[0]
+        for index in range(len(lines) - 1, -1, -1):
+            if lines[index].strip() != "":
+                del lines[index]
+                return "\n".join(lines).strip()
+        return ""
+    if mutation_name == "replace_token":
+        if "." in body:
+            return body.replace(".", "!", 1)
+        return body[:-1] + "X"
+    if mutation_name == "insert_explanatory":
+        return "Additional explanatory sentence is not part of the frozen artifact.\n\n" + body
+    raise AssertionError(mutation_name)
+
+def test_remaining_sections_are_exactly_frozen():
     base = _read()
-    rejecting = MIXED_AFFIRMATIVE_SAFETY_EXAMPLES + FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES + LOCAL_AFFIRMATIVE_SAFETY_EXAMPLES
-    for example in rejecting:
-        mutated = _insert_noncritical_sentence(base, example)
-        _critical_sections_equal_except(base, mutated, [])
-        raised = None
-        try:
-            prohibited_behavior_absent(mutated)
-        except ContractCheckError as error:
-            raised = error
-        _require(raised is not None, "section_nonempty")
-        _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
-        complete = None
-        try:
-            validate(mutated)
-        except ContractCheckError as error:
-            complete = error
-        _require(complete is not None, "section_nonempty")
-    allowed = MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES + NEGATIVE_SAFETY_EXAMPLES + LOCAL_NEGATIVE_SAFETY_EXAMPLES
-    for example in allowed:
-        mutated = _insert_noncritical_sentence(base, example)
-        _critical_sections_equal_except(base, mutated, [])
-        prohibited_behavior_absent(mutated)
+    mutation_names = ["append_affirmative", "append_negative", "delete_final_line", "replace_token", "insert_explanatory"]
+    for heading, expected in EXPECTED_REMAINING_SECTION_BODIES.items():
+        _require(_section(base, heading) == expected, "section_nonempty")
+        for mutation_name in mutation_names:
+            mutated_body = _mutate_remaining_section_body(expected, mutation_name)
+            mutated = _replace_section_body(base, heading, mutated_body)
+            _require(mutated != base, "section_nonempty")
+            _require(_section(mutated, heading) != _section(base, heading), "section_nonempty")
+            for other_heading in EXPECTED_HEADINGS:
+                if other_heading != heading:
+                    _require(_section(mutated, other_heading) == _section(base, other_heading), "section_nonempty")
+            raised = None
+            try:
+                prohibited_behavior_absent(mutated)
+            except ContractCheckError as error:
+                raised = error
+            _require(raised is not None, "section_nonempty")
+            _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
+            complete = None
+            try:
+                validate(mutated)
+            except ContractCheckError as error:
+                complete = error
+            _require(complete is not None, "section_nonempty")
+
+def test_natural_language_safety_parser_is_removed():
+    tree = ast.parse(Path(__file__).read_text())
+    removed_functions = [
+        "_sentences",
+        "_clauses",
+        "_capabilities",
+        "_predicate_forms",
+        "_claim_is_negated_or_conditional",
+        "_active_document_claim_is_affirmative",
+        "_capability_claim_is_affirmative",
+        "_has_affirmative_safety_claim",
+    ]
+    removed_assignments = [
+        "AFFIRMATIVE_SAFETY_EXAMPLES",
+        "NEGATIVE_SAFETY_EXAMPLES",
+        "MIXED_AFFIRMATIVE_SAFETY_EXAMPLES",
+        "MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES",
+        "FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES",
+        "LOCAL_NEGATIVE_SAFETY_EXAMPLES",
+        "LOCAL_AFFIRMATIVE_SAFETY_EXAMPLES",
+    ]
+    function_names = [node.name for node in tree.body if isinstance(node, ast.FunctionDef)]
+    assignment_names = [node.targets[0].id for node in tree.body if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name)]
+    _require(not any(name in function_names for name in removed_functions), "oracle_literals_exact")
+    _require(not any(name in assignment_names for name in removed_assignments), "oracle_literals_exact")
 
 def test_static_test_source_audit_rejects_prohibited_snippets():
     prohibited = [
@@ -1757,6 +1699,7 @@ def test_static_test_source_audit_allows_static_controls():
         "ast.literal_eval(node)",
         "values = [text.strip() for text in lines]",
         "joined = \" | \".join(values)",
+        "note = \"Git is discussed in prose\"",
     ]
     for source in allowed:
         _audit_static_test_source(source)
