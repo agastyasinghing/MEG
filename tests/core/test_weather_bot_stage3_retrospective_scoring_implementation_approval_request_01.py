@@ -524,31 +524,23 @@ def _parse_actual_assignments(text: str):
     delimiter = "\n\nActual assignments:\n\n"
     _require(body.count(delimiter) == 1, "assignments_exact")
     after = body.split(delimiter, 1)[1]
-    marker = "\n\n" + REJECTION_SENTENCE
-    if marker in after:
-        assignments_part = after.split(marker, 1)[0]
-    else:
-        lines = after.splitlines()
-        assignment_lines = []
-        for line in lines:
-            if ASSIGNMENT_RE.fullmatch(line):
-                assignment_lines.append(line)
-            elif line == "":
-                break
-            else:
-                break
-        assignments_part = "\n".join(assignment_lines)
-    lines = assignments_part.splitlines()
-    _require(lines != [], "assignments_exact")
+    lines_after = after.splitlines()
+    boundary = len(lines_after)
+    for index, line in enumerate(lines_after):
+        if line == "":
+            boundary = index
+            break
+    assignment_lines = lines_after[:boundary]
+    _require(assignment_lines != [], "assignments_exact")
     seen = []
-    for line in lines:
+    for line in assignment_lines:
         match = ASSIGNMENT_RE.fullmatch(line)
         _require(match is not None, "assignments_exact")
         field, value = match.group(1), match.group(2)
         _require(field.strip() == field and value.strip() == value and field != "" and value != "", "assignments_exact")
         _require(line not in seen, "assignments_exact")
         seen.append(line)
-    return lines
+    return assignment_lines
 
 def _parse_rejection_tail(text: str) -> str:
     body = _machine_body(text)
@@ -752,38 +744,132 @@ def oracle_literals_exact(text: str):
     rejection_node = _assignment_for(tree, "REJECTION_SENTENCE")
     _require(isinstance(rejection_node, ast.Constant) and isinstance(rejection_node.value, str), "oracle_literals_exact")
 
-def prohibited_behavior_absent(text: str):
-    critical_sections_exact(text)
-    explicit_non_approval = _section(text, "Explicit non-approvals")
-    _require(explicit_non_approval == EXPECTED_CRITICAL_SECTIONS["Explicit non-approvals"], "prohibited_behavior_absent")
-    affirmative_patterns = [
-        r"\bthis ticket (?:creates|approves)\b",
-        r"\bthis document (?:creates|approves|records its own approval)\b",
-        r"\bthis ticket creates or approves\b",
-        r"\bimplementation is hereby approved\b",
-        r"\bproduction behavior is approved\b",
-        r"\bprobability generation is approved\b",
-        r"\bscoring is approved\b",
-        r"\btrading is approved\b",
-        r"\bautonomy is approved\b",
+AFFIRMATIVE_SAFETY_EXAMPLES = [
+    "The Stage 3 package is approved.",
+    "Production modules are authorized.",
+    "Implementation may now proceed.",
+    "Probability generation is enabled.",
+    "Model execution is approved.",
+    "Scoring may proceed.",
+    "Label joining is authorized.",
+    "Persistence is now enabled.",
+    "Serialization is approved.",
+    "Database behavior is authorized.",
+    "Reports and exports may be created.",
+    "Simulation is approved.",
+    "Runtime behavior may proceed.",
+    "Paper trading is authorized.",
+    "Trading and order placement are enabled.",
+    "Autonomy is approved.",
+    "Production behavior is authorized.",
+]
+NEGATIVE_SAFETY_EXAMPLES = [
+    "Implementation is not approved.",
+    "This document does not approve scoring.",
+    "No runtime behavior is created.",
+    "Trading may proceed only after a later explicit approval, and no such approval exists.",
+    "Without explicit human approval, production modules may not be created.",
+]
+
+def _sentences(text: str):
+    return [part.strip() for part in re.split(r"[.\n]+", text.lower()) if part.strip()]
+
+def _is_negated_or_conditional(sentence: str) -> bool:
+    safe_fragments = [
+        "does not approve",
+        "does not create",
+        "is not approved",
+        "are not approved",
+        "not authorized",
+        "no implementation",
+        "no production behavior",
+        "only after explicit human approval",
+        "only after a later explicit approval",
+        "without explicit approval",
+        "without explicit human approval",
+        "later separately approved ticket may create",
+        "may proceed only after",
+        "may not be created",
+        "no such approval exists",
     ]
-    normalized = " ".join(text.lower().split())
-    for pattern in affirmative_patterns:
-        _require(re.search(pattern, normalized) is None, "prohibited_behavior_absent")
+    return any(fragment in sentence for fragment in safe_fragments)
+
+def _has_affirmative_safety_claim(sentence: str) -> bool:
+    if _is_negated_or_conditional(sentence):
+        return False
+    capabilities = [
+        "stage 3 package",
+        "production modules",
+        "implementation",
+        "probability generation",
+        "model execution",
+        "scoring",
+        "label joining",
+        "persistence",
+        "serialization",
+        "database behavior",
+        "reports",
+        "exports",
+        "simulation",
+        "runtime behavior",
+        "paper trading",
+        "trading",
+        "order placement",
+        "autonomy",
+        "production behavior",
+    ]
+    predicates = [
+        "is approved",
+        "are approved",
+        "is authorized",
+        "are authorized",
+        "is enabled",
+        "are enabled",
+        "is now enabled",
+        "are now enabled",
+        "may proceed",
+        "may now proceed",
+        "may be created",
+        "may be implemented",
+        "will be created",
+        "will be implemented",
+        "implementation is granted",
+    ]
+    if any(capability in sentence for capability in capabilities) and any(predicate in sentence for predicate in predicates):
+        return True
+    document_predicates = [
+        "this ticket creates",
+        "this ticket approves",
+        "this document creates",
+        "this document approves",
+        "this request authorizes",
+    ]
+    return any(predicate in sentence for predicate in document_predicates)
+
+def prohibited_behavior_absent(text: str):
+    for name, expected in EXPECTED_CRITICAL_SECTIONS.items():
+        _require(_section(text, name) == expected, "prohibited_behavior_absent")
+    for sentence in _sentences(text):
+        _require(not _has_affirmative_safety_claim(sentence), "prohibited_behavior_absent")
     tree = ast.parse(Path(__file__).read_text())
     allowed_imports = {"ast", "re", "pathlib"}
+    forbidden_import_roots = {"sub" + "process", "socket", "requests", "urllib", "http", "meg"}
+    dangerous_calls = {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect"}
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                _require(alias.name.split(".")[0] in allowed_imports, "prohibited_behavior_absent")
+                root = alias.name.split(".")[0]
+                _require(root in allowed_imports and root not in forbidden_import_roots, "prohibited_behavior_absent")
         if isinstance(node, ast.ImportFrom):
-            _require(node.module is not None and node.module.split(".")[0] in allowed_imports, "prohibited_behavior_absent")
+            _require(node.module is not None, "prohibited_behavior_absent")
+            root = node.module.split(".")[0]
+            _require(root in allowed_imports and root not in forbidden_import_roots, "prohibited_behavior_absent")
         if isinstance(node, ast.Call):
             function = node.func
             if isinstance(function, ast.Name):
-                _require(function.id not in {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect"}, "prohibited_behavior_absent")
+                _require(function.id not in dangerous_calls, "prohibited_behavior_absent")
             if isinstance(function, ast.Attribute):
-                _require(function.attr not in {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect"}, "prohibited_behavior_absent")
+                _require(function.attr not in dangerous_calls, "prohibited_behavior_absent")
 
 VALIDATORS = {
     "header_exact": header_exact,
@@ -1380,6 +1466,100 @@ def test_all_registered_mutations_are_validator_specific():
         _require(raised is not None, "section_nonempty")
         executed.append(name)
     _require(executed == REQUIRED_MUTATION_CASES, "oracle_literals_exact")
+
+
+def _replace_actual_assignments_block(text: str, assignment_lines: list[str], tail: str | None = None) -> str:
+    closed_part, rest = _split_machine(text)
+    if tail is None:
+        tail = _parse_rejection_tail(text)
+    new_rest = "\n".join(assignment_lines)
+    if tail != "":
+        new_rest = new_rest + "\n\n" + tail
+    return _replace_section_body(text, "Machine-checkable assignments", closed_part + "\n\nActual assignments:\n\n" + new_rest)
+
+def _assert_assignment_error(mutated: str):
+    raised = None
+    try:
+        assignments_exact(mutated)
+    except ContractCheckError as error:
+        raised = error
+    _require(raised is not None, "section_nonempty")
+    _require(raised.check_code == "assignments_exact", "section_nonempty")
+    complete = None
+    try:
+        validate(mutated)
+    except ContractCheckError as error:
+        complete = error
+    _require(complete is not None, "section_nonempty")
+
+def test_assignment_parser_rejects_escape_lines():
+    base = _read()
+    cases = []
+    first = EXPECTED_ASSIGNMENTS[:]
+    first[0] = first[0].replace(": ", " = ", 1)
+    cases.append(("malformed_first", first, first[0]))
+    middle = EXPECTED_ASSIGNMENTS[:]
+    middle[len(middle) // 2] = "  " + middle[len(middle) // 2]
+    cases.append(("malformed_middle", middle, middle[len(middle) // 2]))
+    final = EXPECTED_ASSIGNMENTS[:]
+    final[-1] = final[-1].replace(": ", " = ", 1)
+    cases.append(("malformed_final", final, final[-1]))
+    extra_bad = EXPECTED_ASSIGNMENTS[:] + ["- malformed = value"]
+    cases.append(("malformed_extra", extra_bad, "- malformed = value"))
+    prose = EXPECTED_ASSIGNMENTS[:] + ["This prose must not be skipped."]
+    cases.append(("prose_extra", prose, "This prose must not be skipped."))
+    extra_valid = EXPECTED_ASSIGNMENTS[:] + ["- unexpected field: unexpected_value"]
+    cases.append(("unexpected_valid", extra_valid, "- unexpected field: unexpected_value"))
+    second_delimiter = EXPECTED_ASSIGNMENTS[:] + ["Actual assignments:"]
+    cases.append(("second_delimiter", second_delimiter, "Actual assignments:"))
+    early_blank = EXPECTED_ASSIGNMENTS[:5] + [""] + EXPECTED_ASSIGNMENTS[5:]
+    cases.append(("early_blank", early_blank, ""))
+    for name, lines, marker in cases:
+        mutated = _replace_actual_assignments_block(base, lines)
+        _require(mutated != base, "section_nonempty")
+        if marker != "":
+            _require(marker in _machine_body(mutated), "section_nonempty")
+        else:
+            _require("\n\n".join([EXPECTED_ASSIGNMENTS[4], EXPECTED_ASSIGNMENTS[5]]) in _machine_body(mutated), "section_nonempty")
+        _assert_assignment_error(mutated)
+
+def test_assignment_parser_rejection_tail_isolation_controls():
+    base = _read()
+    assignments_exact(base)
+    altered = _replace_actual_assignments_block(base, EXPECTED_ASSIGNMENTS[:], "Altered rejection tail.")
+    assignments_exact(altered)
+    removed = _replace_actual_assignments_block(base, EXPECTED_ASSIGNMENTS[:], "")
+    assignments_exact(removed)
+
+def _insert_noncritical_sentence(text: str, sentence: str) -> str:
+    body = _section(text, "Status and scope") + "\n\n" + sentence
+    return _replace_section_body(text, "Status and scope", body)
+
+def test_affirmative_safety_examples_are_rejected():
+    base = _read()
+    for example in AFFIRMATIVE_SAFETY_EXAMPLES:
+        mutated = _insert_noncritical_sentence(base, example)
+        _require(mutated != base, "section_nonempty")
+        _critical_sections_equal_except(base, mutated, [])
+        raised = None
+        try:
+            prohibited_behavior_absent(mutated)
+        except ContractCheckError as error:
+            raised = error
+        _require(raised is not None, "section_nonempty")
+        _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
+        complete = None
+        try:
+            validate(mutated)
+        except ContractCheckError as error:
+            complete = error
+        _require(complete is not None, "section_nonempty")
+
+def test_negative_safety_examples_are_allowed_by_safety_detector():
+    base = _read()
+    for example in NEGATIVE_SAFETY_EXAMPLES:
+        mutated = _insert_noncritical_sentence(base, example)
+        prohibited_behavior_absent(mutated)
 
 def test_pre_commit_completeness_gate():
     base = _read()
