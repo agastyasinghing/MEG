@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from enum import StrEnum
-import re
 
 __all__ = (
     "PredictionRepresentation",
@@ -102,7 +101,6 @@ _TEXT_FIELDS = (
     "method_version", "record_version",
 )
 _TIMESTAMP_FIELDS = ("prediction_as_of", "input_publication_available_at", "created_at")
-_PROBABILITY_TEXT_RE = re.compile(r"-?(?:0|[1-9]\d*)(?:\.\d+)?\Z")
 _ZERO = Decimal("0")
 _ONE = Decimal("1")
 
@@ -116,7 +114,27 @@ def _result(codes: list[ProbabilityRecordValidationCode]) -> ProbabilityRecordVa
 
 
 def _is_nonblank_text(value: object) -> bool:
-    return isinstance(value, str) and bool(value.strip())
+    return type(value) is str and bool(value.strip())
+
+
+def _is_ascii_canonical_decimal_text(value: str) -> bool:
+    index = 1 if value.startswith("-") else 0
+    integer_start = index
+    while index < len(value) and "0" <= value[index] <= "9":
+        index += 1
+    integer = value[integer_start:index]
+    if integer == "":
+        return False
+    if len(integer) > 1 and integer.startswith("0"):
+        return False
+    if index < len(value) and value[index] == ".":
+        index += 1
+        fraction_start = index
+        while index < len(value) and "0" <= value[index] <= "9":
+            index += 1
+        if fraction_start == index:
+            return False
+    return index == len(value)
 
 
 def _parse_timestamp(value: object) -> datetime | None:
@@ -131,7 +149,23 @@ def _parse_timestamp(value: object) -> datetime | None:
     return parsed
 
 
-def _adapt_representation(value: object) -> PredictionRepresentation | None:
+def _append_timestamp_codes(
+    codes: list[ProbabilityRecordValidationCode],
+    timestamps: dict[str, datetime | None],
+) -> None:
+    for field in _TIMESTAMP_FIELDS:
+        if timestamps[field] is None:
+            codes.append(ProbabilityRecordValidationCode.INVALID_TIMESTAMP)
+    prediction = timestamps["prediction_as_of"]
+    input_available = timestamps["input_publication_available_at"]
+    created = timestamps["created_at"]
+    if prediction is not None and input_available is not None and input_available > prediction:
+        codes.append(ProbabilityRecordValidationCode.INPUT_AVAILABLE_AFTER_PREDICTION)
+    if prediction is not None and created is not None and created < prediction:
+        codes.append(ProbabilityRecordValidationCode.CREATED_BEFORE_PREDICTION)
+
+
+def _adapt_mapping_representation(value: object) -> PredictionRepresentation | None:
     if value is PredictionRepresentation.BINARY_OUTCOME_PROBABILITY:
         return value
     if type(value) is str and value == PredictionRepresentation.BINARY_OUTCOME_PROBABILITY.value:
@@ -139,15 +173,15 @@ def _adapt_representation(value: object) -> PredictionRepresentation | None:
     return None
 
 
-def _adapt_probability(value: object) -> tuple[Decimal | None, ProbabilityRecordValidationCode | None]:
+def _adapt_mapping_probability(value: object) -> tuple[Decimal | None, ProbabilityRecordValidationCode | None]:
     if isinstance(value, Decimal):
         probability = value
-    elif isinstance(value, str):
+    elif type(value) is str:
         try:
             probability = Decimal(value)
         except InvalidOperation:
             return None, ProbabilityRecordValidationCode.INVALID_PROBABILITY_TYPE
-        if probability.is_finite() and _PROBABILITY_TEXT_RE.fullmatch(value) is None:
+        if probability.is_finite() and not _is_ascii_canonical_decimal_text(value):
             return None, ProbabilityRecordValidationCode.INVALID_PROBABILITY_TYPE
     else:
         return None, ProbabilityRecordValidationCode.INVALID_PROBABILITY_TYPE
@@ -158,88 +192,111 @@ def _adapt_probability(value: object) -> tuple[Decimal | None, ProbabilityRecord
     return probability, None
 
 
-def _adapt_provenance(value: object) -> tuple[tuple[str, ...] | None, list[ProbabilityRecordValidationCode]]:
+def _append_mapping_provenance_codes(
+    codes: list[ProbabilityRecordValidationCode], value: object
+) -> tuple[str, ...] | None:
     if not isinstance(value, (tuple, list)):
-        return None, [ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF]
+        codes.append(ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF)
+        return None
     if not value:
-        return None, [ProbabilityRecordValidationCode.EMPTY_PROVENANCE_REFS]
-    codes: list[ProbabilityRecordValidationCode] = []
+        codes.append(ProbabilityRecordValidationCode.EMPTY_PROVENANCE_REFS)
+        return None
     for entry in value:
         if not _is_nonblank_text(entry):
             codes.append(ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF)
-    if codes:
-        return None, codes
-    return tuple(value), []
+    if codes and codes[-1] is ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF:
+        return None
+    return tuple(value)
 
 
-def _validate_values(values: Mapping[str, object]) -> tuple[list[ProbabilityRecordValidationCode], dict[str, object]]:
-    adapted: dict[str, object] = {}
-    codes: list[ProbabilityRecordValidationCode] = []
-    for field in _TEXT_FIELDS:
-        if not _is_nonblank_text(values[field]):
-            codes.append(ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
-    supersedes = values.get("supersedes_prediction_record_id")
-    if supersedes is not None and not _is_nonblank_text(supersedes):
-        codes.append(ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
-
-    representation = _adapt_representation(values["prediction_representation"])
-    if representation is None:
-        codes.append(ProbabilityRecordValidationCode.INVALID_PREDICTION_REPRESENTATION)
-    else:
-        adapted["prediction_representation"] = representation
-
-    probability, probability_code = _adapt_probability(values["probability"])
-    if probability_code is not None:
-        codes.append(probability_code)
-    else:
-        adapted["probability"] = probability
-
-    timestamps = {field: _parse_timestamp(values[field]) for field in _TIMESTAMP_FIELDS}
-    for field in _TIMESTAMP_FIELDS:
-        if timestamps[field] is None:
-            codes.append(ProbabilityRecordValidationCode.INVALID_TIMESTAMP)
-    if timestamps["prediction_as_of"] is not None and timestamps["input_publication_available_at"] is not None:
-        if timestamps["input_publication_available_at"] > timestamps["prediction_as_of"]:
-            codes.append(ProbabilityRecordValidationCode.INPUT_AVAILABLE_AFTER_PREDICTION)
-    if timestamps["prediction_as_of"] is not None and timestamps["created_at"] is not None:
-        if timestamps["created_at"] < timestamps["prediction_as_of"]:
-            codes.append(ProbabilityRecordValidationCode.CREATED_BEFORE_PREDICTION)
-
-    provenance_refs, provenance_codes = _adapt_provenance(values["provenance_refs"])
-    codes.extend(provenance_codes)
-    if provenance_refs is not None:
-        adapted["provenance_refs"] = provenance_refs
-
-    if supersedes is not None and supersedes == values["prediction_record_id"]:
-        codes.append(ProbabilityRecordValidationCode.SELF_SUPERSESSION)
-    return codes, adapted
+def _append_direct_provenance_codes(
+    codes: list[ProbabilityRecordValidationCode], value: object
+) -> None:
+    if not isinstance(value, tuple):
+        codes.append(ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF)
+        return
+    if not value:
+        codes.append(ProbabilityRecordValidationCode.EMPTY_PROVENANCE_REFS)
+        return
+    for entry in value:
+        if not _is_nonblank_text(entry):
+            codes.append(ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF)
 
 
 def binary_outcome_probability_record_from_mapping(mapping: object) -> tuple[BinaryOutcomeProbabilityRecord | None, ProbabilityRecordValidationResult]:
     if not isinstance(mapping, Mapping):
-        codes = [ProbabilityRecordValidationCode.MISSING_REQUIRED_FIELD for _ in _REQUIRED_KEYS]
-        return None, _result(codes)
-    allowed_keys = _REQUIRED_KEYS + _OPTIONAL_KEYS
+        return None, _result([ProbabilityRecordValidationCode.MISSING_REQUIRED_FIELD for _ in _REQUIRED_KEYS])
+
     codes: list[ProbabilityRecordValidationCode] = []
+    present: dict[str, object] = {}
     for key in _REQUIRED_KEYS:
-        if key not in mapping:
+        if key in mapping:
+            present[key] = mapping[key]
+        else:
             codes.append(ProbabilityRecordValidationCode.MISSING_REQUIRED_FIELD)
+    optional_supersedes_present = "supersedes_prediction_record_id" in mapping
+    if optional_supersedes_present:
+        present["supersedes_prediction_record_id"] = mapping["supersedes_prediction_record_id"]
+    else:
+        present["supersedes_prediction_record_id"] = None
+
+    allowed_keys = _REQUIRED_KEYS + _OPTIONAL_KEYS
     unexpected_keys = [key for key in mapping.keys() if key not in allowed_keys]
-    for _key in sorted(unexpected_keys, key=lambda item: item if isinstance(item, str) else repr(item)):
+    for _key in sorted(unexpected_keys, key=lambda item: item if type(item) is str else repr(item)):
         codes.append(ProbabilityRecordValidationCode.UNEXPECTED_FIELD)
+
+    for field in _TEXT_FIELDS:
+        if field in present and not _is_nonblank_text(present[field]):
+            codes.append(ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
+    supersedes = present["supersedes_prediction_record_id"]
+    if optional_supersedes_present and supersedes is not None and not _is_nonblank_text(supersedes):
+        codes.append(ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
+
+    adapted: dict[str, object] = {}
+    if "prediction_representation" in present:
+        representation = _adapt_mapping_representation(present["prediction_representation"])
+        if representation is None:
+            codes.append(ProbabilityRecordValidationCode.INVALID_PREDICTION_REPRESENTATION)
+        else:
+            adapted["prediction_representation"] = representation
+
+    if "probability" in present:
+        probability, probability_code = _adapt_mapping_probability(present["probability"])
+        if probability_code is not None:
+            codes.append(probability_code)
+        else:
+            adapted["probability"] = probability
+
+    timestamps = {
+        field: _parse_timestamp(present[field]) if field in present else None
+        for field in _TIMESTAMP_FIELDS
+    }
+    for field in _TIMESTAMP_FIELDS:
+        if field in present and timestamps[field] is None:
+            codes.append(ProbabilityRecordValidationCode.INVALID_TIMESTAMP)
+    prediction = timestamps["prediction_as_of"]
+    input_available = timestamps["input_publication_available_at"]
+    created = timestamps["created_at"]
+    if prediction is not None and input_available is not None and input_available > prediction:
+        codes.append(ProbabilityRecordValidationCode.INPUT_AVAILABLE_AFTER_PREDICTION)
+    if prediction is not None and created is not None and created < prediction:
+        codes.append(ProbabilityRecordValidationCode.CREATED_BEFORE_PREDICTION)
+
+    if "provenance_refs" in present:
+        provenance_refs = _append_mapping_provenance_codes(codes, present["provenance_refs"])
+        if provenance_refs is not None:
+            adapted["provenance_refs"] = provenance_refs
+
+    prediction_id_valid = "prediction_record_id" in present and _is_nonblank_text(present["prediction_record_id"])
+    supersedes_valid = supersedes is not None and _is_nonblank_text(supersedes)
+    if prediction_id_valid and supersedes_valid and supersedes == present["prediction_record_id"]:
+        codes.append(ProbabilityRecordValidationCode.SELF_SUPERSESSION)
+
     if codes:
         return None, _result(codes)
 
-    values = {key: mapping[key] for key in _REQUIRED_KEYS}
-    if "supersedes_prediction_record_id" in mapping:
-        values["supersedes_prediction_record_id"] = mapping["supersedes_prediction_record_id"]
-    else:
-        values["supersedes_prediction_record_id"] = None
-    value_codes, adapted = _validate_values(values)
-    if value_codes:
-        return None, _result(value_codes)
-
-    record_values = dict(values)
+    record_values = {key: present[key] for key in _REQUIRED_KEYS}
+    record_values["supersedes_prediction_record_id"] = present["supersedes_prediction_record_id"]
     record_values.update(adapted)
     record = BinaryOutcomeProbabilityRecord(**record_values)
     validation = validate_binary_outcome_probability_record(record)
@@ -249,25 +306,29 @@ def binary_outcome_probability_record_from_mapping(mapping: object) -> tuple[Bin
 
 
 def validate_binary_outcome_probability_record(record: BinaryOutcomeProbabilityRecord) -> ProbabilityRecordValidationResult:
-    values = {field: getattr(record, field) for field in _REQUIRED_KEYS}
-    values["supersedes_prediction_record_id"] = record.supersedes_prediction_record_id
-    codes, _adapted = _validate_values(values)
-    if not isinstance(record.prediction_representation, PredictionRepresentation):
-        if ProbabilityRecordValidationCode.INVALID_PREDICTION_REPRESENTATION not in codes:
-            insert_at = sum(1 for code in codes if code is ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
-            codes.insert(insert_at, ProbabilityRecordValidationCode.INVALID_PREDICTION_REPRESENTATION)
-    if not isinstance(record.probability, Decimal):
-        codes = [c for c in codes if c is not ProbabilityRecordValidationCode.INVALID_PROBABILITY_TYPE]
-        insert_at = 0
-        ordered_before = {ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT, ProbabilityRecordValidationCode.INVALID_PREDICTION_REPRESENTATION}
-        while insert_at < len(codes) and codes[insert_at] in ordered_before:
-            insert_at += 1
-        codes.insert(insert_at, ProbabilityRecordValidationCode.INVALID_PROBABILITY_TYPE)
-    if not isinstance(record.provenance_refs, tuple):
-        codes = [c for c in codes if c is not ProbabilityRecordValidationCode.EMPTY_PROVENANCE_REFS]
-        if ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF not in codes:
-            insert_at = len(codes)
-            if codes and codes[-1] is ProbabilityRecordValidationCode.SELF_SUPERSESSION:
-                insert_at -= 1
-            codes.insert(insert_at, ProbabilityRecordValidationCode.INVALID_PROVENANCE_REF)
+    codes: list[ProbabilityRecordValidationCode] = []
+    for field in _TEXT_FIELDS:
+        if not _is_nonblank_text(getattr(record, field)):
+            codes.append(ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
+    supersedes = record.supersedes_prediction_record_id
+    if supersedes is not None and not _is_nonblank_text(supersedes):
+        codes.append(ProbabilityRecordValidationCode.BLANK_REQUIRED_TEXT)
+
+    if record.prediction_representation is not PredictionRepresentation.BINARY_OUTCOME_PROBABILITY:
+        codes.append(ProbabilityRecordValidationCode.INVALID_PREDICTION_REPRESENTATION)
+
+    probability = record.probability
+    if not isinstance(probability, Decimal):
+        codes.append(ProbabilityRecordValidationCode.INVALID_PROBABILITY_TYPE)
+    elif not probability.is_finite():
+        codes.append(ProbabilityRecordValidationCode.NON_FINITE_PROBABILITY)
+    elif probability < _ZERO or probability > _ONE:
+        codes.append(ProbabilityRecordValidationCode.PROBABILITY_OUT_OF_RANGE)
+
+    timestamps = {field: _parse_timestamp(getattr(record, field)) for field in _TIMESTAMP_FIELDS}
+    _append_timestamp_codes(codes, timestamps)
+    _append_direct_provenance_codes(codes, record.provenance_refs)
+    if _is_nonblank_text(record.prediction_record_id) and _is_nonblank_text(supersedes):
+        if supersedes == record.prediction_record_id:
+            codes.append(ProbabilityRecordValidationCode.SELF_SUPERSESSION)
     return _result(codes)
