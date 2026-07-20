@@ -770,18 +770,56 @@ NEGATIVE_SAFETY_EXAMPLES = [
     "Trading may proceed only after a later explicit approval, and no such approval exists.",
     "Without explicit human approval, production modules may not be created.",
 ]
+MIXED_AFFIRMATIVE_SAFETY_EXAMPLES = [
+    "Implementation is not approved, but trading is approved.",
+    "This document does not approve scoring; however, production modules are authorized.",
+    "No implementation is approved, yet runtime behavior may proceed.",
+    "Scoring is not authorized while persistence is enabled.",
+    "Trading may proceed only after a later explicit approval, but autonomy is approved now.",
+]
+MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES = [
+    "Implementation is not approved, and trading is not authorized.",
+    "This document does not approve scoring; production modules are not authorized.",
+    "No runtime behavior is created, and no production behavior is approved.",
+    "Without explicit human approval, implementation may not proceed and production modules may not be created.",
+]
+FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES = [
+    "Implementation is now approved.",
+    "Trading is hereby approved.",
+    "Probability generation is explicitly authorized.",
+    "Persistence has been authorized.",
+    "Production modules have been enabled.",
+    "Runtime behavior can now proceed.",
+    "The Stage 3 package can now be created.",
+    "Scoring will now be implemented.",
+    "This request approves scoring.",
+    "This ticket authorizes persistence.",
+    "This document enables runtime behavior.",
+    "Implementation approval is granted.",
+    "Authorization for production behavior is granted.",
+]
 
 def _sentences(text: str):
     return [part.strip() for part in re.split(r"[.\n]+", text.lower()) if part.strip()]
 
-def _is_negated_or_conditional(sentence: str) -> bool:
+def _clauses(sentence: str):
+    return [part.strip(" ,") for part in re.split(r"\s*(?:;|,\s*(?:but|however|yet|although|while)\b|\b(?:but|however|yet|although|while)\b)\s*", sentence) if part.strip(" ,")]
+
+def _is_negated_or_conditional(clause: str) -> bool:
     safe_fragments = [
         "does not approve",
         "does not create",
         "is not approved",
         "are not approved",
+        "is not authorized",
+        "are not authorized",
+        "is not enabled",
+        "are not enabled",
+        "is not created",
+        "are not created",
         "not authorized",
         "no implementation",
+        "no runtime behavior",
         "no production behavior",
         "only after explicit human approval",
         "only after a later explicit approval",
@@ -789,14 +827,13 @@ def _is_negated_or_conditional(sentence: str) -> bool:
         "without explicit human approval",
         "later separately approved ticket may create",
         "may proceed only after",
+        "may not proceed",
         "may not be created",
         "no such approval exists",
     ]
-    return any(fragment in sentence for fragment in safe_fragments)
+    return any(fragment in clause for fragment in safe_fragments)
 
 def _has_affirmative_safety_claim(sentence: str) -> bool:
-    if _is_negated_or_conditional(sentence):
-        return False
     capabilities = [
         "stage 3 package",
         "production modules",
@@ -818,43 +855,38 @@ def _has_affirmative_safety_claim(sentence: str) -> bool:
         "autonomy",
         "production behavior",
     ]
-    predicates = [
-        "is approved",
-        "are approved",
-        "is authorized",
-        "are authorized",
-        "is enabled",
-        "are enabled",
-        "is now enabled",
-        "are now enabled",
-        "may proceed",
-        "may now proceed",
-        "may be created",
-        "may be implemented",
-        "will be created",
-        "will be implemented",
-        "implementation is granted",
+    predicate_forms = [
+        r"(?:is|are)\s+(?:now\s+|hereby\s+|explicitly\s+)?(?:approved|authorized|enabled|created|implemented)",
+        r"(?:has|have)\s+been\s+(?:approved|authorized|enabled|created|implemented)",
+        r"(?:can|may)\s+(?:now\s+)?proceed",
+        r"(?:can|may)\s+(?:now\s+)?be\s+(?:created|implemented)",
+        r"will\s+(?:now\s+)?be\s+(?:created|implemented)",
     ]
-    if any(capability in sentence for capability in capabilities) and any(predicate in sentence for predicate in predicates):
-        return True
-    document_predicates = [
-        "this ticket creates",
-        "this ticket approves",
-        "this document creates",
-        "this document approves",
-        "this request authorizes",
-    ]
-    return any(predicate in sentence for predicate in document_predicates)
+    for clause in _clauses(sentence):
+        if _is_negated_or_conditional(clause):
+            continue
+        if "implementation approval is granted" in clause:
+            return True
+        if re.search(r"authorization\s+for\s+(?:[a-z0-9 -]+)\s+is\s+granted", clause):
+            if any(capability in clause for capability in capabilities):
+                return True
+        if re.search(r"\bthis\s+(?:request|ticket|document)\s+(?:approves|authorizes|enables|creates)\b", clause):
+            return True
+        if any(capability in clause for capability in capabilities) and any(re.search(pattern, clause) for pattern in predicate_forms):
+            return True
+    return False
 
-def prohibited_behavior_absent(text: str):
-    for name, expected in EXPECTED_CRITICAL_SECTIONS.items():
-        _require(_section(text, name) == expected, "prohibited_behavior_absent")
-    for sentence in _sentences(text):
-        _require(not _has_affirmative_safety_claim(sentence), "prohibited_behavior_absent")
-    tree = ast.parse(Path(__file__).read_text())
+def _audit_static_test_source(source: str):
+    tree = ast.parse(source)
     allowed_imports = {"ast", "re", "pathlib"}
-    forbidden_import_roots = {"sub" + "process", "socket", "requests", "urllib", "http", "meg"}
-    dangerous_calls = {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect"}
+    forbidden_import_roots = {"sub" + "process", "os", "socket", "requests", "urllib", "http", "meg"}
+    dangerous_calls = {"system", "popen", "run", "check_call", "check_output", "getenv", "environ", "urlopen", "request", "connect", "__import__"}
+    command_patterns = [
+        r"\bgit\s+(?:log|show|rev-parse|merge-base|cat-file)\b",
+        r"\bgit\s+diff\s+--name-only\b",
+        r"\bgit\s+ls-files\b",
+        r"\bgh\s+(?:pr|api)\b",
+    ]
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -870,6 +902,20 @@ def prohibited_behavior_absent(text: str):
                 _require(function.id not in dangerous_calls, "prohibited_behavior_absent")
             if isinstance(function, ast.Attribute):
                 _require(function.attr not in dangerous_calls, "prohibited_behavior_absent")
+        if isinstance(node, ast.Attribute):
+            _require(node.attr not in dangerous_calls, "prohibited_behavior_absent")
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            lowered = node.value.lower()
+            _require(("." + "git") not in lowered, "prohibited_behavior_absent")
+            for pattern in command_patterns:
+                _require(re.search(pattern, lowered) is None, "prohibited_behavior_absent")
+
+def prohibited_behavior_absent(text: str):
+    for name, expected in EXPECTED_CRITICAL_SECTIONS.items():
+        _require(_section(text, name) == expected, "prohibited_behavior_absent")
+    for sentence in _sentences(text):
+        _require(not _has_affirmative_safety_claim(sentence), "prohibited_behavior_absent")
+    _audit_static_test_source(Path(__file__).read_text())
 
 VALIDATORS = {
     "header_exact": header_exact,
@@ -1560,6 +1606,92 @@ def test_negative_safety_examples_are_allowed_by_safety_detector():
     for example in NEGATIVE_SAFETY_EXAMPLES:
         mutated = _insert_noncritical_sentence(base, example)
         prohibited_behavior_absent(mutated)
+
+
+def _assert_safety_error_from_source(source: str):
+    raised = None
+    try:
+        _audit_static_test_source(source)
+    except ContractCheckError as error:
+        raised = error
+    _require(raised is not None, "section_nonempty")
+    _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
+
+def test_adversarial_safety_examples_are_clause_aware():
+    base = _read()
+    rejecting = MIXED_AFFIRMATIVE_SAFETY_EXAMPLES + FLEXIBLE_AFFIRMATIVE_SAFETY_EXAMPLES
+    for example in rejecting:
+        mutated = _insert_noncritical_sentence(base, example)
+        _critical_sections_equal_except(base, mutated, [])
+        raised = None
+        try:
+            prohibited_behavior_absent(mutated)
+        except ContractCheckError as error:
+            raised = error
+        _require(raised is not None, "section_nonempty")
+        _require(raised.check_code == "prohibited_behavior_absent", "section_nonempty")
+        complete = None
+        try:
+            validate(mutated)
+        except ContractCheckError as error:
+            complete = error
+        _require(complete is not None, "section_nonempty")
+    allowed = MULTICLAUSE_NEGATIVE_SAFETY_EXAMPLES + NEGATIVE_SAFETY_EXAMPLES
+    for example in allowed:
+        mutated = _insert_noncritical_sentence(base, example)
+        _critical_sections_equal_except(base, mutated, [])
+        prohibited_behavior_absent(mutated)
+
+def test_static_test_source_audit_rejects_prohibited_snippets():
+    prohibited = [
+        "import " + "sub" + "process",
+        "import " + "os",
+        "import socket",
+        "import requests",
+        "import urllib",
+        "import http",
+        "import meg",
+        "from meg.weather import stage2",
+        "import pytest",
+        "__import__(\"ast\")",
+        "import " + "os\n" + "os.environ",
+        "getenv(\"HOME\")",
+        "system(\"true\")",
+        "popen(\"true\")",
+        "run([\"true\"])",
+        "check_call([\"true\"])",
+        "check_output([\"true\"])",
+        "urlopen(\"https://example.invalid\")",
+        "request(\"GET\")",
+        "connect(())",
+        "from pathlib import Path\nPath(\"." + "git\")",
+        "command = \"git " + "log\"",
+        "command = \"git " + "show\"",
+        "command = \"git " + "rev-parse\"",
+        "command = \"git " + "merge-base\"",
+        "command = \"git " + "cat-file\"",
+        "command = \"git diff --" + "name-only\"",
+        "command = \"git " + "ls-files\"",
+        "command = \"gh " + "pr view\"",
+        "command = \"gh " + "api repos\"",
+    ]
+    for source in prohibited:
+        _assert_safety_error_from_source(source)
+
+def test_static_test_source_audit_allows_static_controls():
+    allowed = [
+        "import ast",
+        "import re",
+        "from pathlib import Path",
+        "DOC.read_text()",
+        "ALLOWLIST.read_text()",
+        "ast.parse(source)",
+        "ast.literal_eval(node)",
+        "values = [text.strip() for text in lines]",
+        "joined = \" | \".join(values)",
+    ]
+    for source in allowed:
+        _audit_static_test_source(source)
 
 def test_pre_commit_completeness_gate():
     base = _read()
