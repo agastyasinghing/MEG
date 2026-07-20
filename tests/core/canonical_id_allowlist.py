@@ -158,6 +158,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_stage3_evidence_gate_decision_record_contract_planning_01.py",
     "docs/prd/WEATHER-BOT-STAGE3-RETROSPECTIVE-SCORING-IMPLEMENTATION-READINESS-REVIEW-01.md",
     "tests/core/test_weather_bot_stage3_retrospective_scoring_implementation_readiness_review_01.py",
+    "docs/prd/WEATHER-BOT-STAGE3-RETROSPECTIVE-SCORING-IMPLEMENTATION-APPROVAL-REQUEST-01.md",
+    "tests/core/test_weather_bot_stage3_retrospective_scoring_implementation_approval_request_01.py",
 }
 
 
