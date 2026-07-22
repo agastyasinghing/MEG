@@ -69,7 +69,7 @@ Later ticket must not modify `meg/weather/stage3/__init__.py`, `meg/weather/stag
 | `BLOCKED` | `blocked` |
 
 ## Exact future record-field matrix
-Request one frozen dataclass: `StrictOOSSplitAssignment`.
+Request one frozen dataclass: `@dataclass(frozen=True) class StrictOOSSplitAssignment`.
 | Order | Field | Type |
 | --- | --- | --- |
 | 1 | `split_assignment_id` | `str` |
@@ -104,6 +104,16 @@ Request one frozen dataclass: `StrictOOSSplitAssignment`.
 | 30 | `supersedes_split_assignment_id` | `str | None = None` |
 No identity, timestamp, fold, probability record, cutoff, role, leakage group, provenance, or version may be generated.
 
+Request one frozen dataclass: `@dataclass(frozen=True) class StrictOOSSplitValidationResult`.
+| Order | Field | Type |
+| --- | --- | --- |
+| 1 | `severity` | `SplitValidationSeverity` |
+| 2 | `passed` | `bool` |
+| 3 | `codes` | `tuple[SplitValidationCode, ...] = ()` |
+Passed result invariants: severity is `PASSED`; passed is `True`; codes is empty.
+Blocked result invariants: severity is `BLOCKED`; passed is `False`; codes is nonempty.
+The result must contain no record payload, assignments, partitioned output, free-form message, field name, generated repair, score, claim, approval status, readiness status, or evidence-gate result.
+
 ## Exact fixed-posture matrix
 | Field | Exact value |
 | --- | --- |
@@ -114,13 +124,75 @@ No identity, timestamp, fold, probability record, cutoff, role, leakage group, p
 No alternate, hybrid, custom, or dynamically generated posture is requested.
 
 ## Exact mapping-input matrix
-Future signature: `strict_oos_split_assignment_from_mapping(mapping: object) -> tuple[StrictOOSSplitAssignment | None, StrictOOSSplitValidationResult]`. Mapping adaptation may accept exact enum members, exact enum value strings, exact built-in `int` for `fold_index` with bool rejected, tuple or list for `applicability_modes`, tuple or list for `provenance_refs`, and timezone-aware ISO timestamp strings. It must inspect the complete key set, aggregate all diagnosable failures in deterministic order, reject every unexpected key, supply no required-field default, construct no partial record, return `(None, blocked_result)` for invalid input, and construct a record only after all mapping checks pass.
+Future signature: `strict_oos_split_assignment_from_mapping(mapping: object) -> tuple[StrictOOSSplitAssignment | None, StrictOOSSplitValidationResult]`.
+
+Exact ordered required mapping keys:
+1. `split_assignment_id`
+2. `split_id`
+3. `split_version`
+4. `fold_id`
+5. `fold_index`
+6. `prediction_record_id`
+7. `condition_id`
+8. `token_id`
+9. `outcome`
+10. `settlement_rule_id`
+11. `settlement_rule_version`
+12. `split_role`
+13. `applicability_modes`
+14. `assignment_status`
+15. `fold_cutoff`
+16. `prediction_as_of`
+17. `input_publication_available_at`
+18. `target_start_at`
+19. `target_end_at`
+20. `label_available_at`
+21. `leakage_group_id`
+22. `overlap_control_posture`
+23. `primary_split_posture`
+24. `tuning_posture`
+25. `calibration_posture`
+26. `baseline_parity_posture`
+27. `exclusion_reason`
+28. `provenance_refs`
+29. `created_at`
+
+The only optional mapping key is:
+- `supersedes_split_assignment_id`
+
+`label_available_at` is a required key whose value may be `None`. `exclusion_reason` is a required key whose value may be `None`. Absence of either required nullable key produces `MISSING_REQUIRED_FIELD`. Explicit `None` is distinct from absence. No required key receives a default. No unexpected key is discarded. A mapping with shape errors still validates every diagnosable present value. An invalid mapping never returns a partial record. Unexpected-key ordering is exact built-in string keys in lexical order, then non-string keys afterward in original mapping iteration order. Do not sort arbitrary objects by `repr()`.
+
+For `split_role`, `assignment_status`, and `overlap_control_posture`, mapping adaptation accepts only the exact enum member or the exact built-in string equal to an enum value. It rejects string subclasses, unrelated `StrEnum` members, custom enum members, and every other value. For `applicability_modes`, mapping adaptation accepts only an actual tuple or list. Each entry may be an exact `SplitApplicabilityMode` member or an exact built-in string equal to a member value. After adaptation, output is a tuple, the tuple is nonempty, `PRIMARY_TEMPORAL` is exactly first, no mode is duplicated, caller order is preserved, and any container, entry, ordering, emptiness, or duplicate failure produces exactly one `INVALID_APPLICABILITY_MODES`. For `fold_index`, require `type(value) is int`, reject bool and int subclasses, require value greater than or equal to zero, and any failure produces exactly one `INVALID_INTEGER_FIELD`. For `provenance_refs` mapping input, accept only an actual tuple or list, convert an accepted list to a tuple, preserve order and repeated references, make wrong container produce exactly one `INVALID_PROVENANCE_REF`, make empty tuple/list produce exactly one `EMPTY_PROVENANCE_REFS`, and make each blank, string-subclass, or non-string entry produce one `INVALID_PROVENANCE_REF` in entry order.
 
 ## Exact single-record validation matrix
-Future signature: `validate_strict_oos_split_assignment(record: StrictOOSSplitAssignment) -> StrictOOSSplitValidationResult`. The direct validator must perform no mapping adaptation. General requirements: exact nonblank strings, nonnegative exact int fold index with bool rejected, nonempty tuple applicability modes with `PRIMARY_TEMPORAL` first and no duplicate, exact fixed postures, timezone-aware parseable timestamps, input available no later than prediction, prediction no later than fold cutoff, ordered target window, nonempty provenance tuple of nonblank strings, and no self-supersession. Assigned records require no exclusion reason and no unsatisfied overlap control. Train/calibration require target end and label available by cutoff. Test requires target start strictly after cutoff and any label strictly later than cutoff. Blocked records require nonblank exclusion reason, remain syntactically valid and auditable, are excluded from collection role/leakage calculations, and do not approve pooling, reassignment, or boundary changes.
+Future signature: `validate_strict_oos_split_assignment(record: StrictOOSSplitAssignment) -> StrictOOSSplitValidationResult`. The direct validator performs no mapping adaptation. Require exact enum members, not strings; an actual tuple of exact applicability enum members; `type(fold_index) is int`; an actual tuple for provenance; and exact built-in strings for text and timestamps.
+
+Required nonblank text fields in exact order:
+1. `split_assignment_id`
+2. `split_id`
+3. `split_version`
+4. `fold_id`
+5. `prediction_record_id`
+6. `condition_id`
+7. `token_id`
+8. `outcome`
+9. `settlement_rule_id`
+10. `settlement_rule_version`
+11. `leakage_group_id`
+12. `primary_split_posture`
+13. `tuning_posture`
+14. `calibration_posture`
+15. `baseline_parity_posture`
+Each invalid field produces one `BLANK_REQUIRED_TEXT`. If `exclusion_reason` is not `None`, it must be an exact nonblank built-in string. If `supersedes_split_assignment_id` is not `None`, it must be an exact nonblank built-in string. Each invalid supplied nullable text value produces one `BLANK_REQUIRED_TEXT` after required-text checks.
+
+Timestamp fields in exact parse order: `fold_cutoff`, `prediction_as_of`, `input_publication_available_at`, `target_start_at`, `target_end_at`, `label_available_at` only when not `None`, and `created_at`. A timestamp is valid only when the value is an exact built-in nonblank string, `datetime.fromisoformat` accepts it, `tzinfo` is not `None`, and `utcoffset()` is not `None`. Do not normalize or rewrite stored timestamp strings. Do not use current time. Produce one `INVALID_TIMESTAMP` for every invalid timestamp in that exact order. Only perform a comparison when all timestamps required by that comparison are valid. General temporal rules apply to assigned and blocked records in this code order: `INPUT_AVAILABLE_AFTER_PREDICTION` for `input_publication_available_at <= prediction_as_of`, `PREDICTION_AFTER_FOLD_CUTOFF` for `prediction_as_of <= fold_cutoff`, and `INVALID_TARGET_WINDOW` for `target_start_at <= target_end_at`.
+
+Role-specific temporal and label rules apply only when `assignment_status is ASSIGNED`. For assigned `TRAIN` or `CALIBRATION`, require `target_end_at <= fold_cutoff`, require `label_available_at` not `None`, require the label timestamp to be valid, and require a valid label timestamp `<= fold_cutoff`; codes occur as `TRAIN_OR_CALIBRATION_AFTER_CUTOFF` then `TRAIN_OR_CALIBRATION_LABEL_UNAVAILABLE_BY_CUTOFF`. For assigned `TEST`, require `target_start_at > fold_cutoff`; `label_available_at` may be `None`; if a valid label timestamp is present, it must be strictly later than `fold_cutoff`; codes occur as `TEST_NOT_STRICTLY_AFTER_CUTOFF` then `TEST_LABEL_AVAILABLE_BY_CUTOFF`. Assignment-status consistency codes occur afterward as `ASSIGNED_WITH_EXCLUSION_REASON`, `BLOCKED_WITHOUT_EXCLUSION_REASON`, and `UNSATISFIED_OVERLAP_CONTROL_ASSIGNED`. Assigned record requires `exclusion_reason is None`; blocked record requires an exact nonblank exclusion reason; assigned record may not use `UNSATISFIED`; blocked record may use `UNSATISFIED`; blocked records skip assigned role-specific temporal and label checks; blocked records still receive general syntax, enum, fixed-posture, timestamp, general temporal, provenance, and supersession validation.
 
 ## Exact collection-validation matrix
-Future signature: `validate_strict_oos_split_assignments(assignments: tuple[StrictOOSSplitAssignment, ...]) -> StrictOOSSplitValidationResult`. It must require an actual tuple, reject empty tuple, validate every record, preserve deterministic duplicate code occurrences, require one split identity and version, require unique assignment ids, reject duplicate `(fold_id, prediction_record_id)`, reject same assigned test prediction record in more than one fold, require each fold_id to map to one fold_index and one fold_cutoff, require later fold indices to have strictly later cutoffs, reject assigned leakage group appearing in multiple roles within a fold, ignore blocked records for role-conflict and duplicate-test calculations, generate no folds, modify no assignment, and return no partitioned dataset. Do not request shuffled-random splitting. Do not request numeric fold widths, gap durations, embargo durations, sample minimums, or sufficiency thresholds.
+Future signature: `validate_strict_oos_split_assignments(assignments: tuple[StrictOOSSplitAssignment, ...]) -> StrictOOSSplitValidationResult`. Root behavior: non-tuple root returns only `INVALID_ASSIGNMENT_COLLECTION_TYPE`; empty tuple returns only `EMPTY_ASSIGNMENT_COLLECTION`; a nonempty tuple validates each element in tuple order; an element that is not an actual `StrictOOSSplitAssignment` produces one `INVALID_ASSIGNMENT_COLLECTION_TYPE` in its tuple position and is skipped by later collection comparisons.
+
+For a nonempty tuple, final result order is each element’s complete direct-record validation codes in tuple order, then `DUPLICATE_ASSIGNMENT_ID`, `DUPLICATE_FOLD_RECORD_ASSIGNMENT`, `DUPLICATE_TEST_RECORD`, `INCONSISTENT_SPLIT_ID`, `INCONSISTENT_SPLIT_VERSION`, `INCONSISTENT_FOLD_DEFINITION`, `NON_MONOTONIC_FOLD_CUTOFF`, and `LEAKAGE_GROUP_ROLE_CONFLICT`. Append one `DUPLICATE_ASSIGNMENT_ID` for each later valid record whose nonblank `split_assignment_id` was previously seen, using tuple order. Append one `DUPLICATE_FOLD_RECORD_ASSIGNMENT` for each later valid record whose valid `(fold_id, prediction_record_id)` pair was previously seen, including assigned and blocked records. Append one `DUPLICATE_TEST_RECORD` for each later assigned `TEST` record whose valid `prediction_record_id` previously appeared as an assigned `TEST` record in a different fold, ignoring blocked records. Use the first valid nonblank split identity as the baseline and append one `INCONSISTENT_SPLIT_ID` for each later valid record whose valid split ID differs. Use the first valid nonblank split version as the baseline and append one `INCONSISTENT_SPLIT_VERSION` for each later valid record whose valid split version differs. For valid records, each `fold_id` must map to exactly one `fold_index` and `fold_cutoff`, and each `fold_index` must map to exactly one `fold_id` and `fold_cutoff`; append one `INCONSISTENT_FOLD_DEFINITION` for each later record that conflicts with either previously established mapping. For monotonic fold cutoffs, use the first-seen consistent valid definition for each fold index, order unique definitions by numeric `fold_index`, and append one `NON_MONOTONIC_FOLD_CUTOFF` for each adjacent later index whose valid cutoff is less than or equal to the previous valid cutoff. Do not alter, generate, or infer a cutoff. For leakage-group role conflict, use assigned records only, key by `(fold_id, leakage_group_id)`, record the first valid role, append one `LEAKAGE_GROUP_ROLE_CONFLICT` for each later assigned record with the same key but a different role, and ignore blocked records. Do not generate folds, partitions, replacements, or corrected assignments.
 
 ## Exact validation-code matrix
 Define closed enum `SplitValidationCode` in this exact order:
@@ -160,7 +232,7 @@ Define closed enum `SplitValidationCode` in this exact order:
 No custom validation codes.
 
 ## Exact validation-order contract
-Validation ordering is exactly: mapping-shape codes; single-record field/type/enum codes; fixed-posture codes; timestamp and temporal codes; assignment-status consistency codes; provenance and supersession codes; collection-shape codes; collection identity and duplicate codes; fold-definition and monotonicity codes; leakage-group role-conflict codes. Repeated codes must remain repeated. No set, sorting, or deduplication may replace ordered results.
+Complete direct-record validation order: all `BLANK_REQUIRED_TEXT` occurrences; `INVALID_SPLIT_ROLE`; `INVALID_APPLICABILITY_MODES`; `INVALID_ASSIGNMENT_STATUS`; `INVALID_OVERLAP_CONTROL_POSTURE`; `INVALID_INTEGER_FIELD`; one `INVALID_FIXED_POSTURE` per invalid fixed field in primary split, tuning, calibration, baseline parity order; all `INVALID_TIMESTAMP` occurrences; general temporal codes; assigned role-specific temporal/label codes; assignment-status consistency codes; `EMPTY_PROVENANCE_REFS`; all `INVALID_PROVENANCE_REF` occurrences; `SELF_SUPERSESSION`. Collection validation order follows the collection-validation matrix. Repeated codes must remain repeated. No final sorting, set conversion, filtering, insertion, or deduplication is permitted.
 
 ## Exact future test matrix
 Future tests must cover exact public API; exact enum names, values, and order; exact record/result fields, types, order, defaults, and frozen posture; exact function signatures; mapping-shape aggregation; every required text field; enum adaptation and rejection; exact `fold_index`; timestamp parsing; no-lookahead; fold cutoff eligibility; target-window ordering; train/calibration label isolation; strict test-after-cutoff; test-label no-lookahead; applicability ordering and uniqueness; fixed postures; assignment/exclusion consistency; overlap consistency; provenance; supersession; deterministic repeated-code ordering; collection type and emptiness; split/version consistency; duplicate assignment, fold-record, and test-record detection; fold-definition consistency; monotonically advancing cutoffs; within-fold leakage-group role isolation; blocked-record exclusion; canonical routing; no non-routing market key; no `token_outcome_pair`; and no I/O, providers, services, persistence, split generation, scoring, backtesting, simulation, or trading.
@@ -172,13 +244,13 @@ The later implementation must remain standard-library-only unless a separate app
 Canonical routing remains exactly `condition_id`, `token_id`, and `outcome`. `market_id` remains non-routing only and must not become a routing key. `token_outcome_pair` must not be added as a public input or route.
 
 ## Temporal and no-lookahead boundary
-Strict temporal posture requires timezone-aware timestamps, input availability no later than prediction, prediction no later than fold cutoff, train/calibration labels available by cutoff, and test targets strictly after cutoff without labels available by cutoff. This request does not approve implementation and does not execute splits.
+Strict temporal posture requires timezone-aware timestamps, input availability no later than prediction, prediction no later than fold cutoff, train/calibration labels available by cutoff, and test targets strictly after cutoff without labels available by cutoff. Rolling-origin or walk-forward primacy is preserved; shuffled-random primary splitting is not requested. This request does not approve implementation and does not execute splits.
 
 ## Leakage-group and fold boundary
-Leakage group and fold identifiers must be caller-supplied, immutable, and auditable. The future validator may reject conflicts but must not generate folds, choose cutoffs, partition datasets, or alter assignments.
+Leakage group and fold identifiers must be caller-supplied, immutable, and auditable. Caller-supplied fold definitions and immutable cutoffs are required. The future validator may reject conflicts but must not generate folds, choose cutoffs, partition datasets, alter assignments, invent fold count, invent fold duration, invent sample minimums, or invent embargo duration.
 
 ## Assignment and exclusion semantics
-Assigned records are eligible only when exclusion reason is absent and overlap control is not unsatisfied. Blocked records require an exclusion reason and remain auditable but are ignored for collection leakage role conflict and duplicate-test calculations.
+Assigned records are eligible only when exclusion reason is absent and overlap control is not unsatisfied. Blocked records require an exclusion reason and remain syntactically valid and auditable, but are ignored for collection leakage role conflict and duplicate-test calculations. Blocked status does not approve pooling, reassignment, or boundary changes.
 
 ## Baseline parity boundary
 Baseline parity posture must equal `same_folds_and_eligibility_required`. This preserves later baseline comparability requirements without approving baseline calculation, scoring, diagnostics, claims, or evidence-gate evaluation.
@@ -228,10 +300,10 @@ Exact options:
 A separate human decision is required before any implementation ticket may proceed. This document does not approve implementation, does not execute splits, does not create split files, does not partition datasets, and does not approve scoring.
 
 ## Fail-closed requirements
-Invalid mapping input, invalid records, invalid collections, ambiguous values, unexpected keys, missing required fields, non-aware timestamps, temporal leakage risk, duplicate identity, fold inconsistency, and leakage-group role conflict must fail closed with ordered codes.
+Invalid mapping input, invalid records, invalid collections, ambiguous values, unexpected keys, missing required fields, non-aware timestamps, temporal leakage risk, duplicate identity, fold inconsistency, and leakage-group role conflict must fail closed with ordered codes. Invalid input must not produce partial records, generated folds, partitioned datasets, replacements, corrected assignments, scores, claims, or approvals.
 
 ## Explicit non-approvals
-This request does not approve implementation. It does not execute splits. It does not create split files. It does not partition datasets. It does not approve scoring. It does not approve I/O, providers, services, persistence, split generation, backtesting, simulation, paper trading, trading, order placement, runtime orchestration, production behavior, or autonomy. A separate human decision is required.
+This request does not approve implementation. It does not execute splits. It does not create split files. It does not partition datasets. It does not approve scoring. It does not approve I/O, providers, services, persistence, split generation, backtesting, reporting, simulation, paper trading, trading, order placement, runtime orchestration, production behavior, or autonomy. A separate human decision is required.
 
 ## Machine-checkable assignments
 ```yaml
@@ -250,4 +322,4 @@ future_files_exact:
 ```
 
 ## Acceptance criteria
-Acceptance requires exactly this document, its deterministic static test, and the canonical allowlist update; no `meg/` changes; actual PR #368 merge SHA recorded; future implementation limited to exactly two new files; exact eleven-symbol API, enums, fields, validation codes, and decision options frozen; explicit non-approval posture preserved; mandatory tests passing; and PR opened but not merged.
+Acceptance requires exactly this document, its deterministic static test, and the canonical allowlist update; no `meg/` changes; actual PR #368 merge SHA recorded; future implementation limited to exactly two new files; exact eleven-symbol API, assignment and result dataclasses, enums, fields, mapping keys, fixed postures, validation codes, decision options, direct-record ordering, collection occurrence semantics, 29-section literal freeze, mutation coverage, allowlist AST/count validation, source-safety audit, and explicit non-approval posture preserved; mandatory tests passing; and PR updated but not merged.
