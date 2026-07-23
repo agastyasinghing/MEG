@@ -98,22 +98,58 @@ def test_public_contract_is_frozen_completely():
     assert [(m.name, m.value) for m in SplitValidationCode] == [("MISSING_REQUIRED_FIELD", "missing_required_field"), ("UNEXPECTED_FIELD", "unexpected_field"), ("BLANK_REQUIRED_TEXT", "blank_required_text"), ("INVALID_SPLIT_ROLE", "invalid_split_role"), ("INVALID_APPLICABILITY_MODES", "invalid_applicability_modes"), ("INVALID_ASSIGNMENT_STATUS", "invalid_assignment_status"), ("INVALID_OVERLAP_CONTROL_POSTURE", "invalid_overlap_control_posture"), ("INVALID_INTEGER_FIELD", "invalid_integer_field"), ("INVALID_FIXED_POSTURE", "invalid_fixed_posture"), ("INVALID_TIMESTAMP", "invalid_timestamp"), ("INPUT_AVAILABLE_AFTER_PREDICTION", "input_available_after_prediction"), ("PREDICTION_AFTER_FOLD_CUTOFF", "prediction_after_fold_cutoff"), ("INVALID_TARGET_WINDOW", "invalid_target_window"), ("TRAIN_OR_CALIBRATION_AFTER_CUTOFF", "train_or_calibration_after_cutoff"), ("TRAIN_OR_CALIBRATION_LABEL_UNAVAILABLE_BY_CUTOFF", "train_or_calibration_label_unavailable_by_cutoff"), ("TEST_NOT_STRICTLY_AFTER_CUTOFF", "test_not_strictly_after_cutoff"), ("TEST_LABEL_AVAILABLE_BY_CUTOFF", "test_label_available_by_cutoff"), ("ASSIGNED_WITH_EXCLUSION_REASON", "assigned_with_exclusion_reason"), ("BLOCKED_WITHOUT_EXCLUSION_REASON", "blocked_without_exclusion_reason"), ("UNSATISFIED_OVERLAP_CONTROL_ASSIGNED", "unsatisfied_overlap_control_assigned"), ("EMPTY_PROVENANCE_REFS", "empty_provenance_refs"), ("INVALID_PROVENANCE_REF", "invalid_provenance_ref"), ("SELF_SUPERSESSION", "self_supersession"), ("INVALID_ASSIGNMENT_COLLECTION_TYPE", "invalid_assignment_collection_type"), ("EMPTY_ASSIGNMENT_COLLECTION", "empty_assignment_collection"), ("DUPLICATE_ASSIGNMENT_ID", "duplicate_assignment_id"), ("DUPLICATE_FOLD_RECORD_ASSIGNMENT", "duplicate_fold_record_assignment"), ("DUPLICATE_TEST_RECORD", "duplicate_test_record"), ("INCONSISTENT_SPLIT_ID", "inconsistent_split_id"), ("INCONSISTENT_SPLIT_VERSION", "inconsistent_split_version"), ("INCONSISTENT_FOLD_DEFINITION", "inconsistent_fold_definition"), ("NON_MONOTONIC_FOLD_CUTOFF", "non_monotonic_fold_cutoff"), ("LEAKAGE_GROUP_ROLE_CONFLICT", "leakage_group_role_conflict")]
     assert [f.name for f in dataclasses.fields(StrictOOSSplitAssignment)] == list(REQUIRED_KEYS) + ["supersedes_split_assignment_id"]
     hints = get_type_hints(StrictOOSSplitAssignment)
-    assert hints["fold_index"] is int
-    assert hints["split_role"] is SplitRole
-    assert hints["applicability_modes"] == tuple[SplitApplicabilityMode, ...]
+    assert [(name, hints[name]) for name in [f.name for f in dataclasses.fields(StrictOOSSplitAssignment)]] == [
+        ("split_assignment_id", str),
+        ("split_id", str),
+        ("split_version", str),
+        ("fold_id", str),
+        ("fold_index", int),
+        ("prediction_record_id", str),
+        ("condition_id", str),
+        ("token_id", str),
+        ("outcome", str),
+        ("settlement_rule_id", str),
+        ("settlement_rule_version", str),
+        ("split_role", SplitRole),
+        ("applicability_modes", tuple[SplitApplicabilityMode, ...]),
+        ("assignment_status", SplitAssignmentStatus),
+        ("fold_cutoff", str),
+        ("prediction_as_of", str),
+        ("input_publication_available_at", str),
+        ("target_start_at", str),
+        ("target_end_at", str),
+        ("label_available_at", str | None),
+        ("leakage_group_id", str),
+        ("overlap_control_posture", OverlapControlPosture),
+        ("primary_split_posture", str),
+        ("tuning_posture", str),
+        ("calibration_posture", str),
+        ("baseline_parity_posture", str),
+        ("exclusion_reason", str | None),
+        ("provenance_refs", tuple[str, ...]),
+        ("created_at", str),
+        ("supersedes_split_assignment_id", str | None),
+    ]
     assert dataclasses.fields(StrictOOSSplitAssignment)[-1].default is None
-    assert [f.name for f in dataclasses.fields(StrictOOSSplitValidationResult)] == ["severity", "passed", "codes"]
-    assert get_type_hints(StrictOOSSplitValidationResult)["codes"] == tuple[SplitValidationCode, ...]
+    result_hints = get_type_hints(StrictOOSSplitValidationResult)
+    assert [(name, result_hints[name]) for name in [f.name for f in dataclasses.fields(StrictOOSSplitValidationResult)]] == [("severity", SplitValidationSeverity), ("passed", bool), ("codes", tuple[SplitValidationCode, ...])]
     assert dataclasses.fields(StrictOOSSplitValidationResult)[2].default == ()
     with pytest.raises(FrozenInstanceError):
         good().split_id = "new"
     with pytest.raises(FrozenInstanceError):
         StrictOOSSplitValidationResult(SplitValidationSeverity.PASSED, True).passed = False
     sig = inspect.signature(strict_oos_split_assignment_from_mapping)
-    assert list(sig.parameters) == ["mapping"]
+    assert [(name, parameter.annotation) for name, parameter in sig.parameters.items()] == [("mapping", "object")]
     assert sig.return_annotation == "tuple[StrictOOSSplitAssignment | None, StrictOOSSplitValidationResult]"
-    assert inspect.signature(validate_strict_oos_split_assignment).return_annotation == "StrictOOSSplitValidationResult"
-    assert inspect.signature(validate_strict_oos_split_assignments).return_annotation == "StrictOOSSplitValidationResult"
+    assert get_type_hints(strict_oos_split_assignment_from_mapping) == {"mapping": object, "return": tuple[StrictOOSSplitAssignment | None, StrictOOSSplitValidationResult]}
+    direct_sig = inspect.signature(validate_strict_oos_split_assignment)
+    assert [(name, parameter.annotation) for name, parameter in direct_sig.parameters.items()] == [("record", "StrictOOSSplitAssignment")]
+    assert direct_sig.return_annotation == "StrictOOSSplitValidationResult"
+    assert get_type_hints(validate_strict_oos_split_assignment) == {"record": StrictOOSSplitAssignment, "return": StrictOOSSplitValidationResult}
+    collection_sig = inspect.signature(validate_strict_oos_split_assignments)
+    assert [(name, parameter.annotation) for name, parameter in collection_sig.parameters.items()] == [("assignments", "tuple[StrictOOSSplitAssignment, ...]")]
+    assert collection_sig.return_annotation == "StrictOOSSplitValidationResult"
+    assert get_type_hints(validate_strict_oos_split_assignments) == {"assignments": tuple[StrictOOSSplitAssignment, ...], "return": StrictOOSSplitValidationResult}
     assert module._REQUIRED_MAPPING_KEYS == REQUIRED_KEYS
     assert module._OPTIONAL_MAPPING_KEYS == ("supersedes_split_assignment_id",)
     assert module._REQUIRED_TEXT_FIELDS == REQUIRED_TEXT
@@ -241,6 +277,24 @@ def test_mapping_combined_exact_ordering_cases():
     assert strict_oos_split_assignment_from_mapping(mapping(unexpected="x", supersedes_split_assignment_id="assign-1"))[1].codes == (C.UNEXPECTED_FIELD, C.SELF_SUPERSESSION)
     assert strict_oos_split_assignment_from_mapping(mapping(applicability_modes=[], fold_index=-1))[1].codes == (C.INVALID_APPLICABILITY_MODES, C.INVALID_INTEGER_FIELD)
     assert strict_oos_split_assignment_from_mapping(mapping(split_role="bad", assignment_status="bad", overlap_control_posture="bad"))[1].codes == (C.INVALID_SPLIT_ROLE, C.INVALID_ASSIGNMENT_STATUS, C.INVALID_OVERLAP_CONTROL_POSTURE)
+
+
+def test_mapping_dependent_check_suppression_for_missing_exclusion_and_label():
+    d = mapping(assignment_status=SplitAssignmentStatus.BLOCKED)
+    d.pop("exclusion_reason")
+    assert strict_oos_split_assignment_from_mapping(d)[1].codes == (C.MISSING_REQUIRED_FIELD,)
+    d = mapping(split_role=SplitRole.TRAIN, target_start_at="2025-01-01T00:00:00+00:00", target_end_at="2025-01-01T00:00:00+00:00", label_available_at="2025-01-01T00:00:00+00:00")
+    d.pop("label_available_at")
+    assert strict_oos_split_assignment_from_mapping(d)[1].codes == (C.MISSING_REQUIRED_FIELD,)
+    assert strict_oos_split_assignment_from_mapping(mapping(assignment_status=SplitAssignmentStatus.BLOCKED, exclusion_reason=None))[1].codes == (C.BLOCKED_WITHOUT_EXCLUSION_REASON,)
+    assert strict_oos_split_assignment_from_mapping(mapping(assignment_status=SplitAssignmentStatus.BLOCKED, exclusion_reason=" "))[1].codes == (C.BLANK_REQUIRED_TEXT, C.BLOCKED_WITHOUT_EXCLUSION_REASON)
+    d = mapping(assignment_status="invalid")
+    d.pop("exclusion_reason")
+    assert strict_oos_split_assignment_from_mapping(d)[1].codes == (C.MISSING_REQUIRED_FIELD, C.INVALID_ASSIGNMENT_STATUS)
+    d = mapping(assignment_status=SplitAssignmentStatus.BLOCKED, fold_cutoff="bad")
+    d.pop("exclusion_reason")
+    assert strict_oos_split_assignment_from_mapping(d)[1].codes == (C.MISSING_REQUIRED_FIELD, C.INVALID_TIMESTAMP)
+    assert_codes(good(assignment_status=SplitAssignmentStatus.BLOCKED, exclusion_reason=None), (C.BLOCKED_WITHOUT_EXCLUSION_REASON,))
 
 
 def test_collection_all_categories_repeated_and_ordered():

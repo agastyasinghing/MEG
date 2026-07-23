@@ -306,7 +306,7 @@ def _append_value_codes(values: Mapping, present: tuple[str, ...], codes: list[S
                 codes.append(SplitValidationCode.TEST_LABEL_AVAILABLE_BY_CUTOFF)
     if status is SplitAssignmentStatus.ASSIGNED and "exclusion_reason" in present and values["exclusion_reason"] is not None:
         codes.append(SplitValidationCode.ASSIGNED_WITH_EXCLUSION_REASON)
-    if status is SplitAssignmentStatus.BLOCKED and ("exclusion_reason" not in present or not _valid_text(values["exclusion_reason"])):
+    if status is SplitAssignmentStatus.BLOCKED and "exclusion_reason" in present and not _valid_text(values["exclusion_reason"]):
         codes.append(SplitValidationCode.BLOCKED_WITHOUT_EXCLUSION_REASON)
     if status is SplitAssignmentStatus.ASSIGNED and overlap is OverlapControlPosture.UNSATISFIED:
         codes.append(SplitValidationCode.UNSATISFIED_OVERLAP_CONTROL_ASSIGNED)
