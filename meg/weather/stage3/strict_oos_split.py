@@ -149,7 +149,8 @@ _OPTIONAL_MAPPING_KEYS = ("supersedes_split_assignment_id",)
 _REQUIRED_TEXT_FIELDS = (
     "split_assignment_id", "split_id", "split_version", "fold_id", "prediction_record_id",
     "condition_id", "token_id", "outcome", "settlement_rule_id", "settlement_rule_version",
-    "fold_cutoff", "prediction_as_of", "input_publication_available_at", "target_start_at", "target_end_at",
+    "leakage_group_id", "primary_split_posture", "tuning_posture", "calibration_posture",
+    "baseline_parity_posture",
 )
 _NULLABLE_TEXT_FIELDS = ("exclusion_reason", "supersedes_split_assignment_id")
 _TIMESTAMP_FIELDS = (
@@ -178,8 +179,12 @@ def _valid_text(value: object) -> bool:
     return type(value) is str and value.strip() != ""
 
 
+def _valid_fixed_text(value: object, expected: str) -> bool:
+    return type(value) is str and value == expected
+
+
 def _parse_time(value: object):
-    if not _valid_text(value):
+    if type(value) is not str or value.strip() == "":
         return None
     try:
         parsed = datetime.fromisoformat(value)
@@ -242,36 +247,31 @@ def _valid_overlap(value: object) -> bool:
     return type(value) is OverlapControlPosture
 
 
-def _text_codes(record: StrictOOSSplitAssignment) -> list[SplitValidationCode]:
-    codes = []
+def _append_value_codes(values: Mapping, present: tuple[str, ...], codes: list[SplitValidationCode], adapt_enums: bool) -> dict:
+    parsed = {}
     for field in _REQUIRED_TEXT_FIELDS:
-        if not _valid_text(getattr(record, field)):
+        if field in present and not _valid_text(values[field]):
             codes.append(SplitValidationCode.BLANK_REQUIRED_TEXT)
     for field in _NULLABLE_TEXT_FIELDS:
-        value = getattr(record, field)
-        if value is not None and not _valid_text(value):
+        if field in present and values[field] is not None and not _valid_text(values[field]):
             codes.append(SplitValidationCode.BLANK_REQUIRED_TEXT)
-    return codes
-
-
-def validate_strict_oos_split_assignment(record: StrictOOSSplitAssignment) -> StrictOOSSplitValidationResult:
-    codes = _text_codes(record)
-    if not _valid_role(record.split_role):
+    if "split_role" in present and ((adapt_enums and _enum_value(values["split_role"], SplitRole) is None) or (not adapt_enums and not _valid_role(values["split_role"]))):
         codes.append(SplitValidationCode.INVALID_SPLIT_ROLE)
-    if not _valid_modes(record.applicability_modes):
+    if "applicability_modes" in present and ((adapt_enums and _adapt_modes(values["applicability_modes"]) is None) or (not adapt_enums and not _valid_modes(values["applicability_modes"]))):
         codes.append(SplitValidationCode.INVALID_APPLICABILITY_MODES)
-    if not _valid_status(record.assignment_status):
+    if "assignment_status" in present and ((adapt_enums and _enum_value(values["assignment_status"], SplitAssignmentStatus) is None) or (not adapt_enums and not _valid_status(values["assignment_status"]))):
         codes.append(SplitValidationCode.INVALID_ASSIGNMENT_STATUS)
-    if not _valid_overlap(record.overlap_control_posture):
+    if "overlap_control_posture" in present and ((adapt_enums and _enum_value(values["overlap_control_posture"], OverlapControlPosture) is None) or (not adapt_enums and not _valid_overlap(values["overlap_control_posture"]))):
         codes.append(SplitValidationCode.INVALID_OVERLAP_CONTROL_POSTURE)
-    if type(record.fold_index) is not int or record.fold_index < 0:
+    if "fold_index" in present and (type(values["fold_index"]) is not int or values["fold_index"] < 0):
         codes.append(SplitValidationCode.INVALID_INTEGER_FIELD)
-    for field, fixed in _FIXED_POSTURES:
-        if getattr(record, field) != fixed:
+    for field, expected in _FIXED_POSTURES:
+        if field in present and not _valid_fixed_text(values[field], expected):
             codes.append(SplitValidationCode.INVALID_FIXED_POSTURE)
-    parsed = {}
     for field in _TIMESTAMP_FIELDS:
-        value = getattr(record, field)
+        if field not in present:
+            continue
+        value = values[field]
         if field == "label_available_at" and value is None:
             parsed[field] = None
             continue
@@ -287,96 +287,32 @@ def validate_strict_oos_split_assignment(record: StrictOOSSplitAssignment) -> St
     if parsed.get("target_start_at") is not None and parsed.get("target_end_at") is not None:
         if parsed["target_start_at"] > parsed["target_end_at"]:
             codes.append(SplitValidationCode.INVALID_TARGET_WINDOW)
-    if _valid_status(record.assignment_status) and record.assignment_status is SplitAssignmentStatus.ASSIGNED and _valid_role(record.split_role):
+    role = _enum_value(values["split_role"], SplitRole) if adapt_enums and "split_role" in present else (values["split_role"] if "split_role" in present and _valid_role(values["split_role"]) else None)
+    status = _enum_value(values["assignment_status"], SplitAssignmentStatus) if adapt_enums and "assignment_status" in present else (values["assignment_status"] if "assignment_status" in present and _valid_status(values["assignment_status"]) else None)
+    overlap = _enum_value(values["overlap_control_posture"], OverlapControlPosture) if adapt_enums and "overlap_control_posture" in present else (values["overlap_control_posture"] if "overlap_control_posture" in present and _valid_overlap(values["overlap_control_posture"]) else None)
+    if status is SplitAssignmentStatus.ASSIGNED and role is not None:
         cutoff = parsed.get("fold_cutoff")
-        if record.split_role in (SplitRole.TRAIN, SplitRole.CALIBRATION):
+        if role in (SplitRole.TRAIN, SplitRole.CALIBRATION):
             if parsed.get("target_end_at") is not None and cutoff is not None and parsed["target_end_at"] > cutoff:
                 codes.append(SplitValidationCode.TRAIN_OR_CALIBRATION_AFTER_CUTOFF)
             label = parsed.get("label_available_at")
-            if record.label_available_at is None or label is None or (cutoff is not None and label > cutoff):
+            if "label_available_at" in present and (values["label_available_at"] is None or label is None or (cutoff is not None and label > cutoff)):
                 codes.append(SplitValidationCode.TRAIN_OR_CALIBRATION_LABEL_UNAVAILABLE_BY_CUTOFF)
-        if record.split_role is SplitRole.TEST:
+        if role is SplitRole.TEST:
             if parsed.get("target_start_at") is not None and cutoff is not None and parsed["target_start_at"] <= cutoff:
                 codes.append(SplitValidationCode.TEST_NOT_STRICTLY_AFTER_CUTOFF)
             label = parsed.get("label_available_at")
             if label is not None and cutoff is not None and label <= cutoff:
                 codes.append(SplitValidationCode.TEST_LABEL_AVAILABLE_BY_CUTOFF)
-    if _valid_status(record.assignment_status):
-        if record.assignment_status is SplitAssignmentStatus.ASSIGNED and record.exclusion_reason is not None:
-            codes.append(SplitValidationCode.ASSIGNED_WITH_EXCLUSION_REASON)
-        if record.assignment_status is SplitAssignmentStatus.BLOCKED and not _valid_text(record.exclusion_reason):
-            codes.append(SplitValidationCode.BLOCKED_WITHOUT_EXCLUSION_REASON)
-        if record.assignment_status is SplitAssignmentStatus.ASSIGNED and record.overlap_control_posture is OverlapControlPosture.UNSATISFIED:
-            codes.append(SplitValidationCode.UNSATISFIED_OVERLAP_CONTROL_ASSIGNED)
-    if type(record.provenance_refs) is not tuple:
-        codes.append(SplitValidationCode.INVALID_PROVENANCE_REF)
-    elif len(record.provenance_refs) == 0:
-        codes.append(SplitValidationCode.EMPTY_PROVENANCE_REFS)
-    else:
-        for ref in record.provenance_refs:
-            if not _valid_text(ref):
-                codes.append(SplitValidationCode.INVALID_PROVENANCE_REF)
-    if _valid_text(record.split_assignment_id) and _valid_text(record.supersedes_split_assignment_id) and record.split_assignment_id == record.supersedes_split_assignment_id:
-        codes.append(SplitValidationCode.SELF_SUPERSESSION)
-    return _result(tuple(codes))
-
-
-def strict_oos_split_assignment_from_mapping(mapping: object) -> tuple[StrictOOSSplitAssignment | None, StrictOOSSplitValidationResult]:
-    if not isinstance(mapping, Mapping):
-        return None, _missing_result()
-    try:
-        items = tuple(mapping.items())
-    except Exception:
-        return None, _missing_result()
-    exact = {key: value for key, value in items if type(key) is str}
-    codes = []
-    for key in _REQUIRED_MAPPING_KEYS:
-        if key not in exact:
-            codes.append(SplitValidationCode.MISSING_REQUIRED_FIELD)
-    allowed = _REQUIRED_MAPPING_KEYS + _OPTIONAL_MAPPING_KEYS
-    unexpected_strings = []
-    unexpected_other = []
-    for key, value in items:
-        if type(key) is str:
-            if key not in allowed:
-                unexpected_strings.append(key)
-        else:
-            unexpected_other.append(key)
-    for _key in sorted(unexpected_strings):
-        codes.append(SplitValidationCode.UNEXPECTED_FIELD)
-    for _key in unexpected_other:
-        codes.append(SplitValidationCode.UNEXPECTED_FIELD)
-    values = {}
-    for key in allowed:
-        if key in exact:
-            values[key] = exact[key]
-    for field in _REQUIRED_TEXT_FIELDS:
-        if field in values and not _valid_text(values[field]):
-            codes.append(SplitValidationCode.BLANK_REQUIRED_TEXT)
-    for field in _NULLABLE_TEXT_FIELDS:
-        if field in values and values[field] is not None and not _valid_text(values[field]):
-            codes.append(SplitValidationCode.BLANK_REQUIRED_TEXT)
-    if "split_role" in values:
-        values["split_role"] = _enum_value(values["split_role"], SplitRole)
-        if values["split_role"] is None:
-            codes.append(SplitValidationCode.INVALID_SPLIT_ROLE)
-    if "applicability_modes" in values:
-        values["applicability_modes"] = _adapt_modes(values["applicability_modes"])
-        if values["applicability_modes"] is None:
-            codes.append(SplitValidationCode.INVALID_APPLICABILITY_MODES)
-    if "assignment_status" in values:
-        values["assignment_status"] = _enum_value(values["assignment_status"], SplitAssignmentStatus)
-        if values["assignment_status"] is None:
-            codes.append(SplitValidationCode.INVALID_ASSIGNMENT_STATUS)
-    if "overlap_control_posture" in values:
-        values["overlap_control_posture"] = _enum_value(values["overlap_control_posture"], OverlapControlPosture)
-        if values["overlap_control_posture"] is None:
-            codes.append(SplitValidationCode.INVALID_OVERLAP_CONTROL_POSTURE)
-    if "fold_index" in values and (type(values["fold_index"]) is not int or values["fold_index"] < 0):
-        codes.append(SplitValidationCode.INVALID_INTEGER_FIELD)
-    if "provenance_refs" in values:
+    if status is SplitAssignmentStatus.ASSIGNED and "exclusion_reason" in present and values["exclusion_reason"] is not None:
+        codes.append(SplitValidationCode.ASSIGNED_WITH_EXCLUSION_REASON)
+    if status is SplitAssignmentStatus.BLOCKED and ("exclusion_reason" not in present or not _valid_text(values["exclusion_reason"])):
+        codes.append(SplitValidationCode.BLOCKED_WITHOUT_EXCLUSION_REASON)
+    if status is SplitAssignmentStatus.ASSIGNED and overlap is OverlapControlPosture.UNSATISFIED:
+        codes.append(SplitValidationCode.UNSATISFIED_OVERLAP_CONTROL_ASSIGNED)
+    if "provenance_refs" in present:
         prov = values["provenance_refs"]
-        if type(prov) not in (tuple, list):
+        if (adapt_enums and type(prov) not in (tuple, list)) or (not adapt_enums and type(prov) is not tuple):
             codes.append(SplitValidationCode.INVALID_PROVENANCE_REF)
         elif len(prov) == 0:
             codes.append(SplitValidationCode.EMPTY_PROVENANCE_REFS)
@@ -384,14 +320,103 @@ def strict_oos_split_assignment_from_mapping(mapping: object) -> tuple[StrictOOS
             for ref in prov:
                 if not _valid_text(ref):
                     codes.append(SplitValidationCode.INVALID_PROVENANCE_REF)
-            values["provenance_refs"] = tuple(prov)
+    if "split_assignment_id" in present and "supersedes_split_assignment_id" in present:
+        if _valid_text(values["split_assignment_id"]) and _valid_text(values["supersedes_split_assignment_id"]) and values["split_assignment_id"] == values["supersedes_split_assignment_id"]:
+            codes.append(SplitValidationCode.SELF_SUPERSESSION)
+    return parsed
+
+
+def _mapping_snapshot(mapping: Mapping):
+    snapshot = []
+    for entry in mapping.items():
+        key, value = entry
+        snapshot.append((key, value))
+    return tuple(snapshot)
+
+
+def strict_oos_split_assignment_from_mapping(mapping: object) -> tuple[StrictOOSSplitAssignment | None, StrictOOSSplitValidationResult]:
+    if not isinstance(mapping, Mapping):
+        return None, _missing_result()
+    try:
+        items = _mapping_snapshot(mapping)
+    except Exception:
+        return None, _missing_result()
+    exact = {}
+    unexpected_strings = []
+    unexpected_other = []
+    try:
+        for key, value in items:
+            if type(key) is str:
+                exact[key] = value
+            if type(key) is str:
+                if key not in _REQUIRED_MAPPING_KEYS + _OPTIONAL_MAPPING_KEYS:
+                    unexpected_strings.append(key)
+            else:
+                unexpected_other.append(key)
+    except Exception:
+        return None, _missing_result()
+    codes = []
+    for key in _REQUIRED_MAPPING_KEYS:
+        if key not in exact:
+            codes.append(SplitValidationCode.MISSING_REQUIRED_FIELD)
+    for _key in sorted(unexpected_strings):
+        codes.append(SplitValidationCode.UNEXPECTED_FIELD)
+    for _key in unexpected_other:
+        codes.append(SplitValidationCode.UNEXPECTED_FIELD)
+    present = tuple(key for key in _REQUIRED_MAPPING_KEYS + _OPTIONAL_MAPPING_KEYS if key in exact)
+    _append_value_codes(exact, present, codes, True)
     if codes:
         return None, _result(tuple(codes))
-    record = StrictOOSSplitAssignment(**values)
+    adapted = dict(exact)
+    adapted["split_role"] = _enum_value(adapted["split_role"], SplitRole)
+    adapted["applicability_modes"] = _adapt_modes(adapted["applicability_modes"])
+    adapted["assignment_status"] = _enum_value(adapted["assignment_status"], SplitAssignmentStatus)
+    adapted["overlap_control_posture"] = _enum_value(adapted["overlap_control_posture"], OverlapControlPosture)
+    if type(adapted["provenance_refs"]) is list:
+        adapted["provenance_refs"] = tuple(adapted["provenance_refs"])
+    record = StrictOOSSplitAssignment(**adapted)
     result = validate_strict_oos_split_assignment(record)
     if result.passed:
         return record, result
     return None, result
+
+
+def validate_strict_oos_split_assignment(record: StrictOOSSplitAssignment) -> StrictOOSSplitValidationResult:
+    values = {
+        "split_assignment_id": record.split_assignment_id,
+        "split_id": record.split_id,
+        "split_version": record.split_version,
+        "fold_id": record.fold_id,
+        "fold_index": record.fold_index,
+        "prediction_record_id": record.prediction_record_id,
+        "condition_id": record.condition_id,
+        "token_id": record.token_id,
+        "outcome": record.outcome,
+        "settlement_rule_id": record.settlement_rule_id,
+        "settlement_rule_version": record.settlement_rule_version,
+        "split_role": record.split_role,
+        "applicability_modes": record.applicability_modes,
+        "assignment_status": record.assignment_status,
+        "fold_cutoff": record.fold_cutoff,
+        "prediction_as_of": record.prediction_as_of,
+        "input_publication_available_at": record.input_publication_available_at,
+        "target_start_at": record.target_start_at,
+        "target_end_at": record.target_end_at,
+        "label_available_at": record.label_available_at,
+        "leakage_group_id": record.leakage_group_id,
+        "overlap_control_posture": record.overlap_control_posture,
+        "primary_split_posture": record.primary_split_posture,
+        "tuning_posture": record.tuning_posture,
+        "calibration_posture": record.calibration_posture,
+        "baseline_parity_posture": record.baseline_parity_posture,
+        "exclusion_reason": record.exclusion_reason,
+        "provenance_refs": record.provenance_refs,
+        "created_at": record.created_at,
+        "supersedes_split_assignment_id": record.supersedes_split_assignment_id,
+    }
+    codes = []
+    _append_value_codes(values, _REQUIRED_MAPPING_KEYS + _OPTIONAL_MAPPING_KEYS, codes, False)
+    return _result(tuple(codes))
 
 
 def _eligible_text(value: object) -> bool:
