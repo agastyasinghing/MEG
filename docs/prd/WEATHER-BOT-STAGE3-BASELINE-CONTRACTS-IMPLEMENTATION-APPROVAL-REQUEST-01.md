@@ -153,17 +153,142 @@ def baseline_contract_definition_from_mapping(
 ]:
 ```
 
-Accept only `isinstance(mapping, collections.abc.Mapping)`. A non-Mapping root or ordinary exception while snapshotting or reading the Mapping returns no definition, a blocked result, and exactly 48 repeated `MISSING_REQUIRED_FIELD` codes. Do not catch `BaseException`.
+Accept only `isinstance(mapping, collections.abc.Mapping)`. For a non-Mapping root, or any ordinary exception during `items()` access, iteration, item unpacking, key recognition, value snapshotting, or mapping materialization, return no definition, a blocked result, and exactly 48 ordered `MISSING_REQUIRED_FIELD` occurrences. Do not catch `BaseException`.
 
-For a readable Mapping, code ordering begins with absent required keys in required-key order, unexpected exact built-in string keys in lexical order, remaining non-exact-string keys in original Mapping iteration order, then all present-value codes in direct-validation order. Aggregate every diagnosable present-value failure, skip only checks whose required inputs are absent or unusable, and never construct or return a partial definition.
+Mapping enum fields accept only the exact enum member or an exact built-in string equal to a member value; accepted strings adapt to exact members. String subclasses, unrelated enums, enum subclasses, and every other object are rejected. Direct validation accepts exact enum members only. A present invalid field appends exactly one corresponding `INVALID_BASELINE_TYPE` or `INVALID_DEFINITION_STATUS`.
+
+`fold_index` requires `type(value) is int` and a value of at least zero. Bool, integer subclasses, and every other object are rejected with exactly one `INVALID_INTEGER_FIELD`; no coercion is permitted.
+
+Mapping `conditioning_dimensions`, `availability_evidence_refs`, and `provenance_refs` accept only an actual tuple or list and convert a list to a tuple. Direct validation requires `type(value) is tuple` and performs no conversion.
+
+For a readable Mapping, exact result order is:
+
+1. missing required keys in required-key order;
+2. unexpected exact built-in string keys in lexical order;
+3. unexpected non-exact-string keys in original Mapping iteration order;
+4. required and supplied-nullable text codes;
+5. `INVALID_BASELINE_TYPE`;
+6. `INVALID_DEFINITION_STATUS`;
+7. `INVALID_INTEGER_FIELD`;
+8. fixed-posture codes;
+9. timestamp codes;
+10. temporal comparison codes;
+11. `INVALID_CONDITIONING_DIMENSIONS`;
+12. availability-evidence codes;
+13. provenance codes;
+14. climatology or persistence codes;
+15. definition-status consistency codes;
+16. `SELF_SUPERSESSION`.
+
+Aggregate every diagnosable present-value failure even when missing or unexpected fields exist. Skip only checks whose prerequisites are absent or unusable. Preserve repeated occurrences. Do not finally sort, filter, insert, remove, convert to a set, or deduplicate codes. Never construct or return a partial definition. Construct the frozen definition only when the complete code sequence is empty, and require it to pass direct validation before return.
 
 ## Exact required and optional key matrix
 
-The first 48 definition fields are required mapping keys. The only optional mapping key is `supersedes_baseline_definition_id`.
+The exact required mapping keys, in order, are:
+
+1. `baseline_definition_id`
+2. `baseline_type`
+3. `definition_status`
+4. `baseline_version`
+5. `method_id`
+6. `method_version`
+7. `split_id`
+8. `split_version`
+9. `fold_id`
+10. `fold_index`
+11. `fold_cutoff`
+12. `prediction_as_of`
+13. `input_publication_available_at`
+14. `definition_declared_at`
+15. `condition_id`
+16. `token_id`
+17. `outcome`
+18. `settlement_rule_id`
+19. `settlement_rule_version`
+20. `source_compatibility_posture`
+21. `station_compatibility_posture`
+22. `threshold`
+23. `unit`
+24. `comparator`
+25. `measurement_window`
+26. `archive_finality_layer`
+27. `scoring_target_posture`
+28. `baseline_input_posture`
+29. `conditioning_dimensions`
+30. `smoothing_definition_id`
+31. `history_window_definition_id`
+32. `hierarchy_definition_id`
+33. `fallback_definition_id`
+34. `persisted_quantity_id`
+35. `conversion_rule_id`
+36. `split_parity_posture`
+37. `paired_comparison_posture`
+38. `availability_posture`
+39. `fallback_posture`
+40. `tuning_posture`
+41. `output_contract_posture`
+42. `market_price_posture`
+43. `baseline_execution_posture`
+44. `scoring_execution_posture`
+45. `storage_persistence_posture`
+46. `availability_evidence_refs`
+47. `provenance_refs`
+48. `exclusion_reason`
+
+The only optional mapping key is `supersedes_baseline_definition_id`.
 
 Required nullable mapping keys that must be explicitly present even when `None`: `smoothing_definition_id`, `history_window_definition_id`, `hierarchy_definition_id`, `fallback_definition_id`, `persisted_quantity_id`, `conversion_rule_id`, and `exclusion_reason`.
 
 Absence is distinct from explicit `None`. No required field receives a default. A string-subclass key does not satisfy an exact required key and is also unexpected.
+
+Required exact built-in nonblank text fields, in exact validation order, are:
+
+1. `baseline_definition_id`
+2. `baseline_version`
+3. `method_id`
+4. `method_version`
+5. `split_id`
+6. `split_version`
+7. `fold_id`
+8. `condition_id`
+9. `token_id`
+10. `outcome`
+11. `settlement_rule_id`
+12. `settlement_rule_version`
+13. `source_compatibility_posture`
+14. `station_compatibility_posture`
+15. `threshold`
+16. `unit`
+17. `comparator`
+18. `measurement_window`
+19. `archive_finality_layer`
+20. `scoring_target_posture`
+21. `baseline_input_posture`
+22. `split_parity_posture`
+23. `paired_comparison_posture`
+24. `availability_posture`
+25. `fallback_posture`
+26. `tuning_posture`
+27. `output_contract_posture`
+28. `market_price_posture`
+29. `baseline_execution_posture`
+30. `scoring_execution_posture`
+31. `storage_persistence_posture`
+
+A value is valid only when `type(value) is str` and `value.strip()` is nonempty. Each invalid value appends one `BLANK_REQUIRED_TEXT` in this order. Stored values are not stripped or rewritten. Timestamp fields are excluded from this matrix.
+
+Nullable text fields, in exact validation order, are:
+
+1. `smoothing_definition_id`
+2. `history_window_definition_id`
+3. `hierarchy_definition_id`
+4. `fallback_definition_id`
+5. `persisted_quantity_id`
+6. `conversion_rule_id`
+7. `exclusion_reason`
+8. `supersedes_baseline_definition_id`
+
+At the generic nullable-text layer, `None` is text-valid. Every supplied non-`None` value must be an exact built-in nonblank string; each invalid supplied value appends one `BLANK_REQUIRED_TEXT` after all required-text checks. Mapping absence remains distinct from explicit `None`.
 
 ## Exact fixed-posture matrix
 
@@ -191,29 +316,41 @@ A valid timestamp requires an exact built-in nonblank string, `datetime.fromisof
 
 Comparison codes, when prerequisites are valid, occur in this order: `INPUT_AVAILABLE_AFTER_PREDICTION`, `PREDICTION_AFTER_FOLD_CUTOFF`, `DEFINITION_DECLARED_AFTER_PREDICTION`. Equality passes.
 
+Conditioning-dimension contract: mapping accepts only an actual tuple or list and converts a list to a tuple; direct input requires `type(conditioning_dimensions) is tuple` without conversion. Each entry must be an exact built-in nonblank string. Caller order is preserved and duplicates are rejected. No sorting, normalization, inference, generation, or deduplication occurs. Any container, entry, or duplication defect appends exactly one `INVALID_CONDITIONING_DIMENSIONS`; container failure prevents entry iteration. An empty valid tuple is allowed for climatology and required for persistence. Persistence's nonempty role check runs only for a generically valid tuple.
+
+Availability-evidence contract: mapping accepts only an actual tuple or list and converts a list to a tuple; direct input requires an actual tuple without conversion. A wrong container appends exactly one `INVALID_AVAILABILITY_EVIDENCE_REF`; an empty accepted container appends exactly one `EMPTY_AVAILABILITY_EVIDENCE_REFS`; each non-exact-string or blank entry appends one `INVALID_AVAILABILITY_EVIDENCE_REF` in caller order. Valid duplicates and caller order are preserved. Container failure prevents entry iteration, and emptiness and entry failures are mutually exclusive. References are not generated, resolved, dereferenced, sorted, or deduplicated.
+
+Provenance contract: mapping accepts only an actual tuple or list and converts a list to a tuple; direct input requires an actual tuple without conversion. A wrong container appends exactly one `INVALID_PROVENANCE_REF`; an empty accepted container appends exactly one `EMPTY_PROVENANCE_REFS`; each invalid entry appends one `INVALID_PROVENANCE_REF` in caller order. Valid duplicates and caller order are preserved. Container failure prevents entry iteration, and emptiness and entry failures are mutually exclusive. References are not normalized, generated, looked up, dereferenced, sorted, or deduplicated.
+
 ## Exact climatology matrix
 
-When `baseline_type is CLIMATOLOGY`, `baseline_input_posture` must equal `train_only_as_of_history`; `history_window_definition_id` must be an exact nonblank string; `conditioning_dimensions` may be empty or nonempty but must satisfy its exact tuple contract; `smoothing_definition_id`, `hierarchy_definition_id`, and `fallback_definition_id` may be `None` or exact nonblank strings; `persisted_quantity_id` and `conversion_rule_id` must be `None`.
+Climatology checks run only when baseline type is valid and is `CLIMATOLOGY`. For explicitly present prerequisites, `baseline_input_posture` must be the exact built-in string `train_only_as_of_history`, otherwise append `CLIMATOLOGY_INVALID_INPUT_POSTURE`. `history_window_definition_id` must be an exact built-in nonblank string; `None`, blank, string subclass, or non-string appends `CLIMATOLOGY_MISSING_HISTORY_WINDOW`, and a non-`None` generic text defect retains its earlier `BLANK_REQUIRED_TEXT`. Valid `conditioning_dimensions` may be empty or nonempty. `smoothing_definition_id`, `hierarchy_definition_id`, and `fallback_definition_id` may be `None` or exact built-in nonblank strings. `persisted_quantity_id` and `conversion_rule_id` must be `None`; when either or both explicitly present values are non-`None`, append exactly one `CLIMATOLOGY_PERSISTENCE_FIELDS_PRESENT`.
 
 Code order: `CLIMATOLOGY_INVALID_INPUT_POSTURE`, `CLIMATOLOGY_MISSING_HISTORY_WINDOW`, `CLIMATOLOGY_PERSISTENCE_FIELDS_PRESENT`.
 
 A missing compatible fallback is not repaired here. `None` means future execution must fail closed if compatible conditioned history is unavailable. No numeric history window, smoothing value, hierarchy, fallback, or sample threshold is created.
 
+For mapping input, a missing required prerequisite receives only its missing-field code and no dependent climatology code.
+
 ## Exact persistence matrix
 
-When `baseline_type is PERSISTENCE`, `baseline_input_posture` must equal `latest_legitimately_available_compatible_prior_state`; `conditioning_dimensions` must be empty; `smoothing_definition_id`, `history_window_definition_id`, `hierarchy_definition_id`, and `fallback_definition_id` must be `None`; `persisted_quantity_id` and `conversion_rule_id` must be exact nonblank strings.
+Persistence checks run only when baseline type is valid and is `PERSISTENCE`. For explicitly present prerequisites, `baseline_input_posture` must be the exact built-in string `latest_legitimately_available_compatible_prior_state`, otherwise append `PERSISTENCE_INVALID_INPUT_POSTURE`. A generically valid `conditioning_dimensions` tuple must be empty. `smoothing_definition_id`, `history_window_definition_id`, `hierarchy_definition_id`, and `fallback_definition_id` must all be `None`. If a generically valid conditioning tuple is nonempty or any one or more of those four explicitly present fields is non-`None`, append exactly one `PERSISTENCE_CONDITIONING_FIELDS_PRESENT`.
+
+`persisted_quantity_id` must be an exact built-in nonblank string; `None`, blank, string subclass, or non-string appends `PERSISTENCE_MISSING_QUANTITY`. `conversion_rule_id` has the same posture and appends `PERSISTENCE_MISSING_CONVERSION_RULE`. A text-invalid non-`None` value retains its earlier `BLANK_REQUIRED_TEXT`.
 
 Code order: `PERSISTENCE_INVALID_INPUT_POSTURE`, `PERSISTENCE_CONDITIONING_FIELDS_PRESENT`, `PERSISTENCE_MISSING_QUANTITY`, `PERSISTENCE_MISSING_CONVERSION_RULE`.
 
 No persisted quantity or conversion rule is selected, inferred, executed, or evaluated.
 
+For mapping input, a missing required prerequisite receives only its missing-field code and no dependent persistence code.
+
 ## Exact definition-status matrix
 
-For `ACTIVE`, `exclusion_reason` must be `None`; otherwise append `ACTIVE_WITH_EXCLUSION_REASON`.
+Status consistency checks run only when definition status is valid. For `ACTIVE`, explicitly present `exclusion_reason is None` passes; any explicitly present non-`None` value appends `ACTIVE_WITH_EXCLUSION_REASON`. A text-invalid non-`None` value retains its earlier `BLANK_REQUIRED_TEXT`; a missing mapping key receives only `MISSING_REQUIRED_FIELD`.
 
-For `BLOCKED`, an explicitly present exclusion reason must be an exact nonblank string; otherwise append `BLOCKED_WITHOUT_EXCLUSION_REASON`. For mapping input, do not append a dependent status code when the required exclusion key is absent; the missing-field code is sufficient.
+For `BLOCKED`, an explicitly present exact built-in nonblank string passes. Explicit `None`, blank, string subclass, or non-string appends `BLOCKED_WITHOUT_EXCLUSION_REASON`; invalid non-`None` text retains its earlier `BLANK_REQUIRED_TEXT`; a missing mapping key receives only `MISSING_REQUIRED_FIELD`.
 
-Append `SELF_SUPERSESSION` exactly once only when both definition identifiers are exact nonblank strings and `supersedes_baseline_definition_id == baseline_definition_id`. No predecessor identity is generated.
+Append `SELF_SUPERSESSION` exactly once only when both identifiers are exact built-in nonblank strings and equal. Do not append it when either is text-invalid. No identity is generated or rewritten.
 
 ## Exact validation-code matrix
 
@@ -262,11 +399,15 @@ Exact code order: required and supplied-nullable `BLANK_REQUIRED_TEXT`; `INVALID
 
 Repeated codes remain repeated. No final sorting, filtering, insertion, removal, set conversion, or deduplication is permitted.
 
+The direct validator assumes an actual `BaselineContractDefinition`. It performs no mapping adaptation, enum-string adaptation, list-to-tuple conversion, text normalization, timestamp normalization, identity generation, evidence generation, provenance generation, or repair.
+
 ## Exact future test matrix
 
 Require independent exact expectations for public surface order, all enum matrices, all 26 validation codes, all 49 definition fields, all three result fields, both public signatures, private key/text/timestamp/fixed-posture tuples, non-Mapping and hostile-Mapping roots, every missing key, unexpected-key ordering, string-subclass keys, text fields, enum adaptation and direct rejection, fold-index defects, fixed posture defects, timestamp defects and prerequisite suppression, temporal boundaries, conditioning, evidence, provenance, climatology rules, persistence rules, status consistency, supersession, combined mapping code order, no partial definition, frozen inputs and outputs, deterministic repeated calls, canonical routing, and absence of baseline calculation, probability creation, scoring, I/O, persistence, reports, runtime behavior, simulation, or trading.
 
 Use complete tuple equality. Do not use membership-only, sets, or sorted-result substitutions.
+
+Combined mapping cases must independently assert complete expected tuples for: multiple missing keys; missing plus unexpected keys; missing plus malformed present text; unexpected keys plus invalid enums; invalid integer plus fixed-posture failures; multiple invalid timestamps; temporal plus conditioning failures; evidence plus provenance failures; climatology text and role-specific failures together; persistence conditioning, quantity, and conversion failures together; status plus supersession failures; repeated identical validation codes; and shape plus role-specific failures with dependent-check suppression. Membership-only, count-only, set, or sorted assertions are insufficient.
 
 ## Dependency and import boundary
 
