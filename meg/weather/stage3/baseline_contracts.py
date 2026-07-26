@@ -303,13 +303,6 @@ def _validate(values: Mapping[str, object], present: set[str]) -> list[BaselineV
     return codes
 
 
-def validate_baseline_contract_definition(
-    definition: BaselineContractDefinition,
-) -> BaselineContractValidationResult:
-    values = {field: getattr(definition, field) for field in _REQUIRED_MAPPING_KEYS + _OPTIONAL_MAPPING_KEYS}
-    return _result(_validate(values, set(values)))
-
-
 def baseline_contract_definition_from_mapping(
     mapping: object,
 ) -> tuple[BaselineContractDefinition | None, BaselineContractValidationResult]:
@@ -355,3 +348,10 @@ def baseline_contract_definition_from_mapping(
     if not result.passed:
         return None, result
     return definition, result
+
+
+def validate_baseline_contract_definition(
+    definition: BaselineContractDefinition,
+) -> BaselineContractValidationResult:
+    values = {field: getattr(definition, field) for field in _REQUIRED_MAPPING_KEYS + _OPTIONAL_MAPPING_KEYS}
+    return _result(_validate(values, set(values)))
