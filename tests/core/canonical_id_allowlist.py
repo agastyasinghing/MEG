@@ -502,7 +502,7 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     "tests/core/test_weather_bot_stage3_scoring_and_diagnostics_implementation_approval_request_01.py": 2,
     # Stage 3 evaluation-result approval request uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-STAGE3-EVALUATION-RESULT-RECORD-IMPLEMENTATION-APPROVAL-REQUEST-01.md": 1,
-    "tests/core/test_weather_bot_stage3_evaluation_result_record_implementation_approval_request_01.py": 2,
+    "tests/core/test_weather_bot_stage3_evaluation_result_record_implementation_approval_request_01.py": 4,
     # Runtime approval request packet planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md": 2,
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py": 5,

@@ -192,7 +192,7 @@ Only `supersedes_result_id_when_applicable` is optional. Nullable uncertainty ke
 
 Enum fields `result_kind`, `artifact_id`, `method_role`, `prediction_representation`, and `support_status` accept only the exact enum member or an exact built-in string matching a value. Reject string subclasses, unrelated enums, invalid strings, and other values. Only actual lists for `exclusion_block_reason_summary` and `provenance` may adapt to tuples. A payload must already be one exact approved payload dataclass; never adapt a nested mapping. Direct validation performs no enum or list adaptation.
 
-A non-Mapping root or ordinary exception during root snapshot or materialization returns no record and a blocked result with exactly 32 ordered `MISSING_REQUIRED_FIELD` codes. Catch `Exception`, never `BaseException`. Never construct or return a partial record.
+A non-Mapping root returns no record and a blocked result with exactly 32 ordered `MISSING_REQUIRED_FIELD` codes. For a readable custom `Mapping.items()` snapshot, any repeated key encountered before materialization makes the root unreadable; this includes repeated exact-string, string-subclass, and non-string keys. Any ordinary exception during iteration, item unpacking, key hashing, duplicate detection, value snapshotting, or materialization has the same 32-code result. Catch ordinary `Exception`, never `BaseException`. Never construct or return a partial record.
 
 ## Text, timestamp, posture, and supersession
 
@@ -200,7 +200,18 @@ Required exact built-in nonblank text validation order: `evaluation_result_id`, 
 
 Nullable text order: `uncertainty_method_id`, `uncertainty_level_id`, `supersedes_result_id_when_applicable`. A valid non-null value requires `type(value) is str` and nonempty `value.strip()`. Never strip or rewrite values. Payload text and tuple entries are validated only in their payload group.
 
-`result_created_at` requires an exact built-in RFC3339/ISO-8601 string with explicit UTC offset. Reject malformed, naive, non-string, and string-subclass values; do not compare with the clock, generate, or rewrite it.
+`result_created_at` remains in the required-text group. For every present value, a blank string, non-string, or string subclass appends `BLANK_REQUIRED_TEXT` in the text group, and every value failing the timestamp contract appends exactly one `INVALID_RESULT_CREATED_AT` in the timestamp group; text-invalid timestamp values therefore receive both codes in group order. A missing mapping key receives only `MISSING_REQUIRED_FIELD`.
+
+Exact timestamp acceptance procedure, in order:
+
+1. require `type(value) is str`;
+2. require a date-time separator `T`;
+3. permit a terminal `Z` by converting only that terminal `Z` to `+00:00` for parsing;
+4. otherwise require an explicit terminal numeric offset in `+HH:MM` or `-HH:MM` form;
+5. parse with `datetime.fromisoformat`;
+6. require the resulting datetime to have a non-`None` UTC offset.
+
+Reject all other values. Do not compare with the current clock. Do not normalize or replace the stored caller value.
 
 Require exactly `target_posture = venue_defined_settlement_outcome`. Blank, non-string, or same-valued string subclasses may receive both `BLANK_REQUIRED_TEXT` and `INVALID_FIXED_POSTURE`.
 
@@ -210,7 +221,9 @@ Append `SELF_SUPERSESSION` exactly once only when both `evaluation_result_id` an
 
 `eligible_record_count`, `excluded_record_count`, `blocked_record_count`, and `total_considered_record_count` require exact built-in integers >= 0. Reject bool, subclasses, floats, strings, and negatives; emit one `INVALID_RECORD_COUNT` per invalid field in field order. Only if all are valid require `total_considered_record_count == eligible_record_count + excluded_record_count + blocked_record_count`; otherwise suppress `SAMPLE_ACCOUNTING_MISMATCH`.
 
-Mapping accepts an actual tuple or list reason summary; direct validation requires an actual tuple. Every entry is an exact built-in nonblank string, caller order is preserved, duplicates are rejected, and any container, entry, or duplicate defect emits exactly one `INVALID_REASON_SUMMARY`. A nonempty valid summary is required when excluded or blocked count is positive or support is `INSUFFICIENT`, `BLOCKED`, or `UNAVAILABLE`; with valid prerequisites and empty summary append `MISSING_REQUIRED_REASON`. Never infer reasons.
+Reason-summary structure is valid only when direct validation receives an exact tuple, or mapping input receives an exact tuple/list and adapts a list to a tuple, every entry is an exact built-in nonblank string, and no duplicate exists. Caller order is preserved. Any container, entry, or duplicate defect appends exactly one `INVALID_REASON_SUMMARY`.
+
+Evaluate `MISSING_REQUIRED_REASON` only when reason-summary structure is valid, every count used by the reason condition is a valid exact nonnegative integer, and support status is either absent from the condition or a valid exact enum member. A reason is required when excluded or blocked count is positive or support is `INSUFFICIENT`, `BLOCKED`, or `UNAVAILABLE`. When required and the valid tuple is empty, append exactly one `MISSING_REQUIRED_REASON`. Suppress that code for invalid summary structure, invalid relevant counts, invalid support status, or missing prerequisites. Never infer reasons.
 
 Uncertainty method and level must both be `None` or both valid exact built-in nonblank strings. Exactly one valid field being `None` appends `UNCERTAINTY_FIELDS_MISMATCH`; suppress it when either non-null value is text-invalid. Never select or interpret uncertainty.
 
@@ -233,16 +246,18 @@ Representation matrix: Brier, log, reliability, and decomposition require `binar
 
 Method-role matrix: `paired_comparison_result` requires `paired_comparison`; every other valid kind forbids it and permits only `candidate`, `climatology_baseline`, or `persistence_baseline`. Evaluate only when kind and role are valid.
 
+Dependency gates are exact: evaluate `RESULT_KIND_ARTIFACT_MISMATCH` only when result kind and artifact are valid exact enum members; `REPRESENTATION_MISMATCH` only when artifact and representation are valid exact enum members; and `METHOD_ROLE_MISMATCH` only when result kind and method role are valid exact enum members. Evaluate `INVALID_PAYLOAD_TYPE` only when result kind is valid. Select the expected payload class solely from valid result kind. Payload content validation runs only when result kind is valid and `type(result_payload)` is exactly the expected payload class; never use `isinstance`. Wrong payload type suppresses every payload-content code, `PAIR_BASELINE_NOT_APPROVED`, and `PAIR_RESULT_IDENTITY_COLLISION`.
+
 ## Payload validation
 
-All payloads remain frozen and unchanged. Count-like fields require exact built-in nonnegative `int`; numeric results require exact built-in finite `float`. Reject bool, subclasses, integers where float is required, NaN, and infinities.
+All payloads remain frozen and unchanged. Count-like fields require exact built-in nonnegative `int`; numeric results require exact built-in finite `float`. Reject bool, subclasses, integers where float is required, NaN, and infinities. Each malformed payload emits at most one applicable payload-content code.
 
-- Scalar: exact fixed postures; Brier in `[0.0, 1.0]`; log, CRPS, and threshold-weighted CRPS >= `0.0`; any failure gives one `INVALID_SCALAR_SCORE_PAYLOAD`.
-- Calibration: exact nonblank bin/policy identities; nonnegative bin index/sample count; sample count equals eligible count; probabilities/frequencies in `[0.0, 1.0]`; exact posture; any failure gives one `INVALID_CALIBRATION_BIN_PAYLOAD`.
-- Decomposition: exact nonblank policy identity; finite nonnegative reliability, resolution, uncertainty; exact posture; any failure gives one `INVALID_DECOMPOSITION_PAYLOAD`.
-- Distribution: exact nonblank PIT policy; exact nonempty equal-length tuples; unique nonblank exact-string bin IDs; nonnegative exact-int counts summing to eligible count; exact posture; any failure gives one `INVALID_DISTRIBUTION_DIAGNOSTIC_PAYLOAD`.
-- Ensemble: exact nonblank tie policy; exact nonempty equal-length tuples; unique nonblank exact-string rank IDs; nonnegative exact-int counts summing to eligible count; exact comparability/order postures; any failure gives one `INVALID_ENSEMBLE_DIAGNOSTIC_PAYLOAD`.
-- Paired comparison: exact nonblank distinct candidate/baseline IDs; exact `BaselineType.CLIMATOLOGY` or `BaselineType.PERSISTENCE`; exact direction/scope postures; exact finite float value. Unapproved baseline gives `PAIR_BASELINE_NOT_APPROVED`; equal IDs give `PAIR_RESULT_IDENTITY_COLLISION`; other failures give `INVALID_PAIRED_COMPARISON_PAYLOAD`. Never calculate or recompute comparison.
+- Scalar: for an exact `ScalarScoreResultPayload`, always validate exact finite-float `result_value`, exact `score_direction = lower_is_better`, and exact `result_domain_posture = artifact_specific_domain_validated`. Apply an artifact numeric domain only when artifact is a valid exact enum member and one of the four approved scalar artifacts: Brier requires `0.0 <= result_value <= 1.0`; log, CRPS, and threshold-weighted CRPS require `result_value >= 0.0`. Invalid or scalar-incompatible artifact suppresses only the domain comparison. A generic defect still gives exactly one `INVALID_SCALAR_SCORE_PAYLOAD`.
+- Calibration: always validate exact nonblank bin/policy identities, exact nonnegative bin index and sample count, probabilities/frequencies in `[0.0, 1.0]`, and exact `ordered_bin_posture = predeclared_order_required`. Compare sample count to eligible count only when eligible count is a valid exact nonnegative integer. Invalid eligible count suppresses only that equality. Any defect gives at most one `INVALID_CALIBRATION_BIN_PAYLOAD`.
+- Decomposition: validate exact nonblank policy identity, exact finite nonnegative floats for reliability, resolution, and uncertainty, and exact `component_posture = reliability_resolution_uncertainty_required`. Any defect gives at most one `INVALID_DECOMPOSITION_PAYLOAD`.
+- Distribution: always validate exact nonblank PIT policy, exact nonempty tuples, equal lengths, unique exact nonblank string bin IDs, exact nonnegative integer counts, and exact `ordered_content_posture = predeclared_order_required`. Compare count sum to eligible count only when eligible count is valid. Invalid eligible count suppresses only that sum comparison. Any defect gives at most one `INVALID_DISTRIBUTION_DIAGNOSTIC_PAYLOAD`.
+- Ensemble: always validate exact nonblank tie policy, exact nonempty tuples, equal lengths, unique exact nonblank string rank IDs, exact nonnegative integer counts, exact `ensemble_comparability_posture = finite_comparable_ensemble_required`, and exact `ordered_content_posture = predeclared_order_required`. Compare count sum to eligible count only when eligible count is valid. Invalid eligible count suppresses only that sum comparison. Any defect gives at most one `INVALID_ENSEMBLE_DIAGNOSTIC_PAYLOAD`.
+- Paired comparison: paired checks run only for exact `PairedComparisonResultPayload`. Independently validate exact finite-float comparison value, exact `comparison_direction = candidate_minus_baseline_lower_is_better`, exact `paired_scope_posture = exact_common_test_record_set_required`, and exact nonblank candidate/baseline identities. Append `PAIR_BASELINE_NOT_APPROVED` exactly once unless baseline type is exactly `BaselineType.CLIMATOLOGY` or `BaselineType.PERSISTENCE`; this defect alone does not give `INVALID_PAIRED_COMPARISON_PAYLOAD`, though other defects may coexist. Append `PAIR_RESULT_IDENTITY_COLLISION` exactly once only when both IDs are valid exact built-in nonblank strings and equal. Equal blank, non-string, or string-subclass IDs produce only the generic paired-payload code. Never calculate or recompute comparison.
 
 ## Validation codes
 
