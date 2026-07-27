@@ -125,15 +125,114 @@ Passed means `PASSED`, true, and empty codes; blocked means `BLOCKED`, false, an
 
 ## Mapping input
 
-`scoring_diagnostic_definition_from_mapping` accepts a `Mapping`. Non-Mapping roots or ordinary snapshot exceptions return no definition and a blocked result with exactly 36 ordered `MISSING_REQUIRED_FIELD` codes. Do not catch `BaseException`. Enum strings adapt only from exact built-in strings. Tuple fields accept an actual tuple or list; lists adapt to tuples. Direct validation accepts actual tuples and exact enum members only. No partial definition is returned.
+Future exact signature:
+
+```python
+def scoring_diagnostic_definition_from_mapping(
+    mapping: object,
+) -> tuple[
+    ScoringDiagnosticDefinition | None,
+    ScoringDiagnosticValidationResult,
+]:
+```
+
+The function occupies public source position eight, before the direct validator. It accepts only a `Mapping`. Non-Mapping roots and every ordinary exception during `items()` access, iteration, malformed or non-iterable item handling, item unpacking, key hashing, value snapshotting, or materialization return no definition and a blocked result containing exactly 36 ordered `MISSING_REQUIRED_FIELD` codes. Do not catch `BaseException`.
+
+Mapping enum fields `scoring_artifact`, `prediction_representation`, and `definition_status` accept only an exact enum member or an exact built-in string equal to a member value. Accepted strings adapt to exact members. String subclasses, unrelated enums, enum subclasses, invalid strings, and all other values are rejected. Direct validation accepts exact enum members only.
+
+Mapping tuple fields accept containers only as specified by their dedicated sections. Shape errors never cause an early return: aggregate every diagnosable present-value failure, suppress only dependent checks with missing or unusable prerequisites, and never construct or return a partial definition.
 
 ## Keys
 
-Fields 1 through 36 are required keys in definition-field order. Only `supersedes_scoring_definition_id` is optional. The seven policy IDs and `exclusion_reason` are nullable but required and must be explicitly present; absence differs from `None`. Unexpected exact-string keys precede unexpected non-string keys as specified by validation order.
+Exact required mapping keys, in order:
+
+1. `scoring_definition_id`
+2. `scoring_artifact`
+3. `definition_status`
+4. `definition_version`
+5. `method_id`
+6. `method_version`
+7. `prediction_representation`
+8. `aggregation_rule_id`
+9. `weighting_rule_id`
+10. `sample_support_policy_id`
+11. `uncertainty_method_id`
+12. `uncertainty_level_id`
+13. `supported_stratification_axes`
+14. `required_baseline_types`
+15. `probability_boundary_policy_id`
+16. `binning_policy_id`
+17. `decomposition_policy_id`
+18. `pit_treatment_policy_id`
+19. `tie_treatment_policy_id`
+20. `threshold_weight_policy_id`
+21. `claim_justification_id`
+22. `scoring_target_posture`
+23. `proper_score_direction_posture`
+24. `paired_comparison_posture`
+25. `applicability_posture`
+26. `availability_posture`
+27. `predeclaration_posture`
+28. `tuning_posture`
+29. `sparse_bucket_posture`
+30. `interpretation_posture`
+31. `market_price_posture`
+32. `scoring_execution_posture`
+33. `diagnostic_execution_posture`
+34. `storage_persistence_posture`
+35. `provenance_refs`
+36. `exclusion_reason`
+
+The only optional key is:
+
+1. `supersedes_scoring_definition_id`
+
+Fields 1 through 36 are required, and all seven policy IDs and `exclusion_reason` remain required even when their value is `None`; absence differs from explicit `None`.
+
+Readable mappings recognize required and optional keys only when `type(key) is str`. A string-subclass key does not satisfy an exact required key and is also unexpected. Exact shape order is: missing required keys in the 36-key order; unexpected exact built-in string keys in lexical order; then every remaining non-exact-string key in original Mapping iteration order. Shape errors do not cause an early return. Aggregate every diagnosable present-value failure and construct no partial definition.
 
 ## Text fields
 
-All textual identities, versions, rules, policies when supplied, postures, provenance entries, exclusion reason when required, and supersession identity when supplied require exact built-in nonblank strings. Values are neither stripped nor generated. Invalid required or supplied-nullable text emits `BLANK_REQUIRED_TEXT` in field order.
+Required exact built-in nonblank string fields, in exact validation order:
+
+1. `scoring_definition_id`
+2. `definition_version`
+3. `method_id`
+4. `method_version`
+5. `aggregation_rule_id`
+6. `weighting_rule_id`
+7. `sample_support_policy_id`
+8. `uncertainty_method_id`
+9. `uncertainty_level_id`
+10. `scoring_target_posture`
+11. `proper_score_direction_posture`
+12. `paired_comparison_posture`
+13. `applicability_posture`
+14. `availability_posture`
+15. `predeclaration_posture`
+16. `tuning_posture`
+17. `sparse_bucket_posture`
+18. `interpretation_posture`
+19. `market_price_posture`
+20. `scoring_execution_posture`
+21. `diagnostic_execution_posture`
+22. `storage_persistence_posture`
+
+A valid value requires `type(value) is str` and `value.strip()` to be nonempty. Do not strip, normalize, rewrite, or generate stored values. Each invalid present field appends one `BLANK_REQUIRED_TEXT` in the listed order.
+
+Nullable text fields, in exact validation order after all required-text codes:
+
+1. `probability_boundary_policy_id`
+2. `binning_policy_id`
+3. `decomposition_policy_id`
+4. `pit_treatment_policy_id`
+5. `tie_treatment_policy_id`
+6. `threshold_weight_policy_id`
+7. `claim_justification_id`
+8. `exclusion_reason`
+9. `supersedes_scoring_definition_id`
+
+Generic nullable-text validation permits `None`. Every present non-`None` value must be an exact built-in nonblank string; each invalid non-`None` value appends one `BLANK_REQUIRED_TEXT`. `provenance_refs` entries are excluded from the generic text matrix and are validated only in the provenance group.
 
 ## Fixed postures
 
@@ -152,6 +251,8 @@ All textual identities, versions, rules, policies when supplied, postures, prove
 | diagnostic_execution_posture | `not_approved` |
 | storage_persistence_posture | `not_approved` |
 
+Each fixed posture requires `type(value) is str` and exact equality with its frozen value. A blank, non-string, or same-valued string-subclass posture receives its earlier `BLANK_REQUIRED_TEXT` and also `INVALID_FIXED_POSTURE`. Preserve fixed-posture field order.
+
 ## Representation matrix
 
 | Artifact | Representation | Direction |
@@ -165,7 +266,7 @@ All textual identities, versions, rules, policies when supplied, postures, prove
 | rank_histogram | finite_comparable_ensemble | diagnostic_only_not_scalar_ranking |
 | threshold_weighted_crps | full_predictive_distribution | lower_is_better |
 
-Mismatch emits `REPRESENTATION_MISMATCH` or `DIRECTION_MISMATCH` and fails closed.
+No representation is inferred or repaired. Representation mismatch is evaluated only when both scoring artifact and prediction representation are valid. Direction mismatch is evaluated only when scoring artifact is valid and `proper_score_direction_posture` is an exact built-in nonblank string. Missing or invalid prerequisites suppress the dependent mismatch code while generic text and enum codes remain. Otherwise mismatch emits `REPRESENTATION_MISMATCH` or `DIRECTION_MISMATCH` and fails closed.
 
 ## Artifact-policy matrix
 
@@ -180,23 +281,40 @@ Mismatch emits `REPRESENTATION_MISMATCH` or `DIRECTION_MISMATCH` and fails close
 | rank_histogram | tie_treatment_policy_id | `None` |
 | threshold_weighted_crps | threshold_weight_policy_id, claim_justification_id | `None` |
 
-Missing required policies emit their artifact-specific code. Any inapplicable supplied policy emits `INAPPLICABLE_POLICY_FIELDS_PRESENT` exactly once. No policy is selected, interpreted, or executed.
+Missing required policies emit their artifact-specific code. Any inapplicable supplied policy emits `INAPPLICABLE_POLICY_FIELDS_PRESENT` exactly once. No policy is selected, interpreted, or executed.All seven policy keys remain required even when `None`. For a required policy: an absent key produces only `MISSING_REQUIRED_FIELD`; present `None` produces its artifact-specific missing-policy code; and present blank, non-string, or string-subclass values produce the earlier `BLANK_REQUIRED_TEXT` followed by the missing-policy code.
+
+For policies inapplicable to a valid artifact, every field must be `None`; any one or more present non-`None` values append exactly one `INAPPLICABLE_POLICY_FIELDS_PRESENT`, retaining any earlier text code. Artifact-policy checks run only for a valid artifact. Artifact-specific codes retain validation-code order. No policy value, formula, threshold, clipping rule, bin count, tie constant, or numeric method is invented.
 
 ## Stratification
 
-Allowed axes are exactly `market_family`, `threshold_distance`, `forecast_horizon`, `station_source_compatibility`, `trap_category`, `season_or_regime_when_supported`, and `archive_layer`. Caller order is preserved. Empty is permitted. Duplicates or invalid entries emit `INVALID_STRATIFICATION_AXES` exactly once.
+Allowed axes are exactly `market_family`, `threshold_distance`, `forecast_horizon`, `station_source_compatibility`, `trap_category`, `season_or_regime_when_supported`, and `archive_layer`.
+
+Mapping input accepts only an actual tuple or list and adapts a valid list to a tuple. Direct validation requires an actual tuple. Every entry must be an exact built-in nonblank string and an approved axis. Preserve caller order; reject duplicates. Any container, entry, unsupported-axis, or duplication defect appends exactly one `INVALID_STRATIFICATION_AXES`. Do not sort, normalize, infer, generate, or deduplicate. An empty tuple is valid.
 
 ## Baseline comparison
 
-`required_baseline_types` must be exactly `(BaselineType.CLIMATOLOGY, BaselineType.PERSISTENCE)`. Mapping may adapt those exact strings; direct validation requires that exact enum tuple. Neither baseline substitutes for the other; defects emit `INVALID_REQUIRED_BASELINE_TYPES` once.
+Mapping input accepts only an actual tuple or list. Each element may be an exact `BaselineType` member or an exact built-in string matching that member. After adaptation the value must equal exactly:
+
+```python
+(
+    BaselineType.CLIMATOLOGY,
+    BaselineType.PERSISTENCE,
+)
+```
+
+Direct validation requires that exact tuple of exact enum members. Reordered, missing, duplicate, additional, string-subclass, unrelated-enum, invalid-string, or invalid-container values append exactly one `INVALID_REQUIRED_BASELINE_TYPES`. Neither baseline substitutes for the other. Market price is not a baseline.
 
 ## Provenance
 
-`provenance_refs` is an actual tuple for direct validation, nonempty, and contains exact built-in nonblank strings. Empty emits `EMPTY_PROVENANCE_REFS`; each invalid occurrence emits `INVALID_PROVENANCE_REF`, preserving repetitions.
+Mapping input accepts only an actual tuple or list and adapts a valid list to a tuple. Direct validation requires an actual tuple. A wrong container appends exactly one `INVALID_PROVENANCE_REF` and prevents entry iteration. An empty accepted container appends exactly one `EMPTY_PROVENANCE_REFS`. Each non-exact-string or blank entry appends one `INVALID_PROVENANCE_REF` in caller order. Empty and invalid-entry codes are mutually exclusive.
+
+Valid duplicates and caller order are preserved. Malformed entries do not receive `BLANK_REQUIRED_TEXT`. No reference is generated, resolved, sorted, deduplicated, looked up, or dereferenced.
 
 ## Status and supersession
 
-Active requires `exclusion_reason is None`; otherwise emit `ACTIVE_WITH_EXCLUSION_REASON`. Blocked requires an explicitly present exact built-in nonblank exclusion reason; otherwise emit `BLOCKED_WITHOUT_EXCLUSION_REASON`, except a missing mapping key produces only its missing-field code. Emit `SELF_SUPERSESSION` only when both valid exact string identities are equal.
+Status checks run only when `definition_status` is valid. For active definitions, explicit `None` exclusion passes; any explicit non-`None` value appends `ACTIVE_WITH_EXCLUSION_REASON`, retaining an earlier text code when invalid. For blocked definitions, an exact built-in nonblank string passes; explicit `None`, blank, non-string, or string-subclass values append `BLOCKED_WITHOUT_EXCLUSION_REASON`, retaining an earlier text code for invalid non-`None` values. In either status, a missing mapping exclusion key produces only `MISSING_REQUIRED_FIELD`.
+
+Append `SELF_SUPERSESSION` exactly once only when both identities are valid exact built-in nonblank strings and equal. No identity is generated or rewritten.
 
 ## Validation codes
 
@@ -231,7 +349,15 @@ No other or dynamically generated code is permitted.
 
 ## Validation order
 
-Readable mappings emit in exact groups: (1) missing keys; (2) unexpected exact-string keys; (3) unexpected non-string keys; (4) required and supplied-nullable text; (5) artifact; (6) representation; (7) status; (8) fixed postures; (9) stratification axes; (10) required baseline types; (11) provenance; (12) representation mismatch; (13) direction mismatch; (14) artifact-specific policy codes; (15) status consistency; (16) self-supersession. Aggregate every diagnosable present-value failure, suppress only checks with absent or unusable prerequisites, preserve repetitions, and never finally sort or deduplicate.
+Future exact signature:
+
+```python
+def validate_scoring_diagnostic_definition(
+    definition: ScoringDiagnosticDefinition,
+) -> ScoringDiagnosticValidationResult:
+```
+
+The function occupies public source position nine. Readable mappings emit in exact groups: (1) missing keys; (2) unexpected exact-string keys; (3) unexpected non-string keys; (4) required and supplied-nullable text; (5) artifact; (6) representation; (7) status; (8) fixed postures; (9) stratification axes; (10) required baseline types; (11) provenance; (12) representation mismatch; (13) direction mismatch; (14) artifact-specific policy codes; (15) status consistency; (16) self-supersession. Aggregate every diagnosable present-value failure, suppress only checks with absent or unusable prerequisites, preserve repetitions, and never finally sort or deduplicate.
 
 ## Future tests
 
@@ -247,7 +373,7 @@ Canonical routing remains exactly `condition_id`, `token_id`, and `outcome`. `ma
 
 ## Non-goals
 
-Explicitly denied: score calculation; diagnostic calculation; probability generation; label joining; split execution; baseline execution; evaluation-result creation; claim creation or evaluation; evidence-gate evaluation; data or corpus creation; source fetching; persistence; reporting; simulation; market comparison execution; trading; runtime orchestration; autonomy.
+Explicitly denied: score calculation; diagnostic calculation; probability generation; label joining; split execution; baseline execution; evaluation-result creation; claim creation or evaluation; evidence-gate evaluation; data or corpus creation; dataset creation; source fetching; persistence; reporting; simulation; market comparison execution; paper trading; trading; order placement; runtime orchestration; autonomy; production behavior.
 
 ## Decision options and current status
 
