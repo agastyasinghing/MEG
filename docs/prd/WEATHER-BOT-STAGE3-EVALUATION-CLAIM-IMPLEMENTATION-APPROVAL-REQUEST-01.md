@@ -52,6 +52,14 @@ Validation aggregates every diagnosable present-value failure, suppressing only 
 
 All explicit non-goals in the machine contract are denied. This request changes no production module and creates no runtime schema or behavior. It leaves Phase 0A shared rails and both jobs unchanged and leaves Phase 0B DuckDB/Parquet historical-research boundaries unchanged. Canonical routing remains exactly `condition_id`, `token_id`, and `outcome`; market&#95;id is non-routing, and `token_outcome_pair` is derived only. It does not approve connectors, paper trading, trading, order placement, orchestration, autonomy, or production behavior.
 
+## Method compatibility and dependency-completeness correction
+
+The machine contract now freezes exact candidate and baseline method-role/identity compatibility without inferring identities. Non-paired candidate evidence and paired candidate/baseline references are checked only after their declared resolution, exact-type, and individual-validity prerequisites; each offending observed occurrence emits the corresponding single identity code.
+
+Every claim class now has an exact ordered closed set of allowed observed result kinds, exact minimum family composition, representation, baseline, artifact where applicable, and stratum posture. Offending resolved valid observed records emit `RESULT_KIND_NOT_ALLOWED` in observed-ID order; absent or invalid evidence does not fabricate dependent failures.
+
+Result-context adaptation, per-context-item validation, repeated diagnostic occurrence order, tuple-alignment and partition prerequisites, baseline double classification, evidence-gate double classification, multiplicity classification, and class-matrix suppression are exact machine assignments. Repeated codes remain ordered and are never sorted or deduplicated. These rules validate caller-supplied structure only; they do not evaluate a claim rule or generate a disposition.
+
 ## Machine contract
 
 The following JSON is the sole machine-assignment block. Order is significant for every array.
@@ -586,62 +594,122 @@ The following JSON is the sole machine-assignment block. Order is significant fo
   ],
   "fixed_target_posture": "venue_defined_settlement_outcome",
   "class_matrix": {
-    "candidate_vs_climatology_predictive_skill": [
-      "paired_comparison_result_only",
-      "paired_baseline_climatology",
-      "claim_baseline_climatology",
-      "nonblank_baseline_method_identity_and_version",
-      "exact_candidate_and_baseline_references"
-    ],
-    "candidate_vs_persistence_predictive_skill": [
-      "paired_comparison_result_only",
-      "paired_baseline_persistence",
-      "claim_baseline_persistence",
-      "nonblank_baseline_method_identity_and_version",
-      "exact_candidate_and_baseline_references"
-    ],
-    "candidate_predictive_skill_across_required_baselines": [
-      "paired_comparison_result_only",
-      "at_least_one_climatology",
-      "at_least_one_persistence",
-      "no_silent_baseline_omission",
-      "claim_baseline_fields_none",
-      "compatible_candidate_identity_and_exact_scope"
-    ],
-    "binary_calibration_behavior": [
-      "binary_outcome_probability",
-      "at_least_one_calibration_bin_result",
-      "at_least_one_scalar_score_or_decomposition_result",
-      "no_other_result_kind",
-      "claim_baseline_fields_none"
-    ],
-    "distributional_calibration_behavior": [
-      "full_predictive_distribution",
-      "at_least_one_distribution_diagnostic_result",
-      "at_least_one_scalar_score_result",
-      "no_other_result_kind",
-      "claim_baseline_fields_none"
-    ],
-    "ensemble_calibration_behavior": [
-      "finite_comparable_ensemble",
-      "at_least_one_ensemble_diagnostic_result",
-      "no_incompatible_result_kind",
-      "claim_baseline_fields_none"
-    ],
-    "threshold_weighted_distribution_skill": [
-      "paired_comparison_result_only",
-      "artifact_threshold_weighted_crps_only",
-      "claim_baseline_climatology_or_persistence",
-      "matching_baseline_method_identity_and_version",
-      "exact_threshold_focused_scope"
-    ],
-    "stratum_specific_predictive_skill": [
-      "paired_comparison_result_only",
-      "nonnull_valid_stratum",
-      "claim_baseline_climatology_or_persistence",
-      "matching_baseline_method_identity_and_version",
-      "exact_declared_stratum_preserved"
-    ]
+    "candidate_vs_climatology_predictive_skill": {
+      "allowed_observed_result_kinds": [
+        "PAIRED_COMPARISON_RESULT"
+      ],
+      "required_paired_baseline_types": [
+        "CLIMATOLOGY"
+      ],
+      "minimum_family_composition": [
+        "one_or_more_paired_comparison_result"
+      ],
+      "prediction_representation": "claim_declared_representation",
+      "claim_baseline_posture": "CLIMATOLOGY_with_nonblank_method_id_and_version",
+      "stratum_posture": "exact_claim_stratum_when_applicable"
+    },
+    "candidate_vs_persistence_predictive_skill": {
+      "allowed_observed_result_kinds": [
+        "PAIRED_COMPARISON_RESULT"
+      ],
+      "required_paired_baseline_types": [
+        "PERSISTENCE"
+      ],
+      "minimum_family_composition": [
+        "one_or_more_paired_comparison_result"
+      ],
+      "prediction_representation": "claim_declared_representation",
+      "claim_baseline_posture": "PERSISTENCE_with_nonblank_method_id_and_version",
+      "stratum_posture": "exact_claim_stratum_when_applicable"
+    },
+    "candidate_predictive_skill_across_required_baselines": {
+      "allowed_observed_result_kinds": [
+        "PAIRED_COMPARISON_RESULT"
+      ],
+      "required_paired_baseline_types": [
+        "CLIMATOLOGY",
+        "PERSISTENCE"
+      ],
+      "minimum_family_composition": [
+        "at_least_one_climatology_paired_comparison",
+        "at_least_one_persistence_paired_comparison"
+      ],
+      "prediction_representation": "one_compatible_claim_declared_representation",
+      "claim_baseline_posture": "all_claim_baseline_fields_None",
+      "stratum_posture": "one_exact_compatible_claim_stratum"
+    },
+    "binary_calibration_behavior": {
+      "allowed_observed_result_kinds": [
+        "CALIBRATION_BIN_RESULT",
+        "SCALAR_SCORE_RESULT",
+        "DECOMPOSITION_RESULT"
+      ],
+      "required_paired_baseline_types": [],
+      "minimum_family_composition": [
+        "at_least_one_CALIBRATION_BIN_RESULT",
+        "at_least_one_SCALAR_SCORE_RESULT_or_DECOMPOSITION_RESULT"
+      ],
+      "prediction_representation": "BINARY_OUTCOME_PROBABILITY",
+      "claim_baseline_posture": "all_claim_baseline_fields_None",
+      "stratum_posture": "exact_claim_stratum_when_applicable"
+    },
+    "distributional_calibration_behavior": {
+      "allowed_observed_result_kinds": [
+        "DISTRIBUTION_DIAGNOSTIC_RESULT",
+        "SCALAR_SCORE_RESULT"
+      ],
+      "required_paired_baseline_types": [],
+      "minimum_family_composition": [
+        "at_least_one_DISTRIBUTION_DIAGNOSTIC_RESULT",
+        "at_least_one_SCALAR_SCORE_RESULT"
+      ],
+      "prediction_representation": "FULL_PREDICTIVE_DISTRIBUTION",
+      "claim_baseline_posture": "all_claim_baseline_fields_None",
+      "stratum_posture": "exact_claim_stratum_when_applicable"
+    },
+    "ensemble_calibration_behavior": {
+      "allowed_observed_result_kinds": [
+        "ENSEMBLE_DIAGNOSTIC_RESULT"
+      ],
+      "required_paired_baseline_types": [],
+      "minimum_family_composition": [
+        "at_least_one_ENSEMBLE_DIAGNOSTIC_RESULT"
+      ],
+      "prediction_representation": "FINITE_COMPARABLE_ENSEMBLE",
+      "claim_baseline_posture": "all_claim_baseline_fields_None",
+      "stratum_posture": "exact_claim_stratum_when_applicable"
+    },
+    "threshold_weighted_distribution_skill": {
+      "allowed_observed_result_kinds": [
+        "PAIRED_COMPARISON_RESULT"
+      ],
+      "required_paired_baseline_types": [
+        "CLIMATOLOGY_or_PERSISTENCE_matching_claim_baseline"
+      ],
+      "minimum_family_composition": [
+        "one_or_more_PAIRED_COMPARISON_RESULT"
+      ],
+      "prediction_representation": "FULL_PREDICTIVE_DISTRIBUTION",
+      "required_artifacts": [
+        "THRESHOLD_WEIGHTED_CRPS"
+      ],
+      "claim_baseline_posture": "CLIMATOLOGY_or_PERSISTENCE_with_matching_method_id_and_version",
+      "stratum_posture": "exact_declared_threshold_focused_scope"
+    },
+    "stratum_specific_predictive_skill": {
+      "allowed_observed_result_kinds": [
+        "PAIRED_COMPARISON_RESULT"
+      ],
+      "required_paired_baseline_types": [
+        "CLIMATOLOGY_or_PERSISTENCE_matching_claim_baseline"
+      ],
+      "minimum_family_composition": [
+        "one_or_more_PAIRED_COMPARISON_RESULT"
+      ],
+      "prediction_representation": "claim_declared_representation",
+      "claim_baseline_posture": "CLIMATOLOGY_or_PERSISTENCE_with_matching_method_id_and_version",
+      "stratum_posture": "non_null_valid_exact_declared_stratum_on_observed_and_direct_references"
+    }
   },
   "compatibility_fields": [
     "target_posture",
@@ -911,7 +979,225 @@ The following JSON is the sole machine-assignment block. Order is significant fo
     "claim_rule_registry",
     "result_loader",
     "persistence_helper"
-  ]
+  ],
+  "method_compatibility_rules": {
+    "non_paired_claim_classes": [
+      "BINARY_CALIBRATION_BEHAVIOR",
+      "DISTRIBUTIONAL_CALIBRATION_BEHAVIOR",
+      "ENSEMBLE_CALIBRATION_BEHAVIOR"
+    ],
+    "non_paired_prerequisites": [
+      "resolved_observed_id",
+      "individually_valid_context_record",
+      "usable_method_role_and_identity"
+    ],
+    "non_paired_candidate_requirements": [
+      "method_role_is_CANDIDATE",
+      "method_id_equals_record_candidate_method_id",
+      "method_version_equals_record_candidate_method_version"
+    ],
+    "non_paired_occurrence": "one_CANDIDATE_IDENTITY_MISMATCH_per_offending_observed_result_in_observed_id_order_not_per_field",
+    "non_paired_suppressions": [
+      "unresolved_observed_id",
+      "invalid_context_record",
+      "unusable_method_role_or_identity"
+    ],
+    "paired_observed_prerequisites": [
+      "resolved_individually_valid_observed_result",
+      "exact_kind_PAIRED_COMPARISON_RESULT",
+      "exact_role_PAIRED_COMPARISON",
+      "exact_payload_PairedComparisonResultPayload",
+      "candidate_and_baseline_references_resolved"
+    ],
+    "paired_candidate_requirements": [
+      "referenced_candidate_exact_role_CANDIDATE",
+      "method_id_equals_record_candidate_method_id",
+      "method_version_equals_record_candidate_method_version"
+    ],
+    "paired_candidate_occurrence": "one_CANDIDATE_IDENTITY_MISMATCH_per_offending_observed_paired_result",
+    "paired_baseline_requirements": [
+      "CLIMATOLOGY_requires_exact_role_CLIMATOLOGY_BASELINE",
+      "PERSISTENCE_requires_exact_role_PERSISTENCE_BASELINE",
+      "method_id_equals_applicable_claim_baseline_method_id",
+      "method_version_equals_applicable_claim_baseline_method_version"
+    ],
+    "paired_baseline_occurrence": "one_BASELINE_IDENTITY_MISMATCH_per_offending_observed_paired_result",
+    "cross_baseline_requirements": [
+      "all_referenced_candidates_same_exact_CANDIDATE_role_id_and_version",
+      "climatology_references_only_CLIMATOLOGY_BASELINE_role",
+      "persistence_references_only_PERSISTENCE_BASELINE_role"
+    ],
+    "identity_derivation": "no_calculation_or_inference"
+  },
+  "result_context_adaptation_rules": {
+    "mapping_exact_tuple": "passed_unchanged_to_direct_validation",
+    "mapping_actual_list": "adapt_to_tuple_only_when_every_item_exact_EvaluationResultRecord",
+    "mapping_invalid_list": "no_partial_adaptation_exactly_one_INVALID_RESULT_RECORD_CONTAINER",
+    "mapping_rejected_containers": [
+      "tuple_subclass",
+      "arbitrary_iterable"
+    ],
+    "mapping_rejected_container_occurrence": "exactly_one_INVALID_RESULT_RECORD_CONTAINER",
+    "caller_input": "unchanged",
+    "direct_container": "exact_tuple_only",
+    "direct_invalid_item": "one_INVALID_RESULT_RECORD_per_non_exact_EvaluationResultRecord_in_context_order",
+    "direct_failed_record_validation": "one_INVALID_RESULT_RECORD_per_exact_record_failing_validate_evaluation_result_record_in_context_order",
+    "direct_item_maximum": "at_most_one_INVALID_RESULT_RECORD_per_item",
+    "invalid_record_exclusion": [
+      "identity_uniqueness",
+      "resolution",
+      "compatibility",
+      "precedence",
+      "class_matrix"
+    ]
+  },
+  "diagnostic_occurrence_rules": {
+    "DUPLICATE_CONTEXT_RESULT_ID": [
+      "one_per_valid_identity_after_first",
+      "context_tuple_order"
+    ],
+    "OBSERVED_RESULT_NOT_FOUND": [
+      "one_per_valid_observed_id_not_resolving_exactly_once_to_valid_context",
+      "observed_id_order"
+    ],
+    "UNEXPECTED_CONTEXT_RESULT": [
+      "one_per_valid_context_neither_observed_nor_permitted_direct_reference",
+      "context_tuple_order"
+    ],
+    "PAIRED_REFERENCE_NOT_FOUND": [
+      "candidate_then_baseline_per_observed_occurrence",
+      "resolved_valid_observed_paired_results_in_observed_id_order",
+      "one_per_unresolved_valid_reference"
+    ],
+    "RESULT_TARGET_MISMATCH": [
+      "one_per_offending_observed_result",
+      "observed_id_order"
+    ],
+    "RESULT_REPRESENTATION_MISMATCH": [
+      "one_per_offending_observed_result",
+      "observed_id_order"
+    ],
+    "RESULT_SCOPE_MISMATCH": [
+      "one_per_offending_observed_or_direct_reference",
+      "per_observed_order_observed_then_candidate_then_baseline"
+    ],
+    "CANDIDATE_IDENTITY_MISMATCH": [
+      "one_per_offending_observed_evidence_occurrence"
+    ],
+    "BASELINE_IDENTITY_MISMATCH": [
+      "one_per_offending_observed_paired_occurrence"
+    ],
+    "RESULT_KIND_NOT_ALLOWED": [
+      "one_per_offending_observed_result",
+      "observed_id_order"
+    ],
+    "RESULT_METRIC_MISMATCH": [
+      "exactly_one_if_final_ordered_unique_artifact_version_sequence_differs_from_declared_tuples"
+    ],
+    "final_code_posture": [
+      "preserve_repeated_occurrences",
+      "do_not_sort",
+      "do_not_deduplicate"
+    ]
+  },
+  "tuple_dependency_rules": {
+    "metric_version_length_prerequisites": [
+      "valid_metric_or_diagnostic_ids_tuple_structure",
+      "valid_metric_or_diagnostic_versions_tuple_structure"
+    ],
+    "partition_prerequisites": [
+      "valid_required_evaluation_result_ids_tuple_structure",
+      "valid_observed_evaluation_result_ids_tuple_structure",
+      "valid_missing_evaluation_result_ids_tuple_structure"
+    ],
+    "exact_partition": [
+      "observed_then_missing_reproduces_required_membership_without_omission_or_addition",
+      "observed_preserves_required_relative_order",
+      "missing_preserves_required_relative_order",
+      "observed_and_missing_disjoint",
+      "each_required_id_exactly_once_across_observed_and_missing"
+    ],
+    "suppression": "structural_tuple_failures_suppress_only_dependent_alignment_or_partition_codes"
+  },
+  "baseline_requirement_dependencies": {
+    "required_claim_classes": [
+      "CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL",
+      "CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL",
+      "THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL",
+      "STRATUM_SPECIFIC_PREDICTIVE_SKILL"
+    ],
+    "required_type_none": "one_BASELINE_REQUIREMENT_MISMATCH",
+    "required_type_valid_wrong": "one_BASELINE_REQUIREMENT_MISMATCH",
+    "required_method_none": [
+      "one_BASELINE_REQUIREMENT_MISMATCH_for_method_id",
+      "one_BASELINE_REQUIREMENT_MISMATCH_for_method_version",
+      "field_order"
+    ],
+    "required_method_text_invalid": [
+      "BLANK_REQUIRED_TEXT_in_text_group",
+      "BASELINE_REQUIREMENT_MISMATCH_later"
+    ],
+    "invalid_nonnull_type": [
+      "INVALID_BASELINE_TYPE",
+      "suppress_dependent_type_comparisons_until_usable"
+    ],
+    "absent_field_claim_classes": [
+      "CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES",
+      "BINARY_CALIBRATION_BEHAVIOR",
+      "DISTRIBUTIONAL_CALIBRATION_BEHAVIOR",
+      "ENSEMBLE_CALIBRATION_BEHAVIOR"
+    ],
+    "absent_field_violation": "one_BASELINE_REQUIREMENT_MISMATCH_for_each_valid_nonnull_type_method_id_method_version_in_field_order",
+    "malformed_type": "never_reinterpret_as_approved_baseline"
+  },
+  "evidence_gate_posture_classification": {
+    "present_text_invalid": [
+      "BLANK_REQUIRED_TEXT_in_text_group",
+      "INVALID_EVIDENCE_GATE_POSTURE_later_when_disposition_valid_and_not_exact"
+    ],
+    "valid_disposition_mismatch": "INVALID_EVIDENCE_GATE_POSTURE",
+    "missing_mapping_key": "MISSING_REQUIRED_FIELD_only",
+    "unrelated_failures": "do_not_suppress_posture_validation"
+  },
+  "multiplicity_classification": {
+    "required_none": "one_INVALID_MULTIPLE_COMPARISON_POSTURE",
+    "required_valid_nonblank_exact_text": "pass",
+    "required_text_invalid": [
+      "BLANK_REQUIRED_TEXT_in_text_group",
+      "INVALID_MULTIPLE_COMPARISON_POSTURE_later"
+    ],
+    "not_required_none": "pass",
+    "not_required_valid_nonblank_exact_text": "pass",
+    "not_required_text_invalid_nonnull": "BLANK_REQUIRED_TEXT_only",
+    "trigger_prerequisites": [
+      "valid_metric_tuple_structure",
+      "valid_claim_class"
+    ]
+  },
+  "class_matrix_dependency_behavior": {
+    "claim_level_requirements": "run_with_valid_claim_class_even_when_observed_evidence_missing",
+    "evidence_dependent_checks": [
+      "result_kind",
+      "method",
+      "baseline_payload",
+      "compatibility",
+      "minimum_observed_family"
+    ],
+    "evidence_check_prerequisites": [
+      "resolved_observed_record",
+      "individually_valid_observed_record"
+    ],
+    "missing_evidence_behavior": [
+      "run_disposition_checks",
+      "run_result_set_completeness_checks",
+      "do_not_fabricate_result_kind_method_artifact_or_compatibility_failures"
+    ],
+    "cross_baseline_incomplete_prerequisites": [
+      "valid_cross_baseline_claim_class",
+      "at_least_one_resolved_individually_valid_observed_paired_result"
+    ],
+    "cross_baseline_incomplete_occurrence": "exactly_once_when_both_CLIMATOLOGY_and_PERSISTENCE_not_represented"
+  }
 }
 ```
 
