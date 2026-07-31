@@ -244,8 +244,12 @@ def _valid_text(value: object) -> bool:
     return type(value) is str and bool(value.strip())
 
 
-def _valid_text_tuple(value: object, *, nonempty: bool) -> bool:
+def _valid_unique_text_tuple(value: object, *, nonempty: bool) -> bool:
     return type(value) is tuple and (not nonempty or bool(value)) and all(_valid_text(item) for item in value) and len(value) == len(set(value))
+
+
+def _valid_metric_versions(value: object) -> bool:
+    return type(value) is tuple and bool(value) and all(_valid_text(item) for item in value)
 
 
 def _valid_timestamp(value: object) -> bool:
@@ -269,7 +273,7 @@ def _scope_matches(record: EvaluationClaimRecord, result: EvaluationResultRecord
         and result.paired_test_record_set_id == record.paired_test_record_set_id
         and result.aggregation_rule_id == record.aggregation_rule_id
         and result.weighting_rule_id == record.weighting_rule_id
-        and result.stratum_id == (record.stratum_id_when_applicable or "")
+        and (record.stratum_id_when_applicable is None or result.stratum_id == record.stratum_id_when_applicable)
     )
 
 
@@ -337,37 +341,63 @@ def evaluation_claim_record_from_mapping(
     elif type(context) is not tuple:
         context_invalid = True
 
-    placeholders: dict[str, object] = {
-        "evaluation_claim_id": "missing", "claim_class": EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR,
-        "claim_rule_id": "missing", "claim_rule_version": "missing",
-        "claim_disposition": EvaluationClaimDisposition.CLAIM_UNAVAILABLE,
-        "claim_disposition_reason": "missing", "target_posture": _FIXED_TARGET_POSTURE,
-        "candidate_method_id": "missing", "candidate_method_version": "missing",
-        "baseline_type_when_applicable": None, "baseline_method_id_when_applicable": None,
-        "baseline_method_version_when_applicable": None,
-        "prediction_representation": ScoringPredictionRepresentation.FINITE_COMPARABLE_ENSEMBLE,
-        "metric_or_diagnostic_ids": ("rank_histogram",), "metric_or_diagnostic_versions": ("missing",),
-        "required_evaluation_result_ids": ("missing",), "observed_evaluation_result_ids": (),
-        "missing_evaluation_result_ids": ("missing",), "split_id": "missing",
-        "split_version": "missing", "fold_scope": "missing", "cutoff_scope": "missing",
-        "paired_test_record_set_id": "missing", "aggregation_rule_id": "missing",
-        "weighting_rule_id": "missing", "stratum_id_when_applicable": None,
-        "uncertainty_policy_id": "missing", "sample_support_rule_id": "missing",
-        "selection_control_policy_id": "missing", "multiple_comparison_policy_id_when_applicable": None,
-        "evidence_gate_eligibility_posture": "no_substitution_or_evidence_gate_use",
-        "provenance": ("missing",), "claim_created_at": "2000-01-01T00:00:00Z",
-        "supersedes_claim_id_when_applicable": None,
-    }
     record = None
-    try:
-        record = EvaluationClaimRecord(**(placeholders | adapted))
-    except (TypeError, ValueError):
-        pass
+    if all(key in adapted for key in _REQUIRED_MAPPING_KEYS):
+        try:
+            record = EvaluationClaimRecord(**adapted)
+        except (TypeError, ValueError):
+            pass
     semantic: tuple[EvaluationClaimValidationCode, ...] = ()
     if record is not None:
         semantic = validate_evaluation_claim_record(record, context if not context_invalid else object()).codes  # type: ignore[arg-type]
-    elif context_invalid:
-        semantic = (code.INVALID_RESULT_RECORD_CONTAINER,)
+    else:
+        present_codes: list[EvaluationClaimValidationCode] = []
+        for field in _REQUIRED_TEXT_FIELDS:
+            if field in adapted and not _valid_text(adapted[field]):
+                present_codes.append(code.BLANK_REQUIRED_TEXT)
+        for field in _NULLABLE_TEXT_FIELDS:
+            if field in adapted and adapted[field] is not None and not _valid_text(adapted[field]):
+                present_codes.append(code.BLANK_REQUIRED_TEXT)
+        for field, enum_type, invalid_code in enum_fields:
+            if field in adapted and not (field == "baseline_type_when_applicable" and adapted[field] is None) and type(adapted[field]) is not enum_type:
+                present_codes.append(invalid_code)
+        if "target_posture" in adapted and adapted["target_posture"] != _FIXED_TARGET_POSTURE:
+            present_codes.append(code.INVALID_FIXED_POSTURE)
+        ids_ok = "metric_or_diagnostic_ids" in adapted and _valid_unique_text_tuple(adapted["metric_or_diagnostic_ids"], nonempty=True)
+        versions_ok = "metric_or_diagnostic_versions" in adapted and _valid_metric_versions(adapted["metric_or_diagnostic_versions"])
+        if "metric_or_diagnostic_ids" in adapted and not ids_ok:
+            present_codes.append(code.INVALID_METRIC_IDENTITY_TUPLE)
+        if "metric_or_diagnostic_versions" in adapted and not versions_ok:
+            present_codes.append(code.INVALID_METRIC_IDENTITY_TUPLE)
+        if ids_ok and versions_ok and len(adapted["metric_or_diagnostic_ids"]) != len(adapted["metric_or_diagnostic_versions"]):
+            present_codes.append(code.METRIC_VERSION_LENGTH_MISMATCH)
+        tuple_fields = (("required_evaluation_result_ids", True, code.INVALID_REQUIRED_RESULT_IDS), ("observed_evaluation_result_ids", False, code.INVALID_OBSERVED_RESULT_IDS), ("missing_evaluation_result_ids", False, code.INVALID_MISSING_RESULT_IDS))
+        tuple_ok: dict[str, bool] = {}
+        for field, nonempty, invalid_code in tuple_fields:
+            tuple_ok[field] = field in adapted and _valid_unique_text_tuple(adapted[field], nonempty=nonempty)
+            if field in adapted and not tuple_ok[field]:
+                present_codes.append(invalid_code)
+        if all(tuple_ok.values()):
+            required, observed, absent = (adapted[field] for field, _, _ in tuple_fields)
+            if not (tuple(item for item in required if item in observed) == observed and tuple(item for item in required if item in absent) == absent and set(observed).isdisjoint(absent) and set(observed) | set(absent) == set(required)):
+                present_codes.append(code.RESULT_SET_PARTITION_MISMATCH)
+        if context_invalid:
+            present_codes.append(code.INVALID_RESULT_RECORD_CONTAINER)
+        elif type(context) is tuple:
+            present_codes.extend(code.INVALID_RESULT_RECORD for item in context if type(item) is not EvaluationResultRecord or not validate_evaluation_result_record(item).passed)
+        if "provenance" in adapted:
+            provenance = adapted["provenance"]
+            if type(provenance) is not tuple:
+                present_codes.append(code.INVALID_PROVENANCE_REF)
+            elif not provenance:
+                present_codes.append(code.EMPTY_PROVENANCE)
+            else:
+                present_codes.extend(code.INVALID_PROVENANCE_REF for item in provenance if not _valid_text(item))
+        if "claim_created_at" in adapted and not _valid_timestamp(adapted["claim_created_at"]):
+            present_codes.append(code.INVALID_CLAIM_CREATED_AT)
+        if "evaluation_claim_id" in adapted and "supersedes_claim_id_when_applicable" in adapted and _valid_text(adapted["evaluation_claim_id"]) and _valid_text(adapted["supersedes_claim_id_when_applicable"]) and adapted["evaluation_claim_id"] == adapted["supersedes_claim_id_when_applicable"]:
+            present_codes.append(code.SELF_SUPERSESSION)
+        semantic = tuple(present_codes)
     combined = tuple(codes) + semantic
     if context_invalid and code.INVALID_RESULT_RECORD_CONTAINER not in combined:
         combined += (code.INVALID_RESULT_RECORD_CONTAINER,)
@@ -406,17 +436,17 @@ def validate_evaluation_claim_record(
     if type(record.target_posture) is not str or record.target_posture != _FIXED_TARGET_POSTURE:
         codes.append(code.INVALID_FIXED_POSTURE)
 
-    ids_valid = _valid_text_tuple(record.metric_or_diagnostic_ids, nonempty=True)
-    versions_valid = _valid_text_tuple(record.metric_or_diagnostic_versions, nonempty=True)
+    ids_valid = _valid_unique_text_tuple(record.metric_or_diagnostic_ids, nonempty=True)
+    versions_valid = _valid_metric_versions(record.metric_or_diagnostic_versions)
     if not ids_valid:
         codes.append(code.INVALID_METRIC_IDENTITY_TUPLE)
     if not versions_valid:
         codes.append(code.INVALID_METRIC_IDENTITY_TUPLE)
     if ids_valid and versions_valid and len(record.metric_or_diagnostic_ids) != len(record.metric_or_diagnostic_versions):
         codes.append(code.METRIC_VERSION_LENGTH_MISMATCH)
-    required_valid = _valid_text_tuple(record.required_evaluation_result_ids, nonempty=True)
-    observed_valid = _valid_text_tuple(record.observed_evaluation_result_ids, nonempty=False)
-    missing_valid = _valid_text_tuple(record.missing_evaluation_result_ids, nonempty=False)
+    required_valid = _valid_unique_text_tuple(record.required_evaluation_result_ids, nonempty=True)
+    observed_valid = _valid_unique_text_tuple(record.observed_evaluation_result_ids, nonempty=False)
+    missing_valid = _valid_unique_text_tuple(record.missing_evaluation_result_ids, nonempty=False)
     if not required_valid:
         codes.append(code.INVALID_REQUIRED_RESULT_IDS)
     if not observed_valid:
@@ -494,6 +524,15 @@ def validate_evaluation_claim_record(
     for item in resolved:
         if item.prediction_representation is not record.prediction_representation:
             codes.append(code.RESULT_REPRESENTATION_MISMATCH)
+    if valid_class and valid_representation:
+        required_representation = {
+            EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR: ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY,
+            EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR: ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION,
+            EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR: ScoringPredictionRepresentation.FINITE_COMPARABLE_ENSEMBLE,
+            EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL: ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION,
+        }.get(record.claim_class)
+        if required_representation is not None and record.prediction_representation is not required_representation:
+            codes.append(code.RESULT_REPRESENTATION_MISMATCH)
     refs_by_observed = {id(item): (candidate, baseline) for item, candidate, baseline in paired_refs}
     for item in resolved:
         if not _scope_matches(record, item):
@@ -521,11 +560,11 @@ def validate_evaluation_claim_record(
                 codes.append(code.CANDIDATE_IDENTITY_MISMATCH)
     if valid_class and record.claim_class in _PAIRED_CLASSES:
         for item, candidate, baseline in paired_refs:
-            if candidate is not None and (candidate.method_role is not EvaluationResultMethodRole.CANDIDATE or candidate.method_id != record.candidate_method_id or candidate.method_version != record.candidate_method_version):
+            if candidate is not None and baseline is not None and (candidate.method_role is not EvaluationResultMethodRole.CANDIDATE or candidate.method_id != record.candidate_method_id or candidate.method_version != record.candidate_method_version):
                 codes.append(code.CANDIDATE_IDENTITY_MISMATCH)
     if valid_class and record.claim_class in _PAIRED_CLASSES:
         for item, candidate, baseline in paired_refs:
-            if baseline is None:
+            if candidate is None or baseline is None:
                 continue
             payload = item.result_payload
             expected_role = EvaluationResultMethodRole.CLIMATOLOGY_BASELINE if payload.baseline_type is BaselineType.CLIMATOLOGY else EvaluationResultMethodRole.PERSISTENCE_BASELINE
@@ -551,14 +590,6 @@ def validate_evaluation_claim_record(
             EvaluationResultKind.DISTRIBUTION_DIAGNOSTIC_RESULT not in kinds or EvaluationResultKind.SCALAR_SCORE_RESULT not in kinds
         ):
             codes.append(code.RESULT_KIND_NOT_ALLOWED)
-        required_representation = {
-            EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR: ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY,
-            EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR: ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION,
-            EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR: ScoringPredictionRepresentation.FINITE_COMPARABLE_ENSEMBLE,
-            EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL: ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION,
-        }.get(record.claim_class)
-        if required_representation is not None and valid_representation and record.prediction_representation is not required_representation:
-            codes.append(code.RESULT_REPRESENTATION_MISMATCH)
         if record.claim_class is EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL:
             for item in resolved:
                 if item.artifact_id is not ScoringArtifact.THRESHOLD_WEIGHTED_CRPS:
@@ -588,6 +619,17 @@ def validate_evaluation_claim_record(
                 codes.append(code.BASELINE_REQUIREMENT_MISMATCH)
             if not _valid_text(record.baseline_method_version_when_applicable):
                 codes.append(code.BASELINE_REQUIREMENT_MISMATCH)
+        for item, _, _ in paired_refs:
+            payload_type = item.result_payload.baseline_type
+            expected_family = None
+            if record.claim_class is EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL:
+                expected_family = BaselineType.CLIMATOLOGY
+            elif record.claim_class is EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL:
+                expected_family = BaselineType.PERSISTENCE
+            elif record.claim_class in (EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL, EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL) and valid_baseline:
+                expected_family = record.baseline_type_when_applicable
+            if expected_family is not None and payload_type is not expected_family:
+                codes.append(code.BASELINE_REQUIREMENT_MISMATCH)
 
     baseline_families = {
         item.result_payload.baseline_type for item, _, _ in paired_refs
@@ -605,10 +647,17 @@ def validate_evaluation_claim_record(
         ):
             codes.append(code.STRATUM_REQUIREMENT_MISMATCH)
 
-    statuses = tuple(item.support_status for item in resolved)
+    consumed: list[EvaluationResultRecord] = list(resolved)
+    for _, candidate, baseline in paired_refs:
+        for referenced in (candidate, baseline):
+            if referenced is not None and referenced not in consumed:
+                consumed.append(referenced)
+    statuses = tuple(item.support_status for item in consumed)
     if valid_disposition:
         expected = None
         if EvaluationResultSupportStatus.BLOCKED in statuses:
+            expected = EvaluationClaimDisposition.CLAIM_BLOCKED
+        elif record.claim_disposition is EvaluationClaimDisposition.CLAIM_BLOCKED and _valid_text(record.claim_disposition_reason):
             expected = EvaluationClaimDisposition.CLAIM_BLOCKED
         elif (missing_valid and bool(record.missing_evaluation_result_ids)) or EvaluationResultSupportStatus.UNAVAILABLE in statuses:
             expected = EvaluationClaimDisposition.CLAIM_UNAVAILABLE
@@ -618,15 +667,7 @@ def validate_evaluation_claim_record(
             codes.append(code.DISPOSITION_PRECEDENCE_MISMATCH)
         if record.claim_disposition in (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED):
             complete_support = partition_valid and not record.missing_evaluation_result_ids and len(resolved) == len(record.observed_evaluation_result_ids) and all(status is EvaluationResultSupportStatus.SUPPORTED for status in statuses)
-            if not complete_support or any(value in codes for value in (
-                code.INVALID_RESULT_RECORD_CONTAINER, code.INVALID_RESULT_RECORD,
-                code.OBSERVED_RESULT_NOT_FOUND, code.RESULT_TARGET_MISMATCH,
-                code.RESULT_REPRESENTATION_MISMATCH, code.RESULT_SCOPE_MISMATCH,
-                code.RESULT_METRIC_MISMATCH, code.CANDIDATE_IDENTITY_MISMATCH,
-                code.BASELINE_IDENTITY_MISMATCH, code.RESULT_KIND_NOT_ALLOWED,
-                code.BASELINE_REQUIREMENT_MISMATCH, code.CROSS_BASELINE_INCOMPLETE,
-                code.STRATUM_REQUIREMENT_MISMATCH,
-            )):
+            if not complete_support or bool(codes):
                 codes.append(code.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT)
         if record.evidence_gate_eligibility_posture != _EVIDENCE_GATE_MATRIX[record.claim_disposition]:
             codes.append(code.INVALID_EVIDENCE_GATE_POSTURE)
