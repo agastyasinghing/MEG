@@ -61,27 +61,27 @@ COVERAGE_MANIFEST = {
     "paired_references": ("test_one_reference_suppresses_both_identity_comparisons",),
     "target_compatibility": ("test_semantic_parity_matrix",),
     "representation_compatibility": ("test_semantic_parity_matrix",),
-    "scope_split_id": ("test_semantic_parity_matrix",),
-    "scope_split_version": ("test_semantic_parity_matrix",),
-    "scope_fold": ("test_semantic_parity_matrix",),
-    "scope_cutoff": ("test_semantic_parity_matrix",),
-    "scope_paired_set": ("test_semantic_parity_matrix",),
-    "scope_aggregation": ("test_semantic_parity_matrix",),
-    "scope_weighting": ("test_semantic_parity_matrix",),
+    "scope_split_id": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "scope_split_version": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "scope_fold": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "scope_cutoff": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "scope_paired_set": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "scope_aggregation": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "scope_weighting": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
     "scope_stratum": ("test_scope_stratum_none_does_not_coerce_to_empty",),
     "metric_compatibility": ("test_valid_observed_claim",),
     "candidate_identity": ("test_one_reference_suppresses_both_identity_comparisons",),
     "baseline_identity": ("test_wrong_payload_baseline_family_is_classified_per_observed_pair",),
     "class_candidate_climatology": ("test_valid_paired_claim_and_direct_references",),
-    "class_candidate_persistence": ("test_claim_class_matrix_smoke",),
-    "class_cross_baseline": ("test_claim_class_matrix_smoke",),
-    "class_binary_calibration": ("test_claim_class_matrix_smoke",),
-    "class_distributional_calibration": ("test_claim_class_matrix_smoke",),
+    "class_candidate_persistence": ("test_claim_class_claim_level_behavior",),
+    "class_cross_baseline": ("test_claim_class_claim_level_behavior",),
+    "class_binary_calibration": ("test_claim_class_claim_level_behavior",),
+    "class_distributional_calibration": ("test_claim_class_claim_level_behavior",),
     "class_ensemble_calibration": ("test_valid_observed_claim",),
-    "class_threshold_weighted": ("test_claim_class_matrix_smoke",),
-    "class_stratum_specific": ("test_claim_class_matrix_smoke",),
+    "class_threshold_weighted": ("test_claim_class_claim_level_behavior",),
+    "class_stratum_specific": ("test_claim_class_claim_level_behavior",),
     "baseline_requirements": ("test_present_aware_exact_regressions",),
-    "cross_baseline_completeness": ("test_claim_class_matrix_smoke",),
+    "cross_baseline_completeness": ("test_claim_class_claim_level_behavior",),
     "stratum_requirements": ("test_scope_stratum_none_does_not_coerce_to_empty",),
     "disposition_precedence": ("test_referenced_status_participates_in_precedence",),
     "supported_completeness": ("test_supported_completeness_includes_late_groups",),
@@ -663,11 +663,21 @@ def test_semantic_parity_matrix(field: str, bad: object) -> None:
 
 
 @pytest.mark.parametrize("claim_class", tuple(EvaluationClaimClass))
-def test_claim_class_matrix_smoke(claim_class: EvaluationClaimClass) -> None:
+def test_claim_class_claim_level_behavior(claim_class: EvaluationClaimClass) -> None:
     values = _mapping()
     values["claim_class"] = claim_class
-    result = validate_evaluation_claim_record(EvaluationClaimRecord(**values), ())
-    assert EvaluationClaimValidationCode.INVALID_CLAIM_CLASS not in result.codes
+    baseline = (EvaluationClaimValidationCode.BASELINE_REQUIREMENT_MISMATCH,) * 3
+    expected = {
+        EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL: baseline,
+        EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL: baseline,
+        EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES: (EvaluationClaimValidationCode.INVALID_MULTIPLE_COMPARISON_POSTURE,),
+        EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR: (EvaluationClaimValidationCode.RESULT_REPRESENTATION_MISMATCH,),
+        EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR: (EvaluationClaimValidationCode.RESULT_REPRESENTATION_MISMATCH,),
+        EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR: (),
+        EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL: (EvaluationClaimValidationCode.RESULT_REPRESENTATION_MISMATCH,) + baseline,
+        EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL: baseline + (EvaluationClaimValidationCode.STRATUM_REQUIREMENT_MISMATCH, EvaluationClaimValidationCode.INVALID_MULTIPLE_COMPARISON_POSTURE),
+    }[claim_class]
+    assert validate_evaluation_claim_record(EvaluationClaimRecord(**values), ()).codes == expected
 
 
 @pytest.mark.parametrize("late_field,bad,late_code", (
@@ -835,13 +845,20 @@ ANNOTATIONS = (
     "str", "str", "str", "str", "str", "str", "str", "str | None", "str", "str", "str",
     "str | None", "str", "tuple[str, ...]", "str", "str | None",
 )
+ANNOTATION_TYPES = (
+    str, EvaluationClaimClass, str, str, EvaluationClaimDisposition, str, str, str, str,
+    BaselineType | None, str | None, str | None, ScoringPredictionRepresentation,
+    tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[str, ...],
+    str, str, str, str, str, str, str, str | None, str, str, str, str | None, str,
+    tuple[str, ...], str, str | None,
+)
 
 
 @pytest.mark.parametrize("index,expected", tuple(enumerate(ANNOTATIONS)))
 def test_each_record_resolved_annotation_literal(index: int, expected: str) -> None:
     hints = typing.get_type_hints(EvaluationClaimRecord)
     field = dataclasses.fields(EvaluationClaimRecord)[index]
-    assert str(hints[field.name]).replace("<class '", "").replace("'>", "").replace("meg.weather.stage3.evaluation_claim.", "").replace("meg.weather.stage3.baseline_contracts.", "").replace("meg.weather.stage3.scoring_and_diagnostics.", "")
+    assert hints[field.name] == ANNOTATION_TYPES[index]
     assert field.type == expected
 
 
@@ -878,3 +895,34 @@ def test_timestamp_form_matrix(timestamp: object, valid: bool) -> None:
     values = _mapping(); values["claim_created_at"] = timestamp
     codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), ()).codes
     assert (EvaluationClaimValidationCode.INVALID_CLAIM_CREATED_AT not in codes) is valid
+
+
+@pytest.mark.parametrize("entry", ("direct", "mapping"))
+@pytest.mark.parametrize("field,value,expected", (
+    ("split_id", "", (
+        EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT,
+        EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT,
+    )),
+    ("split_id", "different-split", (
+        EvaluationClaimValidationCode.RESULT_SCOPE_MISMATCH,
+        EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT,
+    )),
+    ("target_posture", "", (
+        EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT,
+        EvaluationClaimValidationCode.INVALID_FIXED_POSTURE,
+        EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT,
+    )),
+    ("target_posture", "wrong-target", (
+        EvaluationClaimValidationCode.INVALID_FIXED_POSTURE,
+        EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT,
+    )),
+))
+def test_compatibility_prerequisite_exact_regressions(entry: str, field: str, value: object, expected: tuple[EvaluationClaimValidationCode, ...]) -> None:
+    claim, result = _valid_observed()
+    values = {item.name: getattr(claim, item.name) for item in dataclasses.fields(claim)}
+    values[field] = value
+    if entry == "direct":
+        codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), (result,)).codes
+    else:
+        codes = evaluation_claim_record_from_mapping(values, (result,))[1].codes
+    assert codes == expected

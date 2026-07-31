@@ -266,14 +266,14 @@ def _valid_timestamp(value: object) -> bool:
 
 def _scope_matches(values: Mapping[str, object], present: set[str], result: EvaluationResultRecord) -> bool:
     return (
-        ("split_id" not in present or result.split_id == values.get("split_id"))
-        and ("split_version" not in present or result.split_version == values.get("split_version"))
-        and ("fold_scope" not in present or result.fold_id == values.get("fold_scope"))
-        and ("cutoff_scope" not in present or result.cutoff_identity == values.get("cutoff_scope"))
-        and ("paired_test_record_set_id" not in present or result.paired_test_record_set_id == values.get("paired_test_record_set_id"))
-        and ("aggregation_rule_id" not in present or result.aggregation_rule_id == values.get("aggregation_rule_id"))
-        and ("weighting_rule_id" not in present or result.weighting_rule_id == values.get("weighting_rule_id"))
-        and ("stratum_id_when_applicable" not in present or values.get("stratum_id_when_applicable") is None or result.stratum_id == values.get("stratum_id_when_applicable"))
+        (not _valid_text(values.get("split_id")) or result.split_id == values.get("split_id"))
+        and (not _valid_text(values.get("split_version")) or result.split_version == values.get("split_version"))
+        and (not _valid_text(values.get("fold_scope")) or result.fold_id == values.get("fold_scope"))
+        and (not _valid_text(values.get("cutoff_scope")) or result.cutoff_identity == values.get("cutoff_scope"))
+        and (not _valid_text(values.get("paired_test_record_set_id")) or result.paired_test_record_set_id == values.get("paired_test_record_set_id"))
+        and (not _valid_text(values.get("aggregation_rule_id")) or result.aggregation_rule_id == values.get("aggregation_rule_id"))
+        and (not _valid_text(values.get("weighting_rule_id")) or result.weighting_rule_id == values.get("weighting_rule_id"))
+        and (values.get("stratum_id_when_applicable") is None or not _valid_text(values.get("stratum_id_when_applicable")) or result.stratum_id == values.get("stratum_id_when_applicable"))
     )
 
 
@@ -465,8 +465,9 @@ def _validate_claim_values(
             codes.append(code.PAIRED_REFERENCE_NOT_FOUND)
         paired_refs.append((item, candidate, baseline))
 
+    target_usable = "target_posture" in present and type(values.get("target_posture")) is str and values.get("target_posture") == _FIXED_TARGET_POSTURE
     for item in resolved:
-        if "target_posture" in present and item.target_posture != values.get("target_posture"):
+        if target_usable and item.target_posture != values.get("target_posture"):
             codes.append(code.RESULT_TARGET_MISMATCH)
     for item in resolved:
         if valid_representation and item.prediction_representation is not values.get("prediction_representation"):
