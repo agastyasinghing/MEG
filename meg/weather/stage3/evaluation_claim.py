@@ -265,17 +265,14 @@ def _valid_timestamp(value: object) -> bool:
 
 
 def _scope_matches(values: Mapping[str, object], present: set[str], result: EvaluationResultRecord) -> bool:
-    required = {"split_id", "split_version", "fold_scope", "cutoff_scope", "paired_test_record_set_id", "aggregation_rule_id", "weighting_rule_id"}
-    if not required <= present:
-        return True
     return (
-        result.split_id == values.get("split_id")
-        and result.split_version == values.get("split_version")
-        and result.fold_id == values.get("fold_scope")
-        and result.cutoff_identity == values.get("cutoff_scope")
-        and result.paired_test_record_set_id == values.get("paired_test_record_set_id")
-        and result.aggregation_rule_id == values.get("aggregation_rule_id")
-        and result.weighting_rule_id == values.get("weighting_rule_id")
+        ("split_id" not in present or result.split_id == values.get("split_id"))
+        and ("split_version" not in present or result.split_version == values.get("split_version"))
+        and ("fold_scope" not in present or result.fold_id == values.get("fold_scope"))
+        and ("cutoff_scope" not in present or result.cutoff_identity == values.get("cutoff_scope"))
+        and ("paired_test_record_set_id" not in present or result.paired_test_record_set_id == values.get("paired_test_record_set_id"))
+        and ("aggregation_rule_id" not in present or result.aggregation_rule_id == values.get("aggregation_rule_id"))
+        and ("weighting_rule_id" not in present or result.weighting_rule_id == values.get("weighting_rule_id"))
         and ("stratum_id_when_applicable" not in present or values.get("stratum_id_when_applicable") is None or result.stratum_id == values.get("stratum_id_when_applicable"))
     )
 
@@ -448,10 +445,11 @@ def _validate_claim_values(
         if item.result_kind is EvaluationResultKind.PAIRED_COMPARISON_RESULT and type(item.result_payload) is PairedComparisonResultPayload:
             referenced_ids.add(item.result_payload.candidate_result_id)
             referenced_ids.add(item.result_payload.baseline_result_id)
-    observed_set = set(values.get("observed_evaluation_result_ids")) if observed_valid else set()
-    for item in valid_context:
-        if item.evaluation_result_id not in observed_set and item.evaluation_result_id not in referenced_ids:
-            codes.append(code.UNEXPECTED_CONTEXT_RESULT)
+    if observed_valid:
+        observed_set = set(values.get("observed_evaluation_result_ids"))
+        for item in valid_context:
+            if item.evaluation_result_id not in observed_set and item.evaluation_result_id not in referenced_ids:
+                codes.append(code.UNEXPECTED_CONTEXT_RESULT)
 
     paired_refs: list[tuple[EvaluationResultRecord, EvaluationResultRecord | None, EvaluationResultRecord | None]] = []
     for item in resolved:
@@ -503,12 +501,12 @@ def _validate_claim_values(
     ):
         codes.append(code.RESULT_METRIC_MISMATCH)
 
-    candidate_identity_present = {"candidate_method_id", "candidate_method_version"} <= present
-    if valid_class and candidate_identity_present and values.get("claim_class") in _NON_PAIRED_CLASSES:
+    candidate_identity_usable = {"candidate_method_id", "candidate_method_version"} <= present and _valid_text(values.get("candidate_method_id")) and _valid_text(values.get("candidate_method_version"))
+    if valid_class and candidate_identity_usable and values.get("claim_class") in _NON_PAIRED_CLASSES:
         for item in resolved:
             if item.method_role is not EvaluationResultMethodRole.CANDIDATE or item.method_id != values.get("candidate_method_id") or item.method_version != values.get("candidate_method_version"):
                 codes.append(code.CANDIDATE_IDENTITY_MISMATCH)
-    if valid_class and candidate_identity_present and values.get("claim_class") in _PAIRED_CLASSES:
+    if valid_class and candidate_identity_usable and values.get("claim_class") in _PAIRED_CLASSES:
         for item, candidate, baseline in paired_refs:
             if candidate is not None and baseline is not None and (candidate.method_role is not EvaluationResultMethodRole.CANDIDATE or candidate.method_id != values.get("candidate_method_id") or candidate.method_version != values.get("candidate_method_version")):
                 codes.append(code.CANDIDATE_IDENTITY_MISMATCH)
@@ -518,10 +516,12 @@ def _validate_claim_values(
                 continue
             payload = item.result_payload
             expected_role = EvaluationResultMethodRole.CLIMATOLOGY_BASELINE if payload.baseline_type is BaselineType.CLIMATOLOGY else EvaluationResultMethodRole.PERSISTENCE_BASELINE
+            method_id_usable = "baseline_method_id_when_applicable" in present and _valid_text(values.get("baseline_method_id_when_applicable"))
+            method_version_usable = "baseline_method_version_when_applicable" in present and _valid_text(values.get("baseline_method_version_when_applicable"))
             if (
                 baseline.method_role is not expected_role
-                or (values.get("claim_class") is not EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES and "baseline_method_id_when_applicable" in present and baseline.method_id != values.get("baseline_method_id_when_applicable"))
-                or (values.get("claim_class") is not EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES and "baseline_method_version_when_applicable" in present and baseline.method_version != values.get("baseline_method_version_when_applicable"))
+                or (values.get("claim_class") is not EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES and method_id_usable and baseline.method_id != values.get("baseline_method_id_when_applicable"))
+                or (values.get("claim_class") is not EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES and method_version_usable and baseline.method_version != values.get("baseline_method_version_when_applicable"))
             ):
                 codes.append(code.BASELINE_IDENTITY_MISMATCH)
 
@@ -621,9 +621,10 @@ def _validate_claim_values(
             provenance_will_fail = "provenance" in present and (type(values.get("provenance")) is not tuple or not values.get("provenance") or any(not _valid_text(item) for item in values.get("provenance") if type(values.get("provenance")) is tuple))
             timestamp_will_fail = "claim_created_at" in present and not _valid_timestamp(values.get("claim_created_at"))
             supersession_will_fail = {"evaluation_claim_id", "supersedes_claim_id_when_applicable"} <= present and _valid_text(values.get("evaluation_claim_id")) and _valid_text(values.get("supersedes_claim_id_when_applicable")) and values.get("evaluation_claim_id") == values.get("supersedes_claim_id_when_applicable")
-            if not complete_support or bool(codes) or multiplicity_will_fail or provenance_will_fail or timestamp_will_fail or supersession_will_fail:
+            posture_will_fail = "evidence_gate_eligibility_posture" in present and (type(values.get("evidence_gate_eligibility_posture")) is not str or values.get("evidence_gate_eligibility_posture") != _EVIDENCE_GATE_MATRIX[values.get("claim_disposition")])
+            if not complete_support or bool(codes) or posture_will_fail or multiplicity_will_fail or provenance_will_fail or timestamp_will_fail or supersession_will_fail:
                 codes.append(code.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT)
-        if "evidence_gate_eligibility_posture" in present and values.get("evidence_gate_eligibility_posture") != _EVIDENCE_GATE_MATRIX[values.get("claim_disposition")]:
+        if "evidence_gate_eligibility_posture" in present and (type(values.get("evidence_gate_eligibility_posture")) is not str or values.get("evidence_gate_eligibility_posture") != _EVIDENCE_GATE_MATRIX[values.get("claim_disposition")]):
             codes.append(code.INVALID_EVIDENCE_GATE_POSTURE)
 
     multiplicity_required = valid_class and ids_valid and (

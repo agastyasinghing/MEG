@@ -95,6 +95,11 @@ COVERAGE_MANIFEST = {
     "caller_preservation": ("test_mapping_adapts_only_approved_values_without_mutation",),
     "determinism": ("test_direct_validation_rejects_tuple_subclasses_and_is_deterministic",),
     "mutation_resistance": ("test_mutation_resistance_map",),
+    "observed_tuple_prerequisite_suppression": ("test_observed_tuple_prerequisite_exact_codes",),
+    "evidence_posture_exact_type": ("test_evidence_posture_requires_exact_builtin_text",),
+    "supported_completeness_evidence_posture": ("test_evidence_posture_requires_exact_builtin_text",),
+    "candidate_claim_identity_prerequisites": ("test_candidate_claim_identity_prerequisites",),
+    "baseline_claim_identity_prerequisites": ("test_baseline_claim_identity_prerequisites",),
 }
 
 
@@ -570,7 +575,7 @@ def test_source_contract_and_purity() -> None:
     tree = ast.parse(source)
     assert module.__all__ == PUBLIC
     test_names = {name for name, value in globals().items() if name.startswith("test_") and callable(value)}
-    assert len(COVERAGE_MANIFEST) == 63
+    assert len(COVERAGE_MANIFEST) == 68
     assert all(names and set(names) <= test_names for names in COVERAGE_MANIFEST.values())
     forbidden = {"open", "eval", "exec", "compile", "__import__", "write", "write_text", "system", "run", "Popen"}
     assert not any(isinstance(node, ast.Call) and ((isinstance(node.func, ast.Name) and node.func.id in forbidden) or (isinstance(node.func, ast.Attribute) and node.func.attr in forbidden)) for node in ast.walk(tree))
@@ -740,3 +745,136 @@ def test_complete_hostile_mapping_matrix(root: object) -> None:
 def test_hostile_mapping_baseexceptions_at_items_propagate(failure: BaseException) -> None:
     with pytest.raises(type(failure)):
         evaluation_claim_record_from_mapping(ItemsMapping(failure), ())
+
+
+@pytest.mark.parametrize("context_kind", ("ordinary", "paired"))
+@pytest.mark.parametrize("observed_case", ("missing", "subclass", "duplicate", "malformed", "empty_malformed", "missing_duplicate_context"))
+def test_observed_tuple_prerequisite_exact_codes(context_kind: str, observed_case: str) -> None:
+    values = _mapping()
+    ordinary = EvaluationResultRecord(**RESULT_FIXTURES[4])
+    paired = EvaluationResultRecord(**RESULT_FIXTURES[5])
+    item = ordinary if context_kind == "ordinary" else paired
+    context = (item, item) if observed_case == "missing_duplicate_context" else (item,)
+    if observed_case in ("missing", "missing_duplicate_context"):
+        del values["observed_evaluation_result_ids"]
+        expected = [EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD]
+    elif observed_case == "subclass":
+        values["observed_evaluation_result_ids"] = type("ObservedTupleSubclass", (tuple,), {})((item.evaluation_result_id,))
+        expected = [EvaluationClaimValidationCode.INVALID_OBSERVED_RESULT_IDS]
+    elif observed_case == "duplicate":
+        values["observed_evaluation_result_ids"] = (item.evaluation_result_id, item.evaluation_result_id)
+        expected = [EvaluationClaimValidationCode.INVALID_OBSERVED_RESULT_IDS]
+    elif observed_case == "malformed":
+        values["observed_evaluation_result_ids"] = (object(),)
+        expected = [EvaluationClaimValidationCode.INVALID_OBSERVED_RESULT_IDS]
+    else:
+        values["observed_evaluation_result_ids"] = ("",)
+        expected = [EvaluationClaimValidationCode.INVALID_OBSERVED_RESULT_IDS]
+    if observed_case == "missing_duplicate_context":
+        expected.append(EvaluationClaimValidationCode.DUPLICATE_CONTEXT_RESULT_ID)
+    assert evaluation_claim_record_from_mapping(values, context)[1].codes == tuple(expected)
+
+
+@pytest.mark.parametrize("disposition", (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED))
+@pytest.mark.parametrize("posture", ("", object(), TextSubclass("wrong"), TextSubclass("eligible_for_later_evidence_gate_decision_only")))
+def test_evidence_posture_requires_exact_builtin_text(disposition: EvaluationClaimDisposition, posture: object) -> None:
+    claim, result = _valid_observed()
+    required = "eligible_for_later_evidence_gate_decision_only" if disposition is EvaluationClaimDisposition.CLAIM_SUPPORTED else "claim_support_absent"
+    if isinstance(posture, TextSubclass) and posture == "eligible_for_later_evidence_gate_decision_only":
+        posture = TextSubclass(required)
+    values = {field.name: getattr(claim, field.name) for field in dataclasses.fields(claim)}
+    values.update(claim_disposition=disposition, evidence_gate_eligibility_posture=posture)
+    assert validate_evaluation_claim_record(EvaluationClaimRecord(**values), (result,)).codes == (
+        EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT,
+        EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT,
+        EvaluationClaimValidationCode.INVALID_EVIDENCE_GATE_POSTURE,
+    )
+
+
+@pytest.mark.parametrize("paired", (False, True))
+@pytest.mark.parametrize("field", ("candidate_method_id", "candidate_method_version"))
+@pytest.mark.parametrize("bad", ("", object(), TextSubclass("candidate"), None), ids=("blank", "object", "subclass", "none"))
+def test_candidate_claim_identity_prerequisites(paired: bool, field: str, bad: object) -> None:
+    if paired:
+        claim, context = _paired_claim_and_context()
+    else:
+        claim, result = _valid_observed()
+        context = (result,)
+    values = {item.name: getattr(claim, item.name) for item in dataclasses.fields(claim)}
+    values[field] = bad
+    codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), context).codes
+    assert EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT in codes
+    assert EvaluationClaimValidationCode.CANDIDATE_IDENTITY_MISMATCH not in codes
+
+
+@pytest.mark.parametrize("field", ("baseline_method_id_when_applicable", "baseline_method_version_when_applicable"))
+@pytest.mark.parametrize("bad", ("", object(), TextSubclass("v1"), None), ids=("blank", "object", "subclass", "none"))
+def test_baseline_claim_identity_prerequisites(field: str, bad: object) -> None:
+    claim, context = _paired_claim_and_context()
+    values = {item.name: getattr(claim, item.name) for item in dataclasses.fields(claim)}
+    values[field] = bad
+    codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), context).codes
+    assert EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT in codes or bad is None
+    assert EvaluationClaimValidationCode.BASELINE_IDENTITY_MISMATCH not in codes
+
+
+@pytest.mark.parametrize("field", ("split_id", "split_version", "fold_id", "cutoff_identity", "paired_test_record_set_id", "aggregation_rule_id", "weighting_rule_id", "stratum_id"))
+def test_each_scope_component_independent_mismatch(field: str) -> None:
+    claim, result = _valid_observed()
+    if field == "stratum_id":
+        claim = dataclasses.replace(claim, stratum_id_when_applicable="all")
+    changed = dataclasses.replace(result, **{field: "wrong"})
+    codes = validate_evaluation_claim_record(claim, (changed,)).codes
+    assert EvaluationClaimValidationCode.RESULT_SCOPE_MISMATCH in codes
+
+
+ANNOTATIONS = (
+    "str", "EvaluationClaimClass", "str", "str", "EvaluationClaimDisposition", "str", "str", "str", "str",
+    "BaselineType | None", "str | None", "str | None", "ScoringPredictionRepresentation",
+    "tuple[str, ...]", "tuple[str, ...]", "tuple[str, ...]", "tuple[str, ...]", "tuple[str, ...]",
+    "str", "str", "str", "str", "str", "str", "str", "str | None", "str", "str", "str",
+    "str | None", "str", "tuple[str, ...]", "str", "str | None",
+)
+
+
+@pytest.mark.parametrize("index,expected", tuple(enumerate(ANNOTATIONS)))
+def test_each_record_resolved_annotation_literal(index: int, expected: str) -> None:
+    hints = typing.get_type_hints(EvaluationClaimRecord)
+    field = dataclasses.fields(EvaluationClaimRecord)[index]
+    assert str(hints[field.name]).replace("<class '", "").replace("'>", "").replace("meg.weather.stage3.evaluation_claim.", "").replace("meg.weather.stage3.baseline_contracts.", "").replace("meg.weather.stage3.scoring_and_diagnostics.", "")
+    assert field.type == expected
+
+
+@pytest.mark.parametrize("field,value", (
+    ("claim_class", "ensemble_calibration_behavior"),
+    ("claim_disposition", "claim_unavailable"),
+    ("baseline_type_when_applicable", "climatology"),
+    ("prediction_representation", "finite_comparable_ensemble"),
+    ("claim_class", EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR),
+    ("claim_disposition", EvaluationClaimDisposition.CLAIM_UNAVAILABLE),
+    ("baseline_type_when_applicable", BaselineType.CLIMATOLOGY),
+    ("prediction_representation", ScoringPredictionRepresentation.FINITE_COMPARABLE_ENSEMBLE),
+))
+def test_each_enum_valid_adaptation(field: str, value: object) -> None:
+    values = _mapping(); values[field] = value
+    if field == "baseline_type_when_applicable":
+        values.update(claim_class=EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, baseline_method_id_when_applicable="climatology", baseline_method_version_when_applicable="v1")
+    _, result = evaluation_claim_record_from_mapping(values, ())
+    assert EvaluationClaimValidationCode.INVALID_CLAIM_CLASS not in result.codes
+    assert EvaluationClaimValidationCode.INVALID_CLAIM_DISPOSITION not in result.codes
+    assert EvaluationClaimValidationCode.INVALID_BASELINE_TYPE not in result.codes
+    assert EvaluationClaimValidationCode.INVALID_PREDICTION_REPRESENTATION not in result.codes
+
+
+@pytest.mark.parametrize("timestamp,valid", (
+    ("2025-01-01T00:00:00Z", True), ("2025-01-01T00:00:00+00:00", True),
+    ("2025-01-01T01:00:00+01:00", True), ("2025-01-01T00:00:00-05:00", True),
+    ("", False), (" ", False), ("2025-01-01", False), ("2025-01-01T00:00:00", False),
+    ("not-time", False), ("2025-13-01T00:00:00Z", False), ("2025-01-32T00:00:00Z", False),
+    (TextSubclass("2025-01-01T00:00:00Z"), False), (object(), False), (None, False),
+    ("2025-01-01 00:00:00Z", False), ("T+00:00", False),
+))
+def test_timestamp_form_matrix(timestamp: object, valid: bool) -> None:
+    values = _mapping(); values["claim_created_at"] = timestamp
+    codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), ()).codes
+    assert (EvaluationClaimValidationCode.INVALID_CLAIM_CREATED_AT not in codes) is valid
