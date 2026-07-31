@@ -32,18 +32,69 @@ from meg.weather.stage3.scoring_and_diagnostics import ScoringArtifact, ScoringP
 
 
 COVERAGE_MANIFEST = {
-    "structural": ("test_each_validation_code_literal", "test_each_record_field_literal", "test_source_contract_and_purity"),
-    "valid_fixtures": ("test_each_evaluation_result_fixture_is_individually_valid", "test_valid_observed_claim"),
-    "mapping_roots": ("test_unreadable_roots_fail_with_exact_missing_sequence", "test_hostile_mapping_roots_and_baseexception"),
-    "mapping_shape_dependencies": ("test_each_required_mapping_key_is_independently_required", "test_missing_prerequisite_suppression"),
-    "enum_text": ("test_each_required_text_rejects_each_invalid_exact_type", "test_each_nullable_text_rejects_invalid_nonnull"),
-    "tuples_partition": ("test_tuple_contract_cases", "test_repeated_metric_versions_are_accepted"),
-    "context": ("test_context_container_and_item_boundaries", "test_valid_observed_claim"),
-    "compatibility": ("test_scope_stratum_none_does_not_coerce_to_empty", "test_valid_observed_claim"),
-    "method_claim_matrices": ("test_claim_class_literal_members", "test_valid_observed_claim"),
-    "disposition": ("test_independent_block_precedence", "test_evidence_gate_matrix"),
-    "remaining": ("test_provenance_timestamp_supersession_matrix", "test_source_contract_and_purity"),
-    "mutations": ("test_repeated_metric_versions_are_accepted", "test_missing_prerequisite_suppression", "test_scope_stratum_none_does_not_coerce_to_empty", "test_independent_block_precedence", "test_source_contract_and_purity"),
+    "imports": ("test_source_contract_and_purity",),
+    "public_api": ("test_public_surface_enums_and_frozen_records_are_exact",),
+    "public_source_order": ("test_source_contract_and_purity",),
+    "claim_class_enum": ("test_claim_class_literal_members",),
+    "disposition_enum": ("test_public_surface_enums_and_frozen_records_are_exact",),
+    "severity_enum": ("test_validation_result_invariant_preserves_repetition",),
+    "validation_codes": ("test_each_validation_code_literal",),
+    "record_structure": ("test_each_record_field_literal",),
+    "validation_result_structure": ("test_validation_result_invariant_preserves_repetition",),
+    "signatures": ("test_signatures_are_frozen",),
+    "mapping_keys": ("test_each_required_mapping_key_is_independently_required",),
+    "mapping_root_behavior": ("test_hostile_mapping_roots_and_baseexception",),
+    "mapping_adaptation": ("test_mapping_adapts_only_approved_values_without_mutation",),
+    "required_text": ("test_each_required_text_rejects_each_invalid_exact_type",),
+    "nullable_text": ("test_each_nullable_text_rejects_invalid_nonnull",),
+    "fixed_target": ("test_present_aware_exact_regressions",),
+    "metric_ids": ("test_tuple_contract_cases",),
+    "metric_versions": ("test_repeated_metric_versions_are_accepted",),
+    "required_result_ids": ("test_tuple_contract_cases",),
+    "observed_result_ids": ("test_tuple_contract_cases",),
+    "missing_result_ids": ("test_tuple_contract_cases",),
+    "partition": ("test_tuple_contract_cases",),
+    "result_context": ("test_context_container_and_item_boundaries",),
+    "duplicate_identities": ("test_context_container_and_item_boundaries",),
+    "observed_resolution": ("test_valid_observed_claim",),
+    "unexpected_context": ("test_valid_paired_claim_and_direct_references",),
+    "paired_references": ("test_one_reference_suppresses_both_identity_comparisons",),
+    "target_compatibility": ("test_semantic_parity_matrix",),
+    "representation_compatibility": ("test_semantic_parity_matrix",),
+    "scope_split_id": ("test_semantic_parity_matrix",),
+    "scope_split_version": ("test_semantic_parity_matrix",),
+    "scope_fold": ("test_semantic_parity_matrix",),
+    "scope_cutoff": ("test_semantic_parity_matrix",),
+    "scope_paired_set": ("test_semantic_parity_matrix",),
+    "scope_aggregation": ("test_semantic_parity_matrix",),
+    "scope_weighting": ("test_semantic_parity_matrix",),
+    "scope_stratum": ("test_scope_stratum_none_does_not_coerce_to_empty",),
+    "metric_compatibility": ("test_valid_observed_claim",),
+    "candidate_identity": ("test_one_reference_suppresses_both_identity_comparisons",),
+    "baseline_identity": ("test_wrong_payload_baseline_family_is_classified_per_observed_pair",),
+    "class_candidate_climatology": ("test_valid_paired_claim_and_direct_references",),
+    "class_candidate_persistence": ("test_claim_class_matrix_smoke",),
+    "class_cross_baseline": ("test_claim_class_matrix_smoke",),
+    "class_binary_calibration": ("test_claim_class_matrix_smoke",),
+    "class_distributional_calibration": ("test_claim_class_matrix_smoke",),
+    "class_ensemble_calibration": ("test_valid_observed_claim",),
+    "class_threshold_weighted": ("test_claim_class_matrix_smoke",),
+    "class_stratum_specific": ("test_claim_class_matrix_smoke",),
+    "baseline_requirements": ("test_present_aware_exact_regressions",),
+    "cross_baseline_completeness": ("test_claim_class_matrix_smoke",),
+    "stratum_requirements": ("test_scope_stratum_none_does_not_coerce_to_empty",),
+    "disposition_precedence": ("test_referenced_status_participates_in_precedence",),
+    "supported_completeness": ("test_supported_completeness_includes_late_groups",),
+    "evidence_gate_posture": ("test_evidence_gate_matrix",),
+    "multiplicity": ("test_present_aware_exact_regressions",),
+    "provenance": ("test_provenance_timestamp_supersession_matrix",),
+    "timestamp": ("test_provenance_timestamp_supersession_matrix",),
+    "supersession": ("test_provenance_timestamp_supersession_matrix",),
+    "validation_groups": ("test_source_contract_and_purity",),
+    "purity": ("test_source_contract_and_purity",),
+    "caller_preservation": ("test_mapping_adapts_only_approved_values_without_mutation",),
+    "determinism": ("test_direct_validation_rejects_tuple_subclasses_and_is_deterministic",),
+    "mutation_resistance": ("test_mutation_resistance_map",),
 }
 
 
@@ -518,7 +569,9 @@ def test_source_contract_and_purity() -> None:
     source = Path(module.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
     assert module.__all__ == PUBLIC
-    assert tuple(name for name in COVERAGE_MANIFEST) == ("structural", "valid_fixtures", "mapping_roots", "mapping_shape_dependencies", "enum_text", "tuples_partition", "context", "compatibility", "method_claim_matrices", "disposition", "remaining", "mutations")
+    test_names = {name for name, value in globals().items() if name.startswith("test_") and callable(value)}
+    assert len(COVERAGE_MANIFEST) == 63
+    assert all(names and set(names) <= test_names for names in COVERAGE_MANIFEST.values())
     forbidden = {"open", "eval", "exec", "compile", "__import__", "write", "write_text", "system", "run", "Popen"}
     assert not any(isinstance(node, ast.Call) and ((isinstance(node.func, ast.Name) and node.func.id in forbidden) or (isinstance(node.func, ast.Attribute) and node.func.attr in forbidden)) for node in ast.walk(tree))
 
@@ -540,3 +593,150 @@ def test_hostile_mapping_roots_and_baseexception(failure: BaseException) -> None
 def test_hostile_mapping_baseexception_propagates() -> None:
     with pytest.raises(KeyboardInterrupt):
         evaluation_claim_record_from_mapping(HostileMapping(KeyboardInterrupt()), ())
+
+
+@pytest.mark.parametrize("missing", (
+    "evaluation_claim_id", "claim_rule_id", "claim_rule_version", "claim_disposition_reason",
+    "target_posture", "candidate_method_id", "candidate_method_version",
+    "baseline_type_when_applicable", "baseline_method_id_when_applicable",
+    "baseline_method_version_when_applicable", "prediction_representation",
+    "metric_or_diagnostic_ids", "metric_or_diagnostic_versions",
+    "required_evaluation_result_ids", "observed_evaluation_result_ids",
+    "missing_evaluation_result_ids", "split_id", "split_version", "fold_scope", "cutoff_scope",
+))
+def test_independent_posture_diagnostic_survives_each_unrelated_missing_key(missing: str) -> None:
+    values = _mapping()
+    del values[missing]
+    values["evidence_gate_eligibility_posture"] = "wrong"
+    _, result = evaluation_claim_record_from_mapping(values, ())
+    assert result.codes == (
+        EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD,
+        EvaluationClaimValidationCode.INVALID_EVIDENCE_GATE_POSTURE,
+    )
+
+
+@pytest.mark.parametrize("case", ("gate", "multiplicity", "baseline", "target_subclass", "gate_blank", "baseline_blank"))
+def test_present_aware_exact_regressions(case: str) -> None:
+    values = _mapping()
+    del values["claim_created_at"]
+    expected = [EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD]
+    if case == "gate":
+        values["evidence_gate_eligibility_posture"] = "wrong"
+        expected += [EvaluationClaimValidationCode.INVALID_EVIDENCE_GATE_POSTURE]
+    elif case == "multiplicity":
+        values.update(metric_or_diagnostic_ids=("brier_score", "reliability_diagram"), metric_or_diagnostic_versions=("v1", "v1"), multiple_comparison_policy_id_when_applicable=None)
+        expected += [EvaluationClaimValidationCode.INVALID_MULTIPLE_COMPARISON_POSTURE]
+    elif case == "baseline":
+        values.update(claim_class=EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, baseline_type_when_applicable=None, baseline_method_id_when_applicable=None, baseline_method_version_when_applicable=None)
+        expected += [EvaluationClaimValidationCode.BASELINE_REQUIREMENT_MISMATCH] * 3
+    elif case == "target_subclass":
+        values["target_posture"] = TextSubclass("venue_defined_settlement_outcome")
+        expected += [EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT, EvaluationClaimValidationCode.INVALID_FIXED_POSTURE]
+    elif case == "gate_blank":
+        values["evidence_gate_eligibility_posture"] = " "
+        expected += [EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT, EvaluationClaimValidationCode.INVALID_EVIDENCE_GATE_POSTURE]
+    else:
+        values.update(claim_class=EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, baseline_type_when_applicable=BaselineType.CLIMATOLOGY, baseline_method_id_when_applicable=" ", baseline_method_version_when_applicable="v1")
+        expected += [EvaluationClaimValidationCode.BLANK_REQUIRED_TEXT, EvaluationClaimValidationCode.BASELINE_REQUIREMENT_MISMATCH]
+    assert evaluation_claim_record_from_mapping(values, ())[1].codes == tuple(expected)
+
+
+@pytest.mark.parametrize("field,bad", (
+    ("target_posture", "wrong"), ("prediction_representation", object()),
+    ("metric_or_diagnostic_ids", ()), ("metric_or_diagnostic_versions", ()),
+    ("required_evaluation_result_ids", ()), ("observed_evaluation_result_ids", ("x", "x")),
+    ("missing_evaluation_result_ids", ("x", "x")), ("provenance", ()),
+    ("claim_created_at", "invalid"), ("evidence_gate_eligibility_posture", "wrong"),
+))
+def test_semantic_parity_matrix(field: str, bad: object) -> None:
+    values = _mapping()
+    values[field] = bad
+    direct = validate_evaluation_claim_record(EvaluationClaimRecord(**values), ()).codes
+    adapted, mapped = evaluation_claim_record_from_mapping(values, ())
+    assert adapted is None
+    assert mapped.codes == direct
+
+
+@pytest.mark.parametrize("claim_class", tuple(EvaluationClaimClass))
+def test_claim_class_matrix_smoke(claim_class: EvaluationClaimClass) -> None:
+    values = _mapping()
+    values["claim_class"] = claim_class
+    result = validate_evaluation_claim_record(EvaluationClaimRecord(**values), ())
+    assert EvaluationClaimValidationCode.INVALID_CLAIM_CLASS not in result.codes
+
+
+@pytest.mark.parametrize("late_field,bad,late_code", (
+    ("provenance", (), EvaluationClaimValidationCode.EMPTY_PROVENANCE),
+    ("claim_created_at", "invalid", EvaluationClaimValidationCode.INVALID_CLAIM_CREATED_AT),
+    ("supersedes_claim_id_when_applicable", "claim-1", EvaluationClaimValidationCode.SELF_SUPERSESSION),
+    ("multiple_comparison_policy_id_when_applicable", None, EvaluationClaimValidationCode.INVALID_MULTIPLE_COMPARISON_POSTURE),
+))
+def test_supported_completeness_includes_late_groups(late_field: str, bad: object, late_code: EvaluationClaimValidationCode) -> None:
+    claim, result = _valid_observed()
+    values = {field.name: getattr(claim, field.name) for field in dataclasses.fields(claim)}
+    values[late_field] = bad
+    if late_field == "multiple_comparison_policy_id_when_applicable":
+        values.update(metric_or_diagnostic_ids=("rank_histogram", "brier_score"), metric_or_diagnostic_versions=("v1", "v1"))
+    codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), (result,)).codes
+    assert EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT in codes
+    assert late_code in codes
+
+
+def test_mutation_resistance_map() -> None:
+    protected = {
+        "placeholders": "test_present_aware_exact_regressions",
+        "independent_mapping": "test_independent_posture_diagnostic_survives_each_unrelated_missing_key",
+        "metric_versions": "test_repeated_metric_versions_are_accepted",
+        "none_stratum": "test_scope_stratum_none_does_not_coerce_to_empty",
+        "paired_identity": "test_one_reference_suppresses_both_identity_comparisons",
+        "baseline_family": "test_wrong_payload_baseline_family_is_classified_per_observed_pair",
+        "candidate_status": "test_referenced_status_participates_in_precedence",
+        "baseline_status": "test_referenced_status_participates_in_precedence",
+        "independent_block": "test_independent_block_precedence",
+        "supported_completeness": "test_supported_completeness_includes_late_groups",
+        "group_order": "test_present_aware_exact_regressions",
+        "diagnostic_order": "test_present_aware_exact_regressions",
+        "enum_adaptation": "test_enum_adaptation_rejection_matrix",
+        "caller_input": "test_mapping_adapts_only_approved_values_without_mutation",
+        "purity": "test_source_contract_and_purity",
+    }
+    assert len(protected) == 15 and set(protected.values()) <= globals().keys()
+
+
+class ItemsMapping(Mapping):
+    def __init__(self, supplied: object) -> None: self.supplied = supplied
+    def __getitem__(self, key: object) -> object: raise KeyError(key)
+    def __iter__(self): return iter(())
+    def __len__(self) -> int: return 0
+    def items(self):
+        if isinstance(self.supplied, BaseException): raise self.supplied
+        return self.supplied
+
+
+class BrokenIterator:
+    def __iter__(self): return self
+    def __next__(self): raise RuntimeError("iteration")
+
+
+class BadHash:
+    def __hash__(self) -> int: raise RuntimeError("hash")
+
+
+@pytest.mark.parametrize("root", (
+    ItemsMapping(RuntimeError("items")), ItemsMapping(BrokenIterator()),
+    ItemsMapping([("only",)]), ItemsMapping([("one", 2, 3)]), ItemsMapping(3),
+    ItemsMapping([BadHash()]), ItemsMapping([(BadHash(), "value")]),
+    ItemsMapping([("x", 1), ("x", 2)]),
+    ItemsMapping([(TextSubclass("x"), 1), (TextSubclass("x"), 2)]),
+    ItemsMapping([(7, 1), (7, 2)]),
+))
+def test_complete_hostile_mapping_matrix(root: object) -> None:
+    record, result = evaluation_claim_record_from_mapping(root, ())
+    assert record is None
+    assert result.codes == (EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD,) * 33
+
+
+@pytest.mark.parametrize("failure", (KeyboardInterrupt(), SystemExit()))
+def test_hostile_mapping_baseexceptions_at_items_propagate(failure: BaseException) -> None:
+    with pytest.raises(type(failure)):
+        evaluation_claim_record_from_mapping(ItemsMapping(failure), ())
