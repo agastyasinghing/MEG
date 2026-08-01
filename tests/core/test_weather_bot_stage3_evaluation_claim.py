@@ -72,16 +72,16 @@ COVERAGE_MANIFEST = {
     "metric_compatibility": ("test_valid_observed_claim",),
     "candidate_identity": ("test_one_reference_suppresses_both_identity_comparisons",),
     "baseline_identity": ("test_wrong_payload_baseline_family_is_classified_per_observed_pair",),
-    "class_candidate_climatology": ("test_valid_paired_claim_and_direct_references",),
-    "class_candidate_persistence": ("test_claim_class_claim_level_behavior",),
-    "class_cross_baseline": ("test_claim_class_claim_level_behavior",),
-    "class_binary_calibration": ("test_claim_class_claim_level_behavior",),
-    "class_distributional_calibration": ("test_claim_class_claim_level_behavior",),
-    "class_ensemble_calibration": ("test_valid_observed_claim",),
-    "class_threshold_weighted": ("test_claim_class_claim_level_behavior",),
-    "class_stratum_specific": ("test_claim_class_claim_level_behavior",),
+    "class_candidate_climatology": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_candidate_persistence": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_cross_baseline": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_binary_calibration": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_distributional_calibration": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_ensemble_calibration": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_threshold_weighted": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "class_stratum_specific": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
     "baseline_requirements": ("test_present_aware_exact_regressions",),
-    "cross_baseline_completeness": ("test_claim_class_claim_level_behavior",),
+    "cross_baseline_completeness": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior",),
     "stratum_requirements": ("test_scope_stratum_none_does_not_coerce_to_empty",),
     "disposition_precedence": ("test_referenced_status_participates_in_precedence",),
     "supported_completeness": ("test_supported_completeness_includes_late_groups",),
@@ -90,7 +90,7 @@ COVERAGE_MANIFEST = {
     "provenance": ("test_provenance_timestamp_supersession_matrix",),
     "timestamp": ("test_provenance_timestamp_supersession_matrix",),
     "supersession": ("test_provenance_timestamp_supersession_matrix",),
-    "validation_groups": ("test_source_contract_and_purity",),
+    "validation_groups": ("test_exact_validation_group_literal_oracle",),
     "purity": ("test_source_contract_and_purity",),
     "caller_preservation": ("test_mapping_adapts_only_approved_values_without_mutation",),
     "determinism": ("test_direct_validation_rejects_tuple_subclasses_and_is_deterministic",),
@@ -852,6 +852,21 @@ ANNOTATION_TYPES = (
     str, str, str, str, str, str, str, str | None, str, str, str, str | None, str,
     tuple[str, ...], str, str | None,
 )
+EXPECTED_GROUPS = (
+    "missing_keys", "unexpected_exact_string_keys", "unexpected_remaining_keys",
+    "required_and_nullable_text", "claim_class", "claim_disposition", "baseline_type",
+    "prediction_representation", "fixed_target_posture", "metric_tuple_structure",
+    "metric_version_alignment", "required_result_tuple", "observed_result_tuple",
+    "missing_result_tuple", "result_set_partition", "result_record_container",
+    "individual_result_record_validity", "context_identity_uniqueness",
+    "observed_result_resolution", "unexpected_context", "paired_reference_resolution",
+    "target_compatibility", "representation_compatibility", "scope_compatibility",
+    "metric_compatibility", "candidate_identity", "baseline_identity",
+    "claim_class_result_kind_compatibility", "baseline_requirements",
+    "cross_baseline_completeness", "stratum_requirements", "disposition_precedence",
+    "supported_not_supported_completeness", "evidence_gate_posture",
+    "multiplicity_posture", "provenance", "claim_created_timestamp", "self_supersession",
+)
 
 
 @pytest.mark.parametrize("index,expected", tuple(enumerate(ANNOTATIONS)))
@@ -860,6 +875,11 @@ def test_each_record_resolved_annotation_literal(index: int, expected: str) -> N
     field = dataclasses.fields(EvaluationClaimRecord)[index]
     assert hints[field.name] == ANNOTATION_TYPES[index]
     assert field.type == expected
+
+
+def test_exact_validation_group_literal_oracle() -> None:
+    import meg.weather.stage3.evaluation_claim as module
+    assert module._VALIDATION_GROUPS == EXPECTED_GROUPS
 
 
 @pytest.mark.parametrize("field,value", (
@@ -926,3 +946,74 @@ def test_compatibility_prerequisite_exact_regressions(entry: str, field: str, va
     else:
         codes = evaluation_claim_record_from_mapping(values, (result,))[1].codes
     assert codes == expected
+
+
+def _claim_for_results(claim_class: EvaluationClaimClass, results: tuple[EvaluationResultRecord, ...], **changes: object) -> EvaluationClaimRecord:
+    values = _mapping()
+    paired = any(result.method_role is EvaluationResultMethodRole.PAIRED_COMPARISON for result in results)
+    observed = tuple(result.evaluation_result_id for result in results if result.method_role is (EvaluationResultMethodRole.PAIRED_COMPARISON if paired else EvaluationResultMethodRole.CANDIDATE))
+    artifacts: list[tuple[str, str]] = []
+    for result in results:
+        if result.evaluation_result_id in observed:
+            pair = (result.artifact_id.value, result.artifact_version)
+            if pair not in artifacts:
+                artifacts.append(pair)
+    values.update(
+        claim_class=claim_class,
+        claim_disposition=EvaluationClaimDisposition.CLAIM_SUPPORTED,
+        evidence_gate_eligibility_posture="eligible_for_later_evidence_gate_decision_only",
+        metric_or_diagnostic_ids=tuple(pair[0] for pair in artifacts),
+        metric_or_diagnostic_versions=tuple(pair[1] for pair in artifacts),
+        required_evaluation_result_ids=observed,
+        observed_evaluation_result_ids=observed,
+        missing_evaluation_result_ids=(),
+        multiple_comparison_policy_id_when_applicable="holm" if len(artifacts) > 1 or claim_class in (EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES, EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL) else None,
+    )
+    values.update(changes)
+    return EvaluationClaimRecord(**values)
+
+
+def _paired_bundle(family: BaselineType, *, prefix: str, artifact: ScoringArtifact = ScoringArtifact.BRIER_SCORE, representation: ScoringPredictionRepresentation = ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY, stratum: str = "all") -> tuple[EvaluationResultRecord, EvaluationResultRecord, EvaluationResultRecord]:
+    role = EvaluationResultMethodRole.CLIMATOLOGY_BASELINE if family is BaselineType.CLIMATOLOGY else EvaluationResultMethodRole.PERSISTENCE_BASELINE
+    method = "climatology" if family is BaselineType.CLIMATOLOGY else "persistence"
+    candidate = EvaluationResultRecord(**_result_values(evaluation_result_id=f"{prefix}-candidate", artifact_id=artifact, prediction_representation=representation, stratum_id=stratum))
+    baseline = EvaluationResultRecord(**_result_values(evaluation_result_id=f"{prefix}-baseline", artifact_id=artifact, prediction_representation=representation, method_role=role, method_id=method, stratum_id=stratum))
+    pair = EvaluationResultRecord(**_result_values(
+        evaluation_result_id=f"{prefix}-pair", result_kind=EvaluationResultKind.PAIRED_COMPARISON_RESULT,
+        artifact_id=artifact, prediction_representation=representation, method_role=EvaluationResultMethodRole.PAIRED_COMPARISON,
+        stratum_id=stratum,
+        result_payload=PairedComparisonResultPayload(candidate.evaluation_result_id, baseline.evaluation_result_id, family, "candidate_minus_baseline_lower_is_better", -0.1, "exact_common_test_record_set_required"),
+    ))
+    return pair, candidate, baseline
+
+
+def _complete_class_case(claim_class: EvaluationClaimClass) -> tuple[EvaluationClaimRecord, tuple[EvaluationResultRecord, ...]]:
+    if claim_class in (EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL, EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL, EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL):
+        family = BaselineType.PERSISTENCE if claim_class is EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL else BaselineType.CLIMATOLOGY
+        artifact = ScoringArtifact.THRESHOLD_WEIGHTED_CRPS if claim_class is EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL else ScoringArtifact.BRIER_SCORE
+        representation = ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION if claim_class is EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL else ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY
+        context = _paired_bundle(family, prefix="one", artifact=artifact, representation=representation)
+        method = "persistence" if family is BaselineType.PERSISTENCE else "climatology"
+        claim = _claim_for_results(claim_class, context, baseline_type_when_applicable=family, baseline_method_id_when_applicable=method, baseline_method_version_when_applicable="v1", prediction_representation=representation, stratum_id_when_applicable="all" if claim_class is EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL else None)
+        return claim, context
+    if claim_class is EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES:
+        context = _paired_bundle(BaselineType.CLIMATOLOGY, prefix="clim") + _paired_bundle(BaselineType.PERSISTENCE, prefix="persist")
+        return _claim_for_results(claim_class, context, baseline_type_when_applicable=None, baseline_method_id_when_applicable=None, baseline_method_version_when_applicable=None, prediction_representation=ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY), context
+    if claim_class is EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR:
+        calibration = dataclasses.replace(EvaluationResultRecord(**RESULT_FIXTURES[1]), evaluation_result_id="calibration")
+        scalar = dataclasses.replace(EvaluationResultRecord(**RESULT_FIXTURES[0]), evaluation_result_id="scalar")
+        context = (calibration, scalar)
+        return _claim_for_results(claim_class, context, prediction_representation=ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY), context
+    if claim_class is EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR:
+        diagnostic = dataclasses.replace(EvaluationResultRecord(**RESULT_FIXTURES[3]), evaluation_result_id="distribution")
+        scalar = EvaluationResultRecord(**_result_values(evaluation_result_id="crps", artifact_id=ScoringArtifact.CRPS, prediction_representation=ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION))
+        context = (diagnostic, scalar)
+        return _claim_for_results(claim_class, context, prediction_representation=ScoringPredictionRepresentation.FULL_PREDICTIVE_DISTRIBUTION), context
+    result = EvaluationResultRecord(**RESULT_FIXTURES[4])
+    return _claim_for_results(claim_class, (result,), prediction_representation=ScoringPredictionRepresentation.FINITE_COMPARABLE_ENSEMBLE), (result,)
+
+
+@pytest.mark.parametrize("claim_class", tuple(EvaluationClaimClass))
+def test_each_claim_class_complete_evidence(claim_class: EvaluationClaimClass) -> None:
+    claim, context = _complete_class_case(claim_class)
+    assert validate_evaluation_claim_record(claim, context).codes == ()
