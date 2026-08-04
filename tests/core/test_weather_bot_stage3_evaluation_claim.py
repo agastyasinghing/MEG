@@ -55,12 +55,12 @@ COVERAGE_MANIFEST = {
     "missing_result_ids": ("test_tuple_contract_cases",),
     "partition": ("test_tuple_contract_cases",),
     "result_context": ("test_context_container_and_item_boundaries",),
-    "duplicate_identities": ("test_context_container_and_item_boundaries",),
-    "observed_resolution": ("test_valid_observed_claim",),
-    "unexpected_context": ("test_valid_paired_claim_and_direct_references",),
-    "paired_references": ("test_one_reference_suppresses_both_identity_comparisons",),
-    "target_compatibility": ("test_semantic_parity_matrix",),
-    "representation_compatibility": ("test_semantic_parity_matrix",),
+    "duplicate_identities": ("test_context_occurrence_exact_matrix",),
+    "observed_resolution": ("test_context_occurrence_exact_matrix",),
+    "unexpected_context": ("test_context_occurrence_exact_matrix",),
+    "paired_references": ("test_context_occurrence_exact_matrix",),
+    "target_compatibility": ("test_compatibility_dimension_behavior_matrix",),
+    "representation_compatibility": ("test_compatibility_dimension_behavior_matrix",),
     "scope_split_id": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
     "scope_split_version": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
     "scope_fold": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
@@ -69,22 +69,22 @@ COVERAGE_MANIFEST = {
     "scope_aggregation": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
     "scope_weighting": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
     "scope_stratum": ("test_scope_stratum_none_does_not_coerce_to_empty",),
-    "metric_compatibility": ("test_valid_observed_claim",),
-    "candidate_identity": ("test_one_reference_suppresses_both_identity_comparisons",),
-    "baseline_identity": ("test_wrong_payload_baseline_family_is_classified_per_observed_pair",),
-    "class_candidate_climatology": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_candidate_persistence": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_cross_baseline": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_binary_calibration": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_distributional_calibration": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_ensemble_calibration": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_threshold_weighted": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
-    "class_stratum_specific": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior"),
+    "metric_compatibility": ("test_compatibility_dimension_behavior_matrix",),
+    "candidate_identity": ("test_candidate_vs_climatology_behavior_matrix",),
+    "baseline_identity": ("test_candidate_vs_climatology_behavior_matrix",),
+    "class_candidate_climatology": ("test_candidate_vs_climatology_behavior_matrix",),
+    "class_candidate_persistence": ("test_candidate_vs_persistence_behavior_matrix",),
+    "class_cross_baseline": ("test_cross_baseline_behavior_matrix",),
+    "class_binary_calibration": ("test_binary_calibration_behavior_matrix",),
+    "class_distributional_calibration": ("test_distributional_calibration_behavior_matrix",),
+    "class_ensemble_calibration": ("test_ensemble_calibration_behavior_matrix",),
+    "class_threshold_weighted": ("test_threshold_weighted_skill_behavior_matrix",),
+    "class_stratum_specific": ("test_stratum_specific_skill_behavior_matrix",),
     "baseline_requirements": ("test_present_aware_exact_regressions",),
     "cross_baseline_completeness": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior",),
     "stratum_requirements": ("test_scope_stratum_none_does_not_coerce_to_empty",),
-    "disposition_precedence": ("test_referenced_status_participates_in_precedence",),
-    "supported_completeness": ("test_supported_completeness_includes_late_groups",),
+    "disposition_precedence": ("test_disposition_role_behavior_matrix",),
+    "supported_completeness": ("test_supported_completeness_blocker_matrix",),
     "evidence_gate_posture": ("test_evidence_gate_matrix",),
     "multiplicity": ("test_present_aware_exact_regressions",),
     "provenance": ("test_provenance_timestamp_supersession_matrix",),
@@ -1017,3 +1017,224 @@ def _complete_class_case(claim_class: EvaluationClaimClass) -> tuple[EvaluationC
 def test_each_claim_class_complete_evidence(claim_class: EvaluationClaimClass) -> None:
     claim, context = _complete_class_case(claim_class)
     assert validate_evaluation_claim_record(claim, context).codes == ()
+
+
+SUPPORT_BLOCK = EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT
+
+
+def _assert_standard_paired_matrix(claim_class: EvaluationClaimClass) -> None:
+    claim, context = _complete_class_case(claim_class)
+    pair, candidate, baseline = context
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    assert validate_evaluation_claim_record(
+        claim, (pair, dataclasses.replace(candidate, method_id="wrong"), baseline)
+    ).codes == (EvaluationClaimValidationCode.CANDIDATE_IDENTITY_MISMATCH, SUPPORT_BLOCK)
+    assert validate_evaluation_claim_record(
+        claim, (pair, candidate, dataclasses.replace(baseline, method_id="wrong"))
+    ).codes == (EvaluationClaimValidationCode.BASELINE_IDENTITY_MISMATCH, SUPPORT_BLOCK)
+    assert validate_evaluation_claim_record(claim, (pair, baseline)).codes == (
+        EvaluationClaimValidationCode.PAIRED_REFERENCE_NOT_FOUND, SUPPORT_BLOCK,
+    )
+    assert validate_evaluation_claim_record(claim, (pair, candidate)).codes == (
+        EvaluationClaimValidationCode.PAIRED_REFERENCE_NOT_FOUND, SUPPORT_BLOCK,
+    )
+    assert validate_evaluation_claim_record(claim, (pair,)).codes == (
+        EvaluationClaimValidationCode.PAIRED_REFERENCE_NOT_FOUND,
+        EvaluationClaimValidationCode.PAIRED_REFERENCE_NOT_FOUND,
+        SUPPORT_BLOCK,
+    )
+
+
+def test_candidate_vs_climatology_behavior_matrix() -> None:
+    _assert_standard_paired_matrix(EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL)
+    claim, context = _complete_class_case(EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL)
+    pair, candidate, baseline = context
+    wrong = dataclasses.replace(pair, result_payload=dataclasses.replace(
+        pair.result_payload, baseline_type=BaselineType.PERSISTENCE
+    ))
+    assert validate_evaluation_claim_record(claim, (wrong, candidate, baseline)).codes == (
+        EvaluationClaimValidationCode.BASELINE_IDENTITY_MISMATCH,
+        EvaluationClaimValidationCode.BASELINE_REQUIREMENT_MISMATCH,
+        SUPPORT_BLOCK,
+    )
+
+
+def test_candidate_vs_persistence_behavior_matrix() -> None:
+    _assert_standard_paired_matrix(EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL)
+    claim, context = _complete_class_case(EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL)
+    pair, candidate, baseline = context
+    wrong = dataclasses.replace(pair, result_payload=dataclasses.replace(
+        pair.result_payload, baseline_type=BaselineType.CLIMATOLOGY
+    ))
+    assert validate_evaluation_claim_record(claim, (wrong, candidate, baseline)).codes == (
+        EvaluationClaimValidationCode.BASELINE_IDENTITY_MISMATCH,
+        EvaluationClaimValidationCode.BASELINE_REQUIREMENT_MISMATCH,
+        SUPPORT_BLOCK,
+    )
+
+
+def test_cross_baseline_behavior_matrix() -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES)
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    for family in (BaselineType.CLIMATOLOGY, BaselineType.PERSISTENCE):
+        one_family = _paired_bundle(family, prefix=f"only-{family.value}")
+        incomplete = _claim_for_results(
+            EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES,
+            one_family,
+            baseline_type_when_applicable=None,
+            baseline_method_id_when_applicable=None,
+            baseline_method_version_when_applicable=None,
+            prediction_representation=ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY,
+        )
+        assert validate_evaluation_claim_record(incomplete, one_family).codes == (
+            EvaluationClaimValidationCode.CROSS_BASELINE_INCOMPLETE, SUPPORT_BLOCK,
+        )
+
+
+def _assert_minimum_family_matrix(claim_class: EvaluationClaimClass) -> None:
+    claim, context = _complete_class_case(claim_class)
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    for result in context:
+        reduced = (result,)
+        reduced_claim = _claim_for_results(
+            claim_class, reduced, prediction_representation=claim.prediction_representation
+        )
+        assert validate_evaluation_claim_record(reduced_claim, reduced).codes == (
+            EvaluationClaimValidationCode.RESULT_KIND_NOT_ALLOWED, SUPPORT_BLOCK,
+        )
+
+
+def test_binary_calibration_behavior_matrix() -> None:
+    _assert_minimum_family_matrix(EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR)
+    claim, context = _complete_class_case(EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR)
+    decomposition = dataclasses.replace(EvaluationResultRecord(**RESULT_FIXTURES[2]), evaluation_result_id="decomposition")
+    expanded = context + (decomposition,)
+    expanded_claim = _claim_for_results(
+        EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR, expanded,
+        prediction_representation=ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY,
+    )
+    assert validate_evaluation_claim_record(expanded_claim, expanded).codes == ()
+
+
+def test_distributional_calibration_behavior_matrix() -> None:
+    _assert_minimum_family_matrix(EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR)
+
+
+def test_ensemble_calibration_behavior_matrix() -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    scalar = EvaluationResultRecord(**RESULT_FIXTURES[0])
+    invalid_claim = _claim_for_results(
+        EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR, (scalar,),
+        prediction_representation=ScoringPredictionRepresentation.FINITE_COMPARABLE_ENSEMBLE,
+    )
+    assert validate_evaluation_claim_record(invalid_claim, (scalar,)).codes == (
+        EvaluationClaimValidationCode.RESULT_REPRESENTATION_MISMATCH,
+        EvaluationClaimValidationCode.RESULT_KIND_NOT_ALLOWED,
+        SUPPORT_BLOCK,
+    )
+
+
+def test_threshold_weighted_skill_behavior_matrix() -> None:
+    _assert_standard_paired_matrix(EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL)
+
+
+def test_stratum_specific_skill_behavior_matrix() -> None:
+    _assert_standard_paired_matrix(EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL)
+    claim, context = _complete_class_case(EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL)
+    for index in range(3):
+        altered = list(context)
+        altered[index] = dataclasses.replace(altered[index], stratum_id="different")
+        assert validate_evaluation_claim_record(claim, tuple(altered)).codes == (
+            EvaluationClaimValidationCode.RESULT_SCOPE_MISMATCH,
+            EvaluationClaimValidationCode.STRATUM_REQUIREMENT_MISMATCH,
+            SUPPORT_BLOCK,
+        )
+
+
+def test_context_occurrence_exact_matrix() -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    result = context[0]
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    assert validate_evaluation_claim_record(claim, (object(), object())).codes == (
+        EvaluationClaimValidationCode.INVALID_RESULT_RECORD,
+        EvaluationClaimValidationCode.INVALID_RESULT_RECORD,
+        EvaluationClaimValidationCode.OBSERVED_RESULT_NOT_FOUND,
+        SUPPORT_BLOCK,
+    )
+    assert validate_evaluation_claim_record(claim, (result, result)).codes == (
+        EvaluationClaimValidationCode.DUPLICATE_CONTEXT_RESULT_ID,
+        EvaluationClaimValidationCode.OBSERVED_RESULT_NOT_FOUND,
+        SUPPORT_BLOCK,
+    )
+    missing_claim = dataclasses.replace(claim, observed_evaluation_result_ids=("absent",))
+    assert validate_evaluation_claim_record(missing_claim, context).codes == (
+        EvaluationClaimValidationCode.RESULT_SET_PARTITION_MISMATCH,
+        EvaluationClaimValidationCode.OBSERVED_RESULT_NOT_FOUND,
+        EvaluationClaimValidationCode.UNEXPECTED_CONTEXT_RESULT,
+        SUPPORT_BLOCK,
+    )
+
+
+@pytest.mark.parametrize("field", (
+    "target_posture", "split_id", "split_version", "fold_scope", "cutoff_scope",
+    "paired_test_record_set_id", "aggregation_rule_id", "weighting_rule_id",
+))
+def test_compatibility_dimension_behavior_matrix(field: str) -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    changed = dataclasses.replace(claim, **{field: "different"})
+    mismatch = (EvaluationClaimValidationCode.RESULT_TARGET_MISMATCH if field == "target_posture"
+                else EvaluationClaimValidationCode.RESULT_SCOPE_MISMATCH)
+    if field == "target_posture":
+        assert validate_evaluation_claim_record(changed, context).codes == (
+            EvaluationClaimValidationCode.INVALID_FIXED_POSTURE, SUPPORT_BLOCK,
+        )
+    else:
+        assert validate_evaluation_claim_record(changed, context).codes == (mismatch, SUPPORT_BLOCK)
+
+
+def test_disposition_role_behavior_matrix() -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL)
+    for index, status, disposition in (
+        (0, EvaluationResultSupportStatus.BLOCKED, EvaluationClaimDisposition.CLAIM_BLOCKED),
+        (1, EvaluationResultSupportStatus.UNAVAILABLE, EvaluationClaimDisposition.CLAIM_UNAVAILABLE),
+        (2, EvaluationResultSupportStatus.INSUFFICIENT, EvaluationClaimDisposition.CLAIM_INSUFFICIENT),
+    ):
+        altered = list(context)
+        altered[index] = dataclasses.replace(
+            altered[index], support_status=status,
+            exclusion_block_reason_summary=("contract reason",),
+        )
+        adjusted_claim = dataclasses.replace(
+            claim, claim_disposition=disposition,
+            claim_disposition_reason="contract reason",
+            evidence_gate_eligibility_posture={
+                EvaluationClaimDisposition.CLAIM_BLOCKED: "evidence_gate_use_blocked",
+                EvaluationClaimDisposition.CLAIM_UNAVAILABLE: "no_substitution_or_evidence_gate_use",
+                EvaluationClaimDisposition.CLAIM_INSUFFICIENT: "evidence_gate_use_blocked",
+            }[disposition],
+        )
+        assert validate_evaluation_claim_record(adjusted_claim, tuple(altered)).codes == ()
+
+
+@pytest.mark.parametrize("disposition", (
+    EvaluationClaimDisposition.CLAIM_SUPPORTED,
+    EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED,
+))
+def test_supported_completeness_blocker_matrix(disposition: EvaluationClaimDisposition) -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    claim = dataclasses.replace(
+        claim,
+        claim_disposition=disposition,
+        evidence_gate_eligibility_posture=(
+            "eligible_for_later_evidence_gate_decision_only"
+            if disposition is EvaluationClaimDisposition.CLAIM_SUPPORTED
+            else "claim_support_absent"
+        ),
+    )
+    assert validate_evaluation_claim_record(claim, (object(),)).codes == (
+        EvaluationClaimValidationCode.INVALID_RESULT_RECORD,
+        EvaluationClaimValidationCode.OBSERVED_RESULT_NOT_FOUND,
+        SUPPORT_BLOCK,
+    )
