@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import ast
-from collections.abc import Mapping
 import dataclasses
-from enum import StrEnum
 import inspect
-from pathlib import Path
 import typing
+from collections.abc import Mapping
+from enum import StrEnum
+from pathlib import Path
 
 import pytest
 
+import meg.weather.stage3.evaluation_claim as evaluation_claim_module
 from meg.weather.stage3.baseline_contracts import BaselineType
 from meg.weather.stage3.evaluation_claim import (
     EvaluationClaimClass,
@@ -22,14 +23,22 @@ from meg.weather.stage3.evaluation_claim import (
     validate_evaluation_claim_record,
 )
 from meg.weather.stage3.evaluation_result_record import (
-    CalibrationBinResultPayload, DecompositionResultPayload,
-    DistributionDiagnosticResultPayload, EnsembleDiagnosticResultPayload,
-    EvaluationResultKind, EvaluationResultMethodRole, EvaluationResultRecord,
-    EvaluationResultSupportStatus, PairedComparisonResultPayload,
-    ScalarScoreResultPayload, validate_evaluation_result_record,
+    CalibrationBinResultPayload,
+    DecompositionResultPayload,
+    DistributionDiagnosticResultPayload,
+    EnsembleDiagnosticResultPayload,
+    EvaluationResultKind,
+    EvaluationResultMethodRole,
+    EvaluationResultRecord,
+    EvaluationResultSupportStatus,
+    PairedComparisonResultPayload,
+    ScalarScoreResultPayload,
+    validate_evaluation_result_record,
 )
-from meg.weather.stage3.scoring_and_diagnostics import ScoringArtifact, ScoringPredictionRepresentation
-
+from meg.weather.stage3.scoring_and_diagnostics import (
+    ScoringArtifact,
+    ScoringPredictionRepresentation,
+)
 
 COVERAGE_MANIFEST = {
     "imports": ("test_source_contract_and_purity",),
@@ -80,6 +89,7 @@ COVERAGE_MANIFEST = {
     "class_ensemble_calibration": ("test_ensemble_calibration_behavior_matrix",),
     "class_threshold_weighted": ("test_threshold_weighted_skill_behavior_matrix",),
     "class_stratum_specific": ("test_stratum_specific_skill_behavior_matrix",),
+    "closed_acceptance_matrices": ("test_closed_acceptance_matrices_are_exact_and_exhaustive",),
     "baseline_requirements": ("test_present_aware_exact_regressions",),
     "cross_baseline_completeness": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior",),
     "stratum_requirements": ("test_scope_stratum_none_does_not_coerce_to_empty",),
@@ -575,7 +585,7 @@ def test_source_contract_and_purity() -> None:
     tree = ast.parse(source)
     assert module.__all__ == PUBLIC
     test_names = {name for name, value in globals().items() if name.startswith("test_") and callable(value)}
-    assert len(COVERAGE_MANIFEST) == 68
+    assert len(COVERAGE_MANIFEST) == 69
     assert all(names and set(names) <= test_names for names in COVERAGE_MANIFEST.values())
     forbidden = {"open", "eval", "exec", "compile", "__import__", "write", "write_text", "system", "run", "Popen"}
     assert not any(isinstance(node, ast.Call) and ((isinstance(node.func, ast.Name) and node.func.id in forbidden) or (isinstance(node.func, ast.Attribute) and node.func.attr in forbidden)) for node in ast.walk(tree))
@@ -1020,6 +1030,70 @@ def test_each_claim_class_complete_evidence(claim_class: EvaluationClaimClass) -
 
 
 SUPPORT_BLOCK = EvaluationClaimValidationCode.SUPPORTED_OR_NOT_SUPPORTED_WITHOUT_COMPLETE_SUPPORT
+
+
+EXPECTED_ALLOWED_RESULT_KINDS = {
+    EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL: (
+        EvaluationResultKind.PAIRED_COMPARISON_RESULT,
+    ),
+    EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL: (
+        EvaluationResultKind.PAIRED_COMPARISON_RESULT,
+    ),
+    EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES: (
+        EvaluationResultKind.PAIRED_COMPARISON_RESULT,
+    ),
+    EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR: (
+        EvaluationResultKind.CALIBRATION_BIN_RESULT,
+        EvaluationResultKind.SCALAR_SCORE_RESULT,
+        EvaluationResultKind.DECOMPOSITION_RESULT,
+    ),
+    EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR: (
+        EvaluationResultKind.DISTRIBUTION_DIAGNOSTIC_RESULT,
+        EvaluationResultKind.SCALAR_SCORE_RESULT,
+    ),
+    EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR: (
+        EvaluationResultKind.ENSEMBLE_DIAGNOSTIC_RESULT,
+    ),
+    EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL: (
+        EvaluationResultKind.PAIRED_COMPARISON_RESULT,
+    ),
+    EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL: (
+        EvaluationResultKind.PAIRED_COMPARISON_RESULT,
+    ),
+}
+EXPECTED_EVIDENCE_GATE_POSTURES = {
+    EvaluationClaimDisposition.CLAIM_SUPPORTED: "eligible_for_later_evidence_gate_decision_only",
+    EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED: "claim_support_absent",
+    EvaluationClaimDisposition.CLAIM_INSUFFICIENT: "evidence_gate_use_blocked",
+    EvaluationClaimDisposition.CLAIM_BLOCKED: "evidence_gate_use_blocked",
+    EvaluationClaimDisposition.CLAIM_UNAVAILABLE: "no_substitution_or_evidence_gate_use",
+}
+
+
+def test_closed_acceptance_matrices_are_exact_and_exhaustive() -> None:
+    """Pin every matrix key and value instead of sampling representative rows."""
+    assert tuple(EXPECTED_ALLOWED_RESULT_KINDS) == tuple(EvaluationClaimClass)
+    assert evaluation_claim_module._ALLOWED_RESULT_KINDS == EXPECTED_ALLOWED_RESULT_KINDS
+    assert evaluation_claim_module._PAIRED_CLASSES == (
+        EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL,
+        EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL,
+        EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES,
+        EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL,
+        EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL,
+    )
+    assert evaluation_claim_module._NON_PAIRED_CLASSES == (
+        EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR,
+        EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR,
+        EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR,
+    )
+    assert set(evaluation_claim_module._PAIRED_CLASSES).isdisjoint(
+        evaluation_claim_module._NON_PAIRED_CLASSES
+    )
+    assert set(evaluation_claim_module._PAIRED_CLASSES) | set(
+        evaluation_claim_module._NON_PAIRED_CLASSES
+    ) == set(EvaluationClaimClass)
+    assert tuple(EXPECTED_EVIDENCE_GATE_POSTURES) == tuple(EvaluationClaimDisposition)
+    assert evaluation_claim_module._EVIDENCE_GATE_MATRIX == EXPECTED_EVIDENCE_GATE_POSTURES
 
 
 def _assert_standard_paired_matrix(claim_class: EvaluationClaimClass) -> None:
