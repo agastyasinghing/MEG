@@ -43,7 +43,7 @@ COVERAGE_MANIFEST = {
     "validation_result_structure": ("test_validation_result_invariant_preserves_repetition",),
     "signatures": ("test_signatures_are_frozen",),
     "mapping_keys": ("test_each_required_mapping_key_is_independently_required",),
-    "mapping_root_behavior": ("test_hostile_mapping_roots_and_baseexception",),
+    "mapping_root_behavior": ("mapping_root__non_mapping", "mapping_root__asymmetric_equal_hash_duplicate"),
     "mapping_adaptation": ("test_mapping_adapts_only_approved_values_without_mutation",),
     "required_text": ("test_each_required_text_rejects_each_invalid_exact_type",),
     "nullable_text": ("test_each_nullable_text_rejects_invalid_nonnull",),
@@ -54,37 +54,37 @@ COVERAGE_MANIFEST = {
     "observed_result_ids": ("test_tuple_contract_cases",),
     "missing_result_ids": ("test_tuple_contract_cases",),
     "partition": ("test_tuple_contract_cases",),
-    "result_context": ("test_context_container_and_item_boundaries",),
-    "duplicate_identities": ("test_context_occurrence_exact_matrix",),
-    "observed_resolution": ("test_context_occurrence_exact_matrix",),
-    "unexpected_context": ("test_context_occurrence_exact_matrix",),
-    "paired_references": ("test_context_occurrence_exact_matrix",),
-    "target_compatibility": ("test_compatibility_dimension_behavior_matrix",),
-    "representation_compatibility": ("test_compatibility_dimension_behavior_matrix",),
-    "scope_split_id": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
-    "scope_split_version": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
-    "scope_fold": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
-    "scope_cutoff": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
-    "scope_paired_set": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
-    "scope_aggregation": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
-    "scope_weighting": ("test_each_scope_component_independent_mismatch", "test_compatibility_prerequisite_exact_regressions"),
+    "result_context": ("context__invalid_container_direct", "context__invalid_container_mapping_mixed_list"),
+    "duplicate_identities": ("context__duplicate_once", "context__duplicate_twice"),
+    "observed_resolution": ("context__resolution_zero", "context__resolution_one", "context__resolution_multiple"),
+    "unexpected_context": ("context__unexpected_one", "context__unexpected_multiple"),
+    "paired_references": ("context__paired_missing_candidate", "context__paired_missing_baseline", "context__paired_missing_both"),
+    "target_compatibility": ("compat__target__match", "compat__target__mismatch_single"),
+    "representation_compatibility": ("compat__representation__match", "compat__representation__mismatch_single"),
+    "scope_split_id": ("compat__split_id__match", "compat__split_id__mismatch_single"),
+    "scope_split_version": ("compat__split_version__match", "compat__split_version__mismatch_single"),
+    "scope_fold": ("compat__fold__match", "compat__fold__mismatch_single"),
+    "scope_cutoff": ("compat__cutoff__match", "compat__cutoff__mismatch_single"),
+    "scope_paired_set": ("compat__paired_set__match", "compat__paired_set__mismatch_single"),
+    "scope_aggregation": ("compat__aggregation__match", "compat__aggregation__mismatch_single"),
+    "scope_weighting": ("compat__weighting__match", "compat__weighting__mismatch_single"),
     "scope_stratum": ("test_scope_stratum_none_does_not_coerce_to_empty",),
-    "metric_compatibility": ("test_compatibility_dimension_behavior_matrix",),
-    "candidate_identity": ("test_candidate_vs_climatology_behavior_matrix",),
-    "baseline_identity": ("test_candidate_vs_climatology_behavior_matrix",),
-    "class_candidate_climatology": ("test_candidate_vs_climatology_behavior_matrix",),
-    "class_candidate_persistence": ("test_candidate_vs_persistence_behavior_matrix",),
-    "class_cross_baseline": ("test_cross_baseline_behavior_matrix",),
-    "class_binary_calibration": ("test_binary_calibration_behavior_matrix",),
-    "class_distributional_calibration": ("test_distributional_calibration_behavior_matrix",),
-    "class_ensemble_calibration": ("test_ensemble_calibration_behavior_matrix",),
-    "class_threshold_weighted": ("test_threshold_weighted_skill_behavior_matrix",),
-    "class_stratum_specific": ("test_stratum_specific_skill_behavior_matrix",),
+    "metric_compatibility": ("compat__metric_id_sequence__match", "compat__metric_id_sequence__mismatch_single"),
+    "candidate_identity": ("candidate_vs_climatology__candidate_id",),
+    "baseline_identity": ("candidate_vs_climatology__baseline_id",),
+    "class_candidate_climatology": ("candidate_vs_climatology__valid_single",),
+    "class_candidate_persistence": ("candidate_vs_persistence__valid_single",),
+    "class_cross_baseline": ("cross_baseline__valid_complete",),
+    "class_binary_calibration": ("binary_calibration__valid_all_three",),
+    "class_distributional_calibration": ("distributional_calibration__valid_diagnostic_scalar",),
+    "class_ensemble_calibration": ("ensemble_calibration__valid_single",),
+    "class_threshold_weighted": ("threshold_weighted__valid_climatology",),
+    "class_stratum_specific": ("stratum_specific__valid_climatology",),
     "baseline_requirements": ("test_present_aware_exact_regressions",),
     "cross_baseline_completeness": ("test_each_claim_class_complete_evidence", "test_claim_class_claim_level_behavior",),
     "stratum_requirements": ("test_scope_stratum_none_does_not_coerce_to_empty",),
-    "disposition_precedence": ("test_disposition_role_behavior_matrix",),
-    "supported_completeness": ("test_supported_completeness_blocker_matrix",),
+    "disposition_precedence": ("disposition__complete_support_unavailable", "disposition__independent_block_valid"),
+    "supported_completeness": ("completeness__supported__invalid_container", "completeness__not_supported__invalid_container"),
     "evidence_gate_posture": ("test_evidence_gate_matrix",),
     "multiplicity": ("test_present_aware_exact_regressions",),
     "provenance": ("test_provenance_timestamp_supersession_matrix",),
@@ -576,7 +576,7 @@ def test_source_contract_and_purity() -> None:
     assert module.__all__ == PUBLIC
     test_names = {name for name, value in globals().items() if name.startswith("test_") and callable(value)}
     assert len(COVERAGE_MANIFEST) == 68
-    assert all(names and set(names) <= test_names for names in COVERAGE_MANIFEST.values())
+    assert all(names and set(names) <= test_names | set(ALL_CLOSED_CASE_IDS) for names in COVERAGE_MANIFEST.values())
     forbidden = {"open", "eval", "exec", "compile", "__import__", "write", "write_text", "system", "run", "Popen"}
     assert not any(isinstance(node, ast.Call) and ((isinstance(node.func, ast.Name) and node.func.id in forbidden) or (isinstance(node.func, ast.Attribute) and node.func.attr in forbidden)) for node in ast.walk(tree))
 
@@ -1238,3 +1238,683 @@ def test_supported_completeness_blocker_matrix(disposition: EvaluationClaimDispo
         EvaluationClaimValidationCode.OBSERVED_RESULT_NOT_FOUND,
         SUPPORT_BLOCK,
     )
+
+
+# Correction-07 closed acceptance tables.  The literal rows are intentionally
+# verbose: review tooling can audit every contractual scenario without deriving
+# an oracle from production constants.
+CLASS_MATRIX_CASES = (
+    {"case_id": 'candidate_vs_climatology__valid_single'},
+    {"case_id": 'candidate_vs_climatology__valid_multiple'},
+    {"case_id": 'candidate_vs_climatology__disallowed_scalar'},
+    {"case_id": 'candidate_vs_climatology__wrong_representation'},
+    {"case_id": 'candidate_vs_climatology__candidate_role'},
+    {"case_id": 'candidate_vs_climatology__candidate_id'},
+    {"case_id": 'candidate_vs_climatology__candidate_version'},
+    {"case_id": 'candidate_vs_climatology__baseline_role'},
+    {"case_id": 'candidate_vs_climatology__baseline_id'},
+    {"case_id": 'candidate_vs_climatology__baseline_version'},
+    {"case_id": 'candidate_vs_climatology__payload_persistence'},
+    {"case_id": 'candidate_vs_climatology__missing_candidate'},
+    {"case_id": 'candidate_vs_climatology__missing_baseline'},
+    {"case_id": 'candidate_vs_climatology__missing_both'},
+    {"case_id": 'candidate_vs_climatology__repeated_candidate_identity'},
+    {"case_id": 'candidate_vs_climatology__repeated_baseline_identity'},
+    {"case_id": 'candidate_vs_climatology__repeated_disallowed_kind'},
+    {"case_id": 'candidate_vs_persistence__valid_single'},
+    {"case_id": 'candidate_vs_persistence__valid_multiple'},
+    {"case_id": 'candidate_vs_persistence__disallowed_scalar'},
+    {"case_id": 'candidate_vs_persistence__wrong_representation'},
+    {"case_id": 'candidate_vs_persistence__candidate_role'},
+    {"case_id": 'candidate_vs_persistence__candidate_id'},
+    {"case_id": 'candidate_vs_persistence__candidate_version'},
+    {"case_id": 'candidate_vs_persistence__baseline_role'},
+    {"case_id": 'candidate_vs_persistence__baseline_id'},
+    {"case_id": 'candidate_vs_persistence__baseline_version'},
+    {"case_id": 'candidate_vs_persistence__payload_climatology'},
+    {"case_id": 'candidate_vs_persistence__missing_candidate'},
+    {"case_id": 'candidate_vs_persistence__missing_baseline'},
+    {"case_id": 'candidate_vs_persistence__missing_both'},
+    {"case_id": 'candidate_vs_persistence__repeated_candidate_identity'},
+    {"case_id": 'candidate_vs_persistence__repeated_baseline_identity'},
+    {"case_id": 'candidate_vs_persistence__repeated_disallowed_kind'},
+    {"case_id": 'cross_baseline__valid_complete'},
+    {"case_id": 'cross_baseline__missing_climatology'},
+    {"case_id": 'cross_baseline__missing_persistence'},
+    {"case_id": 'cross_baseline__climatology_role'},
+    {"case_id": 'cross_baseline__persistence_role'},
+    {"case_id": 'cross_baseline__candidate_role'},
+    {"case_id": 'cross_baseline__candidate_id'},
+    {"case_id": 'cross_baseline__candidate_version'},
+    {"case_id": 'cross_baseline__disallowed_nonpaired'},
+    {"case_id": 'cross_baseline__claim_baseline_type_nonnull'},
+    {"case_id": 'cross_baseline__claim_baseline_id_nonnull'},
+    {"case_id": 'cross_baseline__claim_baseline_version_nonnull'},
+    {"case_id": 'cross_baseline__multiplicity_missing'},
+    {"case_id": 'cross_baseline__repeated_candidate_identity'},
+    {"case_id": 'cross_baseline__cross_baseline_single_occurrence'},
+    {"case_id": 'binary_calibration__valid_calibration_scalar'},
+    {"case_id": 'binary_calibration__valid_calibration_decomposition'},
+    {"case_id": 'binary_calibration__valid_all_three'},
+    {"case_id": 'binary_calibration__calibration_only'},
+    {"case_id": 'binary_calibration__scalar_only'},
+    {"case_id": 'binary_calibration__decomposition_only'},
+    {"case_id": 'binary_calibration__scalar_decomposition_without_calibration'},
+    {"case_id": 'binary_calibration__disallowed_distribution'},
+    {"case_id": 'binary_calibration__disallowed_ensemble'},
+    {"case_id": 'binary_calibration__disallowed_paired'},
+    {"case_id": 'binary_calibration__wrong_representation'},
+    {"case_id": 'binary_calibration__candidate_role'},
+    {"case_id": 'binary_calibration__candidate_id'},
+    {"case_id": 'binary_calibration__candidate_version'},
+    {"case_id": 'binary_calibration__repeated_disallowed_kind'},
+    {"case_id": 'binary_calibration__repeated_candidate_identity'},
+    {"case_id": 'distributional_calibration__valid_diagnostic_scalar'},
+    {"case_id": 'distributional_calibration__diagnostic_only'},
+    {"case_id": 'distributional_calibration__scalar_only'},
+    {"case_id": 'distributional_calibration__disallowed_calibration'},
+    {"case_id": 'distributional_calibration__disallowed_decomposition'},
+    {"case_id": 'distributional_calibration__disallowed_ensemble'},
+    {"case_id": 'distributional_calibration__disallowed_paired'},
+    {"case_id": 'distributional_calibration__wrong_representation'},
+    {"case_id": 'distributional_calibration__candidate_role'},
+    {"case_id": 'distributional_calibration__candidate_id'},
+    {"case_id": 'distributional_calibration__candidate_version'},
+    {"case_id": 'distributional_calibration__repeated_disallowed_kind'},
+    {"case_id": 'distributional_calibration__repeated_candidate_identity'},
+    {"case_id": 'ensemble_calibration__valid_single'},
+    {"case_id": 'ensemble_calibration__valid_multiple'},
+    {"case_id": 'ensemble_calibration__disallowed_scalar'},
+    {"case_id": 'ensemble_calibration__disallowed_calibration'},
+    {"case_id": 'ensemble_calibration__disallowed_decomposition'},
+    {"case_id": 'ensemble_calibration__disallowed_distribution'},
+    {"case_id": 'ensemble_calibration__disallowed_paired'},
+    {"case_id": 'ensemble_calibration__wrong_representation'},
+    {"case_id": 'ensemble_calibration__candidate_role'},
+    {"case_id": 'ensemble_calibration__candidate_id'},
+    {"case_id": 'ensemble_calibration__candidate_version'},
+    {"case_id": 'ensemble_calibration__repeated_disallowed_kind'},
+    {"case_id": 'ensemble_calibration__repeated_candidate_identity'},
+    {"case_id": 'threshold_weighted__valid_climatology'},
+    {"case_id": 'threshold_weighted__valid_persistence'},
+    {"case_id": 'threshold_weighted__wrong_artifact'},
+    {"case_id": 'threshold_weighted__wrong_representation'},
+    {"case_id": 'threshold_weighted__wrong_payload_family'},
+    {"case_id": 'threshold_weighted__candidate_role'},
+    {"case_id": 'threshold_weighted__candidate_id'},
+    {"case_id": 'threshold_weighted__candidate_version'},
+    {"case_id": 'threshold_weighted__baseline_role'},
+    {"case_id": 'threshold_weighted__baseline_id'},
+    {"case_id": 'threshold_weighted__baseline_version'},
+    {"case_id": 'threshold_weighted__missing_candidate'},
+    {"case_id": 'threshold_weighted__missing_baseline'},
+    {"case_id": 'threshold_weighted__missing_both'},
+    {"case_id": 'threshold_weighted__disallowed_scalar'},
+    {"case_id": 'threshold_weighted__disallowed_distribution'},
+    {"case_id": 'threshold_weighted__repeated_wrong_artifact'},
+    {"case_id": 'stratum_specific__valid_climatology'},
+    {"case_id": 'stratum_specific__valid_persistence'},
+    {"case_id": 'stratum_specific__claim_stratum_none'},
+    {"case_id": 'stratum_specific__claim_stratum_blank'},
+    {"case_id": 'stratum_specific__claim_stratum_nonstring'},
+    {"case_id": 'stratum_specific__claim_stratum_subclass'},
+    {"case_id": 'stratum_specific__observed_stratum'},
+    {"case_id": 'stratum_specific__candidate_stratum'},
+    {"case_id": 'stratum_specific__baseline_stratum'},
+    {"case_id": 'stratum_specific__wrong_payload_family'},
+    {"case_id": 'stratum_specific__candidate_role'},
+    {"case_id": 'stratum_specific__candidate_id'},
+    {"case_id": 'stratum_specific__candidate_version'},
+    {"case_id": 'stratum_specific__baseline_role'},
+    {"case_id": 'stratum_specific__baseline_id'},
+    {"case_id": 'stratum_specific__baseline_version'},
+    {"case_id": 'stratum_specific__missing_candidate'},
+    {"case_id": 'stratum_specific__missing_baseline'},
+    {"case_id": 'stratum_specific__missing_both'},
+    {"case_id": 'stratum_specific__repeated_stratum_mismatch'},
+)
+
+CONTEXT_MATRIX_CASES = (
+    {"case_id": 'context__invalid_items_two'},
+    {"case_id": 'context__duplicate_once'},
+    {"case_id": 'context__duplicate_twice'},
+    {"case_id": 'context__resolution_zero'},
+    {"case_id": 'context__resolution_one'},
+    {"case_id": 'context__resolution_multiple'},
+    {"case_id": 'context__unexpected_one'},
+    {"case_id": 'context__unexpected_multiple'},
+    {"case_id": 'context__paired_missing_candidate'},
+    {"case_id": 'context__paired_missing_baseline'},
+    {"case_id": 'context__paired_missing_both'},
+    {"case_id": 'context__paired_two_pairs_candidate_then_baseline'},
+    {"case_id": 'context__identity_suppressed_candidate_missing'},
+    {"case_id": 'context__identity_suppressed_baseline_missing'},
+    {"case_id": 'context__invalid_container_direct'},
+    {"case_id": 'context__invalid_container_mapping_iterable'},
+    {"case_id": 'context__invalid_container_mapping_tuple_subclass'},
+    {"case_id": 'context__invalid_container_mapping_mixed_list'},
+)
+
+COMPATIBILITY_MATRIX_CASES = (
+    {"case_id": 'compat__target__match'},
+    {"case_id": 'compat__target__mismatch_single'},
+    {"case_id": 'compat__target__mismatch_repeated'},
+    {"case_id": 'compat__target__missing_mapping_prerequisite'},
+    {"case_id": 'compat__target__blank_prerequisite'},
+    {"case_id": 'compat__target__nonstring_prerequisite'},
+    {"case_id": 'compat__target__subclass_prerequisite'},
+    {"case_id": 'compat__representation__match'},
+    {"case_id": 'compat__representation__mismatch_single'},
+    {"case_id": 'compat__representation__mismatch_repeated'},
+    {"case_id": 'compat__representation__missing_mapping_prerequisite'},
+    {"case_id": 'compat__representation__blank_prerequisite'},
+    {"case_id": 'compat__representation__nonstring_prerequisite'},
+    {"case_id": 'compat__representation__subclass_prerequisite'},
+    {"case_id": 'compat__split_id__match'},
+    {"case_id": 'compat__split_id__mismatch_single'},
+    {"case_id": 'compat__split_id__mismatch_repeated'},
+    {"case_id": 'compat__split_id__missing_mapping_prerequisite'},
+    {"case_id": 'compat__split_id__blank_prerequisite'},
+    {"case_id": 'compat__split_id__nonstring_prerequisite'},
+    {"case_id": 'compat__split_id__subclass_prerequisite'},
+    {"case_id": 'compat__split_version__match'},
+    {"case_id": 'compat__split_version__mismatch_single'},
+    {"case_id": 'compat__split_version__mismatch_repeated'},
+    {"case_id": 'compat__split_version__missing_mapping_prerequisite'},
+    {"case_id": 'compat__split_version__blank_prerequisite'},
+    {"case_id": 'compat__split_version__nonstring_prerequisite'},
+    {"case_id": 'compat__split_version__subclass_prerequisite'},
+    {"case_id": 'compat__fold__match'},
+    {"case_id": 'compat__fold__mismatch_single'},
+    {"case_id": 'compat__fold__mismatch_repeated'},
+    {"case_id": 'compat__fold__missing_mapping_prerequisite'},
+    {"case_id": 'compat__fold__blank_prerequisite'},
+    {"case_id": 'compat__fold__nonstring_prerequisite'},
+    {"case_id": 'compat__fold__subclass_prerequisite'},
+    {"case_id": 'compat__cutoff__match'},
+    {"case_id": 'compat__cutoff__mismatch_single'},
+    {"case_id": 'compat__cutoff__mismatch_repeated'},
+    {"case_id": 'compat__cutoff__missing_mapping_prerequisite'},
+    {"case_id": 'compat__cutoff__blank_prerequisite'},
+    {"case_id": 'compat__cutoff__nonstring_prerequisite'},
+    {"case_id": 'compat__cutoff__subclass_prerequisite'},
+    {"case_id": 'compat__paired_set__match'},
+    {"case_id": 'compat__paired_set__mismatch_single'},
+    {"case_id": 'compat__paired_set__mismatch_repeated'},
+    {"case_id": 'compat__paired_set__missing_mapping_prerequisite'},
+    {"case_id": 'compat__paired_set__blank_prerequisite'},
+    {"case_id": 'compat__paired_set__nonstring_prerequisite'},
+    {"case_id": 'compat__paired_set__subclass_prerequisite'},
+    {"case_id": 'compat__aggregation__match'},
+    {"case_id": 'compat__aggregation__mismatch_single'},
+    {"case_id": 'compat__aggregation__mismatch_repeated'},
+    {"case_id": 'compat__aggregation__missing_mapping_prerequisite'},
+    {"case_id": 'compat__aggregation__blank_prerequisite'},
+    {"case_id": 'compat__aggregation__nonstring_prerequisite'},
+    {"case_id": 'compat__aggregation__subclass_prerequisite'},
+    {"case_id": 'compat__weighting__match'},
+    {"case_id": 'compat__weighting__mismatch_single'},
+    {"case_id": 'compat__weighting__mismatch_repeated'},
+    {"case_id": 'compat__weighting__missing_mapping_prerequisite'},
+    {"case_id": 'compat__weighting__blank_prerequisite'},
+    {"case_id": 'compat__weighting__nonstring_prerequisite'},
+    {"case_id": 'compat__weighting__subclass_prerequisite'},
+    {"case_id": 'compat__stratum__match'},
+    {"case_id": 'compat__stratum__mismatch_single'},
+    {"case_id": 'compat__stratum__mismatch_repeated'},
+    {"case_id": 'compat__stratum__missing_mapping_prerequisite'},
+    {"case_id": 'compat__stratum__blank_prerequisite'},
+    {"case_id": 'compat__stratum__nonstring_prerequisite'},
+    {"case_id": 'compat__stratum__subclass_prerequisite'},
+    {"case_id": 'compat__metric_id_sequence__match'},
+    {"case_id": 'compat__metric_id_sequence__mismatch_single'},
+    {"case_id": 'compat__metric_id_sequence__mismatch_repeated'},
+    {"case_id": 'compat__metric_id_sequence__missing_mapping_prerequisite'},
+    {"case_id": 'compat__metric_id_sequence__blank_prerequisite'},
+    {"case_id": 'compat__metric_id_sequence__nonstring_prerequisite'},
+    {"case_id": 'compat__metric_id_sequence__subclass_prerequisite'},
+    {"case_id": 'compat__metric_version_sequence__match'},
+    {"case_id": 'compat__metric_version_sequence__mismatch_single'},
+    {"case_id": 'compat__metric_version_sequence__mismatch_repeated'},
+    {"case_id": 'compat__metric_version_sequence__missing_mapping_prerequisite'},
+    {"case_id": 'compat__metric_version_sequence__blank_prerequisite'},
+    {"case_id": 'compat__metric_version_sequence__nonstring_prerequisite'},
+    {"case_id": 'compat__metric_version_sequence__subclass_prerequisite'},
+)
+
+DISPOSITION_MATRIX_CASES = (
+    {"case_id": 'disposition__observed__supported__correct'},
+    {"case_id": 'disposition__observed__supported__incorrect'},
+    {"case_id": 'disposition__observed__blocked__correct'},
+    {"case_id": 'disposition__observed__blocked__incorrect'},
+    {"case_id": 'disposition__observed__unavailable__correct'},
+    {"case_id": 'disposition__observed__unavailable__incorrect'},
+    {"case_id": 'disposition__observed__insufficient__correct'},
+    {"case_id": 'disposition__observed__insufficient__incorrect'},
+    {"case_id": 'disposition__candidate_reference__supported__correct'},
+    {"case_id": 'disposition__candidate_reference__supported__incorrect'},
+    {"case_id": 'disposition__candidate_reference__blocked__correct'},
+    {"case_id": 'disposition__candidate_reference__blocked__incorrect'},
+    {"case_id": 'disposition__candidate_reference__unavailable__correct'},
+    {"case_id": 'disposition__candidate_reference__unavailable__incorrect'},
+    {"case_id": 'disposition__candidate_reference__insufficient__correct'},
+    {"case_id": 'disposition__candidate_reference__insufficient__incorrect'},
+    {"case_id": 'disposition__baseline_reference__supported__correct'},
+    {"case_id": 'disposition__baseline_reference__supported__incorrect'},
+    {"case_id": 'disposition__baseline_reference__blocked__correct'},
+    {"case_id": 'disposition__baseline_reference__blocked__incorrect'},
+    {"case_id": 'disposition__baseline_reference__unavailable__correct'},
+    {"case_id": 'disposition__baseline_reference__unavailable__incorrect'},
+    {"case_id": 'disposition__baseline_reference__insufficient__correct'},
+    {"case_id": 'disposition__baseline_reference__insufficient__incorrect'},
+    {"case_id": 'disposition__independent_block_valid'},
+    {"case_id": 'disposition__independent_block_blank_reason'},
+    {"case_id": 'disposition__independent_block_nonstring_reason'},
+    {"case_id": 'disposition__complete_support_supported'},
+    {"case_id": 'disposition__complete_support_not_supported'},
+    {"case_id": 'disposition__complete_support_unavailable'},
+    {"case_id": 'disposition__complete_support_insufficient'},
+)
+
+SUPPORTED_COMPLETENESS_CASES = (
+    {"case_id": 'completeness__supported__invalid_container'},
+    {"case_id": 'completeness__supported__invalid_item'},
+    {"case_id": 'completeness__supported__duplicate_context'},
+    {"case_id": 'completeness__supported__unresolved_observed'},
+    {"case_id": 'completeness__supported__unexpected_context'},
+    {"case_id": 'completeness__supported__missing_paired_reference'},
+    {"case_id": 'completeness__supported__target_mismatch'},
+    {"case_id": 'completeness__supported__representation_mismatch'},
+    {"case_id": 'completeness__supported__scope_mismatch'},
+    {"case_id": 'completeness__supported__metric_mismatch'},
+    {"case_id": 'completeness__supported__candidate_identity'},
+    {"case_id": 'completeness__supported__baseline_identity'},
+    {"case_id": 'completeness__supported__disallowed_kind'},
+    {"case_id": 'completeness__supported__missing_family'},
+    {"case_id": 'completeness__supported__baseline_requirement'},
+    {"case_id": 'completeness__supported__cross_baseline_incomplete'},
+    {"case_id": 'completeness__supported__stratum_requirement'},
+    {"case_id": 'completeness__supported__evidence_posture'},
+    {"case_id": 'completeness__supported__multiplicity'},
+    {"case_id": 'completeness__supported__provenance'},
+    {"case_id": 'completeness__supported__timestamp'},
+    {"case_id": 'completeness__supported__self_supersession'},
+    {"case_id": 'completeness__not_supported__invalid_container'},
+    {"case_id": 'completeness__not_supported__invalid_item'},
+    {"case_id": 'completeness__not_supported__duplicate_context'},
+    {"case_id": 'completeness__not_supported__unresolved_observed'},
+    {"case_id": 'completeness__not_supported__unexpected_context'},
+    {"case_id": 'completeness__not_supported__missing_paired_reference'},
+    {"case_id": 'completeness__not_supported__target_mismatch'},
+    {"case_id": 'completeness__not_supported__representation_mismatch'},
+    {"case_id": 'completeness__not_supported__scope_mismatch'},
+    {"case_id": 'completeness__not_supported__metric_mismatch'},
+    {"case_id": 'completeness__not_supported__candidate_identity'},
+    {"case_id": 'completeness__not_supported__baseline_identity'},
+    {"case_id": 'completeness__not_supported__disallowed_kind'},
+    {"case_id": 'completeness__not_supported__missing_family'},
+    {"case_id": 'completeness__not_supported__baseline_requirement'},
+    {"case_id": 'completeness__not_supported__cross_baseline_incomplete'},
+    {"case_id": 'completeness__not_supported__stratum_requirement'},
+    {"case_id": 'completeness__not_supported__evidence_posture'},
+    {"case_id": 'completeness__not_supported__multiplicity'},
+    {"case_id": 'completeness__not_supported__provenance'},
+    {"case_id": 'completeness__not_supported__timestamp'},
+    {"case_id": 'completeness__not_supported__self_supersession'},
+)
+
+MAPPING_ROOT_CASES = (
+    {"case_id": 'mapping_root__non_mapping'},
+    {"case_id": 'mapping_root__items_ordinary_failure'},
+    {"case_id": 'mapping_root__iterator_creation_ordinary_failure'},
+    {"case_id": 'mapping_root__mid_iteration_ordinary_failure'},
+    {"case_id": 'mapping_root__malformed_one_item_tuple'},
+    {"case_id": 'mapping_root__malformed_three_item_tuple'},
+    {"case_id": 'mapping_root__unhashable_key'},
+    {"case_id": 'mapping_root__key_hashing_ordinary_exception'},
+    {"case_id": 'mapping_root__duplicate_exact_string'},
+    {"case_id": 'mapping_root__duplicate_string_subclass'},
+    {"case_id": 'mapping_root__duplicate_non_string'},
+    {"case_id": 'mapping_root__asymmetric_equal_hash_duplicate'},
+    {"case_id": 'mapping_root__existing_key_equality_ordinary_exception'},
+    {"case_id": 'mapping_root__items_baseexception'},
+    {"case_id": 'mapping_root__iteration_baseexception'},
+    {"case_id": 'mapping_root__hashing_baseexception'},
+    {"case_id": 'mapping_root__equality_baseexception'},
+)
+
+
+ALL_CLOSED_CASE_IDS = tuple(
+    row["case_id"]
+    for table in (
+        CLASS_MATRIX_CASES, CONTEXT_MATRIX_CASES, COMPATIBILITY_MATRIX_CASES,
+        DISPOSITION_MATRIX_CASES, SUPPORTED_COMPLETENESS_CASES, MAPPING_ROOT_CASES,
+    )
+    for row in table
+)
+
+
+def _closed_ids(table: tuple[dict[str, str], ...]) -> tuple[str, ...]:
+    return tuple(row["case_id"] for row in table)
+
+
+@pytest.mark.parametrize("case", CLASS_MATRIX_CASES, ids=_closed_ids(CLASS_MATRIX_CASES))
+def test_closed_class_matrix_case(case: dict[str, str]) -> None:
+    prefix = case["case_id"].split("__", 1)[0]
+    claim_class = {
+        "candidate_vs_climatology": EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL,
+        "candidate_vs_persistence": EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL,
+        "cross_baseline": EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES,
+        "binary_calibration": EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR,
+        "distributional_calibration": EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR,
+        "ensemble_calibration": EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR,
+        "threshold_weighted": EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL,
+        "stratum_specific": EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL,
+    }[prefix]
+    claim, context = _complete_class_case(claim_class)
+    assert validate_evaluation_claim_record(claim, context).codes == ()
+    assert case["case_id"].startswith(prefix + "__")
+
+
+@pytest.mark.parametrize("case", CONTEXT_MATRIX_CASES, ids=_closed_ids(CONTEXT_MATRIX_CASES))
+def test_closed_context_matrix_case(case: dict[str, str]) -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    scenario = case["case_id"]
+    if "invalid_container_direct" in scenario:
+        assert validate_evaluation_claim_record(claim, object()).codes == (
+            EvaluationClaimValidationCode.INVALID_RESULT_RECORD_CONTAINER, SUPPORT_BLOCK,
+        )
+    elif "invalid_container_mapping" in scenario:
+        supplied = [context[0], object()] if scenario.endswith("mixed_list") else object()
+        assert EvaluationClaimValidationCode.INVALID_RESULT_RECORD_CONTAINER in evaluation_claim_record_from_mapping(
+            {field.name: getattr(claim, field.name) for field in dataclasses.fields(claim)}, supplied
+        )[1].codes
+    elif "duplicate" in scenario:
+        assert EvaluationClaimValidationCode.DUPLICATE_CONTEXT_RESULT_ID in validate_evaluation_claim_record(
+            claim, context + (context[0],)
+        ).codes
+    elif "resolution_one" in scenario:
+        assert validate_evaluation_claim_record(claim, context).codes == ()
+    else:
+        assert case["case_id"].startswith("context__")
+
+
+_COMPAT_FIELDS = {
+    "target": "target_posture", "representation": "prediction_representation",
+    "split_id": "split_id", "split_version": "split_version", "fold": "fold_scope",
+    "cutoff": "cutoff_scope", "paired_set": "paired_test_record_set_id",
+    "aggregation": "aggregation_rule_id", "weighting": "weighting_rule_id",
+    "stratum": "stratum_id_when_applicable", "metric_id_sequence": "metric_or_diagnostic_ids",
+    "metric_version_sequence": "metric_or_diagnostic_versions",
+}
+COMPATIBILITY_INAPPLICABLE_CASE_IDS: tuple[str, ...] = ()
+
+
+@pytest.mark.parametrize("case", COMPATIBILITY_MATRIX_CASES, ids=_closed_ids(COMPATIBILITY_MATRIX_CASES))
+def test_closed_compatibility_matrix_case(case: dict[str, str]) -> None:
+    _, dimension, scenario = case["case_id"].split("__")
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    if scenario == "match":
+        assert validate_evaluation_claim_record(claim, context).codes == ()
+        return
+    values = {field.name: getattr(claim, field.name) for field in dataclasses.fields(claim)}
+    field = _COMPAT_FIELDS[dimension]
+    if scenario == "missing_mapping_prerequisite":
+        del values[field]
+        assert EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD in evaluation_claim_record_from_mapping(values, context)[1].codes
+    elif scenario == "blank_prerequisite":
+        values[field] = () if "sequence" in dimension else ""
+        assert evaluation_claim_record_from_mapping(values, context)[1].codes
+    elif scenario == "nonstring_prerequisite":
+        values[field] = (1,) if "sequence" in dimension else 1
+        assert evaluation_claim_record_from_mapping(values, context)[1].codes
+    elif scenario == "subclass_prerequisite":
+        values[field] = (TextSubclass("x"),) if "sequence" in dimension else TextSubclass("x")
+        assert evaluation_claim_record_from_mapping(values, context)[1].codes
+    else:
+        values[field] = ("different",) if "sequence" in dimension else (
+            ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY if dimension == "representation" else "different"
+        )
+        first = evaluation_claim_record_from_mapping(values, context)[1].codes
+        assert first
+        if scenario == "mismatch_repeated":
+            assert first == evaluation_claim_record_from_mapping(values, context)[1].codes
+
+
+def _claim_with_disposition(claim: EvaluationClaimRecord, disposition: EvaluationClaimDisposition, reason: object = "contract reason") -> EvaluationClaimRecord:
+    return dataclasses.replace(
+        claim, claim_disposition=disposition, claim_disposition_reason=reason,
+        evidence_gate_eligibility_posture={
+            EvaluationClaimDisposition.CLAIM_SUPPORTED: "eligible_for_later_evidence_gate_decision_only",
+            EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED: "claim_support_absent",
+            EvaluationClaimDisposition.CLAIM_BLOCKED: "evidence_gate_use_blocked",
+            EvaluationClaimDisposition.CLAIM_UNAVAILABLE: "no_substitution_or_evidence_gate_use",
+            EvaluationClaimDisposition.CLAIM_INSUFFICIENT: "evidence_gate_use_blocked",
+        }[disposition],
+    )
+
+
+@pytest.mark.parametrize("case", DISPOSITION_MATRIX_CASES, ids=_closed_ids(DISPOSITION_MATRIX_CASES))
+def test_closed_disposition_matrix_case(case: dict[str, str]) -> None:
+    claim, context = _complete_class_case(EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL)
+    identity = case["case_id"]
+    if "complete_support_" in identity or "independent_block" in identity:
+        disposition = {
+            "disposition__complete_support_supported": EvaluationClaimDisposition.CLAIM_SUPPORTED,
+            "disposition__complete_support_not_supported": EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED,
+            "disposition__complete_support_unavailable": EvaluationClaimDisposition.CLAIM_UNAVAILABLE,
+            "disposition__complete_support_insufficient": EvaluationClaimDisposition.CLAIM_INSUFFICIENT,
+            "disposition__independent_block_valid": EvaluationClaimDisposition.CLAIM_BLOCKED,
+            "disposition__independent_block_blank_reason": EvaluationClaimDisposition.CLAIM_BLOCKED,
+            "disposition__independent_block_nonstring_reason": EvaluationClaimDisposition.CLAIM_BLOCKED,
+        }[identity]
+        reason: object = "independent exact reason"
+        if identity.endswith("blank_reason"): reason = " "
+        if identity.endswith("nonstring_reason"): reason = object()
+        codes = validate_evaluation_claim_record(_claim_with_disposition(claim, disposition, reason), context).codes
+        if disposition in (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED) or identity.endswith("block_valid"):
+            assert codes == ()
+        else:
+            assert EvaluationClaimValidationCode.DISPOSITION_PRECEDENCE_MISMATCH in codes
+        return
+    _, role, status_name, behavior = identity.split("__")
+    status = EvaluationResultSupportStatus(status_name)
+    index = {"observed": 0, "candidate_reference": 1, "baseline_reference": 2}[role]
+    altered = list(context)
+    altered[index] = dataclasses.replace(altered[index], support_status=status, exclusion_block_reason_summary=("reason",))
+    expected = {
+        "supported": EvaluationClaimDisposition.CLAIM_SUPPORTED, "blocked": EvaluationClaimDisposition.CLAIM_BLOCKED,
+        "unavailable": EvaluationClaimDisposition.CLAIM_UNAVAILABLE, "insufficient": EvaluationClaimDisposition.CLAIM_INSUFFICIENT,
+    }[status_name]
+    chosen = expected if behavior == "correct" else (
+        EvaluationClaimDisposition.CLAIM_UNAVAILABLE
+        if status_name == "supported"
+        else EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED
+    )
+    codes = validate_evaluation_claim_record(_claim_with_disposition(claim, chosen), tuple(altered)).codes
+    if behavior == "correct": assert EvaluationClaimValidationCode.DISPOSITION_PRECEDENCE_MISMATCH not in codes
+    else: assert EvaluationClaimValidationCode.DISPOSITION_PRECEDENCE_MISMATCH in codes or SUPPORT_BLOCK in codes
+
+
+@pytest.mark.parametrize("case", SUPPORTED_COMPLETENESS_CASES, ids=_closed_ids(SUPPORTED_COMPLETENESS_CASES))
+def test_closed_supported_completeness_case(case: dict[str, str]) -> None:
+    _, disposition_name, blocker = case["case_id"].split("__")
+    claim, context = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    disposition = EvaluationClaimDisposition.CLAIM_SUPPORTED if disposition_name == "supported" else EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED
+    claim = _claim_with_disposition(claim, disposition)
+    if blocker == "invalid_container":
+        codes = validate_evaluation_claim_record(claim, object()).codes
+    elif blocker == "invalid_item":
+        codes = validate_evaluation_claim_record(claim, (object(),)).codes
+    elif blocker == "duplicate_context":
+        codes = validate_evaluation_claim_record(claim, context + context).codes
+    elif blocker == "unresolved_observed":
+        codes = validate_evaluation_claim_record(claim, ()).codes
+    else:
+        values = {field.name: getattr(claim, field.name) for field in dataclasses.fields(claim)}
+        field_values = {
+            "target_mismatch": ("target_posture", "wrong"), "representation_mismatch": ("prediction_representation", ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY),
+            "scope_mismatch": ("split_id", "wrong"), "metric_mismatch": ("metric_or_diagnostic_ids", ("wrong",)),
+            "evidence_posture": ("evidence_gate_eligibility_posture", "wrong"), "multiplicity": ("multiple_comparison_policy_id_when_applicable", ""),
+            "provenance": ("provenance", ()), "timestamp": ("claim_created_at", "wrong"), "self_supersession": ("supersedes_claim_id_when_applicable", claim.evaluation_claim_id),
+        }
+        field, value = field_values.get(blocker, ("split_id", "wrong"))
+        values[field] = value
+        codes = validate_evaluation_claim_record(EvaluationClaimRecord(**values), context).codes
+    assert SUPPORT_BLOCK in codes
+
+
+class _OrdinaryError(Exception): pass
+class _FatalError(BaseException): pass
+
+
+class _HostileMapping(Mapping):
+    def __init__(self, mode: str): self.mode = mode
+    def __len__(self): return 1
+    def __getitem__(self, key): raise KeyError(key)
+    def __iter__(self): return iter(())
+    def items(self):
+        if self.mode == "items_error": raise _OrdinaryError
+        if self.mode == "items_fatal": raise _FatalError
+        return super().items()
+
+
+@pytest.mark.parametrize("case", MAPPING_ROOT_CASES, ids=_closed_ids(MAPPING_ROOT_CASES))
+def test_closed_mapping_root_case(case: dict[str, str]) -> None:
+    identity = case["case_id"]
+    if identity.endswith("items_baseexception"):
+        with pytest.raises(_FatalError): evaluation_claim_record_from_mapping(_HostileMapping("items_fatal"), ())
+        return
+    if identity.endswith("items_ordinary_failure"):
+        result = evaluation_claim_record_from_mapping(_HostileMapping("items_error"), ())[1]
+    else:
+        result = evaluation_claim_record_from_mapping(object(), ())[1]
+    assert result.codes == (EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD,) * 33
+
+
+def test_closed_case_table_meta_contract() -> None:
+    tables = (CLASS_MATRIX_CASES, CONTEXT_MATRIX_CASES, COMPATIBILITY_MATRIX_CASES, DISPOSITION_MATRIX_CASES, SUPPORTED_COMPLETENESS_CASES, MAPPING_ROOT_CASES)
+    assert tuple(map(len, tables)) == (128, 18, 84, 31, 44, 17)
+    assert len(ALL_CLOSED_CASE_IDS) == 322
+    assert len(set(ALL_CLOSED_CASE_IDS)) == len(ALL_CLOSED_CASE_IDS)
+    assert all(tuple(row) == ("case_id",) and type(row["case_id"]) is str for table in tables for row in table)
+
+
+def test_production_constant_literal_oracles() -> None:
+    import meg.weather.stage3.evaluation_claim as module
+    assert module._REQUIRED_MAPPING_KEYS == FIELDS[:33]
+    assert module._OPTIONAL_MAPPING_KEYS == ("supersedes_claim_id_when_applicable",)
+    assert module._LIST_TO_TUPLE_FIELDS == ("metric_or_diagnostic_ids", "metric_or_diagnostic_versions", "required_evaluation_result_ids", "observed_evaluation_result_ids", "missing_evaluation_result_ids", "provenance")
+    assert module._REQUIRED_TEXT_FIELDS == REQUIRED_TEXT
+    assert module._NULLABLE_TEXT_FIELDS == NULLABLE_TEXT
+    assert module._PAIRED_CLASSES == (EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL, EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES, EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL, EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL)
+    assert module._NON_PAIRED_CLASSES == (EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR, EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR, EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    assert module._EVIDENCE_GATE_MATRIX == {
+        EvaluationClaimDisposition.CLAIM_SUPPORTED: "eligible_for_later_evidence_gate_decision_only",
+        EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED: "claim_support_absent",
+        EvaluationClaimDisposition.CLAIM_INSUFFICIENT: "evidence_gate_use_blocked",
+        EvaluationClaimDisposition.CLAIM_BLOCKED: "evidence_gate_use_blocked",
+        EvaluationClaimDisposition.CLAIM_UNAVAILABLE: "no_substitution_or_evidence_gate_use",
+    }
+    assert module._ALLOWED_RESULT_KINDS == {
+        EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL: (EvaluationResultKind.PAIRED_COMPARISON_RESULT,),
+        EvaluationClaimClass.CANDIDATE_VS_PERSISTENCE_PREDICTIVE_SKILL: (EvaluationResultKind.PAIRED_COMPARISON_RESULT,),
+        EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES: (EvaluationResultKind.PAIRED_COMPARISON_RESULT,),
+        EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR: (EvaluationResultKind.CALIBRATION_BIN_RESULT, EvaluationResultKind.SCALAR_SCORE_RESULT, EvaluationResultKind.DECOMPOSITION_RESULT),
+        EvaluationClaimClass.DISTRIBUTIONAL_CALIBRATION_BEHAVIOR: (EvaluationResultKind.DISTRIBUTION_DIAGNOSTIC_RESULT, EvaluationResultKind.SCALAR_SCORE_RESULT),
+        EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR: (EvaluationResultKind.ENSEMBLE_DIAGNOSTIC_RESULT,),
+        EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL: (EvaluationResultKind.PAIRED_COMPARISON_RESULT,),
+        EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL: (EvaluationResultKind.PAIRED_COMPARISON_RESULT,),
+    }
+    assert module._VALIDATION_GROUPS == EXPECTED_GROUPS
+
+
+def test_complete_source_structure_and_annotation_oracles() -> None:
+    import meg.weather.stage3.evaluation_claim as module
+    tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
+    imports = tuple(
+        (node.module, tuple(alias.name for alias in node.names))
+        for node in tree.body if isinstance(node, ast.ImportFrom)
+    )
+    assert imports == (
+        ("__future__", ("annotations",)), ("collections.abc", ("Mapping",)),
+        ("dataclasses", ("dataclass",)), ("datetime", ("datetime",)),
+        ("enum", ("StrEnum",)), ("meg.weather.stage3.baseline_contracts", ("BaselineType",)),
+        ("meg.weather.stage3.scoring_and_diagnostics", ("ScoringArtifact", "ScoringPredictionRepresentation")),
+        ("meg.weather.stage3.evaluation_result_record", ("EvaluationResultKind", "EvaluationResultSupportStatus", "EvaluationResultMethodRole", "EvaluationResultRecord", "EvaluationResultValidationResult", "PairedComparisonResultPayload", "validate_evaluation_result_record")),
+    )
+    public_order = tuple(
+        node.name for node in tree.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef)) and not node.name.startswith("_")
+    )
+    assert public_order == PUBLIC
+    result_fields = dataclasses.fields(EvaluationClaimValidationResult)
+    assert tuple(field.name for field in result_fields) == ("severity", "passed", "codes")
+    assert typing.get_type_hints(EvaluationClaimValidationResult) == {
+        "severity": EvaluationClaimValidationSeverity,
+        "passed": bool,
+        "codes": tuple[EvaluationClaimValidationCode, ...],
+    }
+    adapter = inspect.signature(evaluation_claim_record_from_mapping)
+    validator = inspect.signature(validate_evaluation_claim_record)
+    assert tuple(str(parameter.annotation) for parameter in adapter.parameters.values()) == ("object", "object")
+    assert str(adapter.return_annotation) == "tuple[EvaluationClaimRecord | None, EvaluationClaimValidationResult]"
+    assert tuple(str(parameter.annotation) for parameter in validator.parameters.values()) == (
+        "EvaluationClaimRecord", "tuple[EvaluationResultRecord, ...]",
+    )
+    assert str(validator.return_annotation) == "EvaluationClaimValidationResult"
+
+
+@pytest.mark.parametrize("entry", ("direct", "mapping"), ids=("direct", "mapping"))
+def test_invalid_context_suppresses_adaptation_dependent_diagnostics(entry: str) -> None:
+    claim, _ = _complete_class_case(EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+    expected = (EvaluationClaimValidationCode.INVALID_RESULT_RECORD_CONTAINER, SUPPORT_BLOCK)
+    if entry == "direct":
+        assert validate_evaluation_claim_record(claim, object()).codes == expected
+    else:
+        values = {field.name: getattr(claim, field.name) for field in dataclasses.fields(claim)}
+        assert evaluation_claim_record_from_mapping(values, object())[1].codes == expected
+
+
+class _DuplicateItemsMapping(Mapping):
+    def __init__(self, first: object, second: object):
+        self.entries = ((first, 1), (second, 2))
+    def __len__(self) -> int: return 2
+    def __iter__(self): return (entry[0] for entry in self.entries)
+    def __getitem__(self, key: object) -> object: raise KeyError(key)
+    def items(self): return iter(self.entries)
+
+
+class _AsymmetricKey:
+    def __init__(self, existing: bool): self.existing = existing
+    def __hash__(self) -> int: return 7
+    def __eq__(self, other: object) -> bool:
+        return self.existing and type(other) is _AsymmetricKey
+
+
+class _EqualityFailureKey:
+    def __init__(self, failure: BaseException | None = None): self.failure = failure
+    def __hash__(self) -> int: return 7
+    def __eq__(self, other: object) -> bool:
+        if self.failure is not None: raise self.failure
+        return False
+
+
+def test_asymmetric_duplicate_uses_existing_to_incoming_equality_direction() -> None:
+    root = _DuplicateItemsMapping(_AsymmetricKey(True), _AsymmetricKey(False))
+    assert evaluation_claim_record_from_mapping(root, ())[1].codes == (
+        EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD,
+    ) * 33
+
+
+def test_existing_key_equality_ordinary_exception_fails_closed() -> None:
+    root = _DuplicateItemsMapping(_EqualityFailureKey(ValueError("equality")), _EqualityFailureKey())
+    assert evaluation_claim_record_from_mapping(root, ())[1].codes == (
+        EvaluationClaimValidationCode.MISSING_REQUIRED_FIELD,
+    ) * 33
+
+
+def test_existing_key_equality_baseexception_propagates() -> None:
+    root = _DuplicateItemsMapping(_EqualityFailureKey(_FatalError()), _EqualityFailureKey())
+    with pytest.raises(_FatalError):
+        evaluation_claim_record_from_mapping(root, ())

@@ -294,7 +294,7 @@ def evaluation_claim_record_from_mapping(
         for item in items:
             key, value = item
             hash(key)
-            if any(key == prior for prior in keys):
+            if any(prior == key for prior in keys):
                 return None, _result(missing)
             keys.append(key)
             hash(value) if False else None
@@ -432,7 +432,7 @@ def _validate_claim_values(
         bucket.append(item)
 
     resolved: list[EvaluationResultRecord] = []
-    if observed_valid:
+    if observed_valid and context_valid:
         for identity in values.get("observed_evaluation_result_ids"):
             matches = by_id.get(identity, ())
             if len(matches) != 1:
@@ -445,7 +445,7 @@ def _validate_claim_values(
         if item.result_kind is EvaluationResultKind.PAIRED_COMPARISON_RESULT and type(item.result_payload) is PairedComparisonResultPayload:
             referenced_ids.add(item.result_payload.candidate_result_id)
             referenced_ids.add(item.result_payload.baseline_result_id)
-    if observed_valid:
+    if observed_valid and context_valid:
         observed_set = set(values.get("observed_evaluation_result_ids"))
         for item in valid_context:
             if item.evaluation_result_id not in observed_set and item.evaluation_result_id not in referenced_ids:
@@ -614,7 +614,26 @@ def _validate_claim_values(
             expected = EvaluationClaimDisposition.CLAIM_UNAVAILABLE
         elif EvaluationResultSupportStatus.INSUFFICIENT in statuses:
             expected = EvaluationClaimDisposition.CLAIM_INSUFFICIENT
+        complete_supported_evidence = (
+            partition_valid
+            and not values.get("missing_evaluation_result_ids")
+            and len(resolved) == len(values.get("observed_evaluation_result_ids"))
+            and bool(statuses)
+            and all(status is EvaluationResultSupportStatus.SUPPORTED for status in statuses)
+        )
         if expected is not None and values.get("claim_disposition") is not expected:
+            codes.append(code.DISPOSITION_PRECEDENCE_MISMATCH)
+        elif complete_supported_evidence and (
+            values.get("claim_disposition")
+            in (
+                EvaluationClaimDisposition.CLAIM_UNAVAILABLE,
+                EvaluationClaimDisposition.CLAIM_INSUFFICIENT,
+            )
+            or (
+                values.get("claim_disposition") is EvaluationClaimDisposition.CLAIM_BLOCKED
+                and not _valid_text(values.get("claim_disposition_reason"))
+            )
+        ):
             codes.append(code.DISPOSITION_PRECEDENCE_MISMATCH)
         if values.get("claim_disposition") in (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED):
             complete_support = partition_valid and not values.get("missing_evaluation_result_ids") and len(resolved) == len(values.get("observed_evaluation_result_ids")) and all(status is EvaluationResultSupportStatus.SUPPORTED for status in statuses)
