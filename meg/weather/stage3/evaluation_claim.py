@@ -294,7 +294,7 @@ def evaluation_claim_record_from_mapping(
         for item in items:
             key, value = item
             hash(key)
-            if any(key == prior for prior in keys):
+            if any(prior == key for prior in keys):
                 return None, _result(missing)
             keys.append(key)
             hash(value) if False else None
@@ -432,7 +432,7 @@ def _validate_claim_values(
         bucket.append(item)
 
     resolved: list[EvaluationResultRecord] = []
-    if observed_valid:
+    if observed_valid and context_valid:
         for identity in values.get("observed_evaluation_result_ids"):
             matches = by_id.get(identity, ())
             if len(matches) != 1:
@@ -445,7 +445,7 @@ def _validate_claim_values(
         if item.result_kind is EvaluationResultKind.PAIRED_COMPARISON_RESULT and type(item.result_payload) is PairedComparisonResultPayload:
             referenced_ids.add(item.result_payload.candidate_result_id)
             referenced_ids.add(item.result_payload.baseline_result_id)
-    if observed_valid:
+    if observed_valid and context_valid:
         observed_set = set(values.get("observed_evaluation_result_ids"))
         for item in valid_context:
             if item.evaluation_result_id not in observed_set and item.evaluation_result_id not in referenced_ids:
@@ -465,7 +465,7 @@ def _validate_claim_values(
             codes.append(code.PAIRED_REFERENCE_NOT_FOUND)
         paired_refs.append((item, candidate, baseline))
 
-    target_usable = "target_posture" in present and type(values.get("target_posture")) is str and values.get("target_posture") == _FIXED_TARGET_POSTURE
+    target_usable = "target_posture" in present and _valid_text(values.get("target_posture"))
     for item in resolved:
         if target_usable and item.target_posture != values.get("target_posture"):
             codes.append(code.RESULT_TARGET_MISMATCH)
@@ -605,6 +605,14 @@ def _validate_claim_values(
                 consumed.append(referenced)
     statuses = tuple(item.support_status for item in consumed)
     if valid_disposition:
+        complete_supported_evidence = (
+            context_valid
+            and partition_valid
+            and not values.get("missing_evaluation_result_ids")
+            and len(resolved) == len(values.get("observed_evaluation_result_ids"))
+            and bool(statuses)
+            and all(status is EvaluationResultSupportStatus.SUPPORTED for status in statuses)
+        )
         expected = None
         if EvaluationResultSupportStatus.BLOCKED in statuses:
             expected = EvaluationClaimDisposition.CLAIM_BLOCKED
@@ -614,10 +622,22 @@ def _validate_claim_values(
             expected = EvaluationClaimDisposition.CLAIM_UNAVAILABLE
         elif EvaluationResultSupportStatus.INSUFFICIENT in statuses:
             expected = EvaluationClaimDisposition.CLAIM_INSUFFICIENT
+        elif complete_supported_evidence and (
+            values.get("claim_disposition")
+            in (
+                EvaluationClaimDisposition.CLAIM_UNAVAILABLE,
+                EvaluationClaimDisposition.CLAIM_INSUFFICIENT,
+            )
+            or (
+                values.get("claim_disposition") is EvaluationClaimDisposition.CLAIM_BLOCKED
+                and not _valid_text(values.get("claim_disposition_reason"))
+            )
+        ):
+            expected = EvaluationClaimDisposition.CLAIM_SUPPORTED
         if expected is not None and values.get("claim_disposition") is not expected:
             codes.append(code.DISPOSITION_PRECEDENCE_MISMATCH)
         if values.get("claim_disposition") in (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED):
-            complete_support = partition_valid and not values.get("missing_evaluation_result_ids") and len(resolved) == len(values.get("observed_evaluation_result_ids")) and all(status is EvaluationResultSupportStatus.SUPPORTED for status in statuses)
+            complete_support = complete_supported_evidence
             multiplicity_will_fail = valid_class and ids_valid and (len(values.get("metric_or_diagnostic_ids")) > 1 or values.get("claim_class") in (EvaluationClaimClass.CANDIDATE_PREDICTIVE_SKILL_ACROSS_REQUIRED_BASELINES, EvaluationClaimClass.STRATUM_SPECIFIC_PREDICTIVE_SKILL)) and "multiple_comparison_policy_id_when_applicable" in present and not _valid_text(values.get("multiple_comparison_policy_id_when_applicable"))
             provenance_will_fail = "provenance" in present and (type(values.get("provenance")) is not tuple or not values.get("provenance") or any(not _valid_text(item) for item in values.get("provenance") if type(values.get("provenance")) is tuple))
             timestamp_will_fail = "claim_created_at" in present and not _valid_timestamp(values.get("claim_created_at"))
