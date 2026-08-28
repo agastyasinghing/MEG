@@ -519,8 +519,9 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                            'plural decision policy fields are ordered tuples containing each compatible singular '
                            'EvaluationClaimRecord policy identity',
                            'required_claim_classes and observed_claim_classes use EvaluationClaimClass directly',
-                           'component_outcomes is an ordered tuple of exact component/outcome pairs aligned one-to-one '
-                           'with applicable_gate_components',
+                           'component_outcomes is an exact six-pair canonical sequence independent of '
+                           'applicable_gate_components length; conditional components absent from the canonical-order '
+                           'applicable subset remain represented by component_not_applicable',
                            'required claim IDs are explicitly predeclared; deterministic selection-rule execution is '
                            'outside this minimal boundary',
                            'no semantic conflict requires modification of an existing upstream file',
@@ -1087,10 +1088,17 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                                 'suppressed for unusable outer tuple'},
                                {'code': 'invalid_component_tuple',
                                 'condition_and_occurrence': 'once when applicable_gate_components is not an exact '
-                                                            'tuple or not the exact six-component canonical roster',
-                                'prerequisite_and_suppression': 'applicable_gate_components is present; applicability '
-                                                                'semantics suppressed until usable canonical ordered '
-                                                                'subset'},
+                                                            'tuple, omits any mandatory component, includes a '
+                                                            'conditional component not predeclared applicable, omits a '
+                                                            'conditional component predeclared applicable, violates '
+                                                            'canonical relative order, or contains a duplicate, extra, '
+                                                            'or substituted component; valid subset lengths are four, '
+                                                            'five, or six',
+                                'prerequisite_and_suppression': 'field is present; element enum diagnostics run for '
+                                                                'readable exact-tuple elements, while applicability '
+                                                                'and outcome-relationship checks are suppressed until '
+                                                                'the exact canonical-order applicable subset is '
+                                                                'usable'},
                                {'code': 'invalid_component_outcome_tuple',
                                 'condition_and_occurrence': 'once when component_outcomes is not an exact tuple of six '
                                                             'exact two-item tuple pairs in canonical component '
@@ -1206,11 +1214,18 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                                 'positional policy tuple/required position is usable; '
                                                                 'repeat by claim then policy order'},
                                {'code': 'provenance_traceability_mismatch',
-                                'condition_and_occurrence': 'once per resolved usable observed claim lacking the '
-                                                            'frozen provenance/result-chain linkage, in observed-ID '
-                                                            'order',
-                                'prerequisite_and_suppression': 'claim resolves exactly once, provenance tuple and '
-                                                                'fixed traceability posture are usable'},
+                                'condition_and_occurrence': 'once per uniquely resolved observed claim, in observed-ID '
+                                                            'order, when its evaluation_claim_id is absent from usable '
+                                                            'decision provenance or its trusted claim provenance is '
+                                                            'not a multiplicity-preserving ordered subsequence of '
+                                                            'decision provenance; both failures for one claim produce '
+                                                            'one occurrence',
+                                'prerequisite_and_suppression': 'exact fixed result_chain_traceability_posture, usable '
+                                                                'decision provenance, and unique exact claim '
+                                                                'resolution; suppress for malformed posture '
+                                                                '(INVALID_FIXED_POSTURE only), unusable provenance, or '
+                                                                'unusable claim, while continuing independently usable '
+                                                                'claims'},
                                {'code': 'cross_baseline_incomplete',
                                 'condition_and_occurrence': 'once when usable aligned required classes lack the exact '
                                                             'cross-baseline class or its upstream-complete climatology '
@@ -1237,12 +1252,18 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                 'prerequisite_and_suppression': 'applicable subset, outcomes, stratum alignment, and '
                                                                 'relevant claims are usable'},
                                {'code': 'no_lookahead_integrity_mismatch',
-                                'condition_and_occurrence': 'once per independently diagnosable fixed no-lookahead, '
-                                                            'selection-control, complete-scope, or '
-                                                            'publication-availability violation in frozen check order',
-                                'prerequisite_and_suppression': 'fixed posture, policy, scope, and traceability '
-                                                                'prerequisites for the specific check are usable; '
-                                                                'repeat in frozen check order'},
+                                'condition_and_occurrence': 'exactly once when the exact fixed no-lookahead posture '
+                                                            'and usable integrity pair claim component_satisfied while '
+                                                            'an earlier gate-visible split/fold/cutoff, '
+                                                            'selection-control-policy, or provenance/traceability '
+                                                            'diagnostic contradicts that satisfied attestation; never '
+                                                            'emitted solely for trusted upstream publication/finality '
+                                                            'facts',
+                                'prerequisite_and_suppression': 'exact fixed no_lookahead_review_posture and usable '
+                                                                'selection_scope_and_no_lookahead_integrity pair; '
+                                                                'malformed posture emits INVALID_FIXED_POSTURE only; '
+                                                                'suppress when pair unusable or outcome is not '
+                                                                'component_satisfied'},
                                {'code': 'component_outcome_mismatch',
                                 'condition_and_occurrence': 'once per structurally decisive '
                                                             'blocked/unavailable/insufficient incompatibility in '
@@ -1359,7 +1380,64 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                   ['provenance', ['invalid_provenance', 'empty_provenance']],
                                   ['decision_created_timestamp', ['invalid_decision_created_at']],
                                   ['self_supersession', ['self_supersession']],
-                                  ['supersession_link', ['invalid_supersession_link']]]}
+                                  ['supersession_link', ['invalid_supersession_link']]],
+ 'gate_visible_attestation_contract': {'upstream_trust': 'result-level source availability, publication timing, '
+                                                         'finality, and no-lookahead correctness are trusted from '
+                                                         'previously validated immutable EvaluationClaimRecord '
+                                                         'artifacts and are not independently inspected or '
+                                                         'recalculated',
+                                       'traceability_inputs': 'only observed_evaluation_claim_ids, resolved exact '
+                                                              'EvaluationClaimRecord.evaluation_claim_id, each '
+                                                              'resolved claim provenance tuple, decision provenance '
+                                                              'tuple, and the exact fixed '
+                                                              'result_chain_traceability_posture are gate-visible '
+                                                              'traceability inputs',
+                                       'ordered_subsequence_definition': 'claim provenance is linked when it is an '
+                                                                         'ordered subsequence of decision provenance '
+                                                                         'using left-to-right equality with '
+                                                                         'multiplicity preserved; every observed claim '
+                                                                         'ID must also occur at least once in decision '
+                                                                         'provenance',
+                                       'traceability_mismatch': 'after exact fixed traceability posture, usable '
+                                                                'decision provenance, and unique observed resolution, '
+                                                                'emit PROVENANCE_TRACEABILITY_MISMATCH once per '
+                                                                'observed claim, in observed-ID order, when its ID is '
+                                                                'absent from decision provenance or its provenance is '
+                                                                'not an ordered subsequence of decision provenance; '
+                                                                'combine both failures for one claim into one '
+                                                                'occurrence',
+                                       'traceability_suppression': 'INVALID_FIXED_POSTURE alone handles a malformed '
+                                                                   'result_chain_traceability_posture; suppress '
+                                                                   'traceability mismatch for that posture, unusable '
+                                                                   'decision provenance, or an '
+                                                                   'unresolved/duplicate/invalid claim, while '
+                                                                   'continuing other independently usable claims',
+                                       'no_lookahead_inputs': 'only the exact fixed no_lookahead_review_posture, the '
+                                                              'selection_scope_and_no_lookahead_integrity outcome '
+                                                              'pair, and already-diagnosed gate-visible '
+                                                              'split/fold/cutoff, selection-control policy, and '
+                                                              'provenance/traceability consistency are inspected',
+                                       'no_lookahead_mismatch': 'after exact fixed no-lookahead posture and a usable '
+                                                                'integrity outcome pair, emit '
+                                                                'NO_LOOKAHEAD_INTEGRITY_MISMATCH exactly once when '
+                                                                'that outcome is component_satisfied while any '
+                                                                'SPLIT_SCOPE_MISMATCH, INHERITED_POLICY_MISMATCH '
+                                                                'attributable to selection_control_policy_ids, or '
+                                                                'PROVENANCE_TRACEABILITY_MISMATCH occurred; no code is '
+                                                                'emitted merely for trusted result-level '
+                                                                'publication/finality facts',
+                                       'no_lookahead_suppression': 'INVALID_FIXED_POSTURE alone handles malformed '
+                                                                   'no_lookahead_review_posture; suppress '
+                                                                   'NO_LOOKAHEAD_INTEGRITY_MISMATCH when that posture '
+                                                                   'or integrity pair is unusable, and do not emit it '
+                                                                   'when the integrity outcome is not '
+                                                                   'component_satisfied',
+                                       'code_separation': 'INVALID_FIXED_POSTURE validates exact posture text; '
+                                                          'PROVENANCE_TRACEABILITY_MISMATCH validates observable '
+                                                          'claim/provenance linkage; NO_LOOKAHEAD_INTEGRITY_MISMATCH '
+                                                          'validates the satisfied-integrity attestation against '
+                                                          'already-diagnosed gate-visible contradictions; the same '
+                                                          'malformed posture is never assigned to more than one code'}}
 EXPECTED_GROUP_CODE_MATRIX = [['missing_keys', ['missing_required_field']],
  ['unexpected_exact_string_keys', ['unexpected_field']],
  ['unexpected_remaining_keys', ['unexpected_field']],
@@ -1475,6 +1553,12 @@ def test_literal_oracle_is_complete_and_independent() -> None:
     assert EXPECTED["disposition_precedence"] == ["BLOCKED", "UNAVAILABLE", "INSUFFICIENT", "PASSED_OR_NOT_PASSED_BY_COMPLETE_PREDECLARED_RULE"]
     assert EXPECTED["future_files"] == ["meg/weather/stage3/evidence_gate_decision.py", "tests/core/test_weather_bot_stage3_evidence_gate_decision.py"]
 
+def _valid_applicable_subset(candidate: tuple[str, ...], threshold: bool, stratum: bool) -> bool:
+    canonical = tuple(EXPECTED["gate_components"])
+    mandatory = {canonical[0], canonical[1], canonical[4], canonical[5]}
+    expected = tuple(item for item in canonical if item in mandatory or (threshold and item == canonical[2]) or (stratum and item == canonical[3]))
+    return type(candidate) is tuple and candidate == expected
+
 def test_corrected_cross_contract_invariants() -> None:
     matrix = dict(EXPECTED_GROUP_CODE_MATRIX)
     assert matrix["missing_keys"] == ["missing_required_field"]
@@ -1496,9 +1580,21 @@ def test_corrected_cross_contract_invariants() -> None:
     valid_with_threshold = [canonical[0], canonical[1], canonical[2], canonical[4], canonical[5]]
     assert set(valid_without_conditionals) == mandatory
     assert all(canonical.index(a) < canonical.index(b) for a, b in zip(valid_with_threshold, valid_with_threshold[1:]))
+    assert _valid_applicable_subset(tuple(valid_without_conditionals), False, False)
+    assert not _valid_applicable_subset(tuple(valid_without_conditionals[:-1]), False, False)
+    assert not _valid_applicable_subset((canonical[1], canonical[0], canonical[4], canonical[5]), False, False)
+    component_tuple_semantic = next(entry for entry in EXPECTED["validation_code_semantics"] if entry["code"] == "invalid_component_tuple")
+    assert "valid subset lengths are four, five, or six" in component_tuple_semantic["condition_and_occurrence"]
+    assert "independent of applicable_gate_components length" in EXPECTED["ambiguity_resolutions"][4]
     assert "absent from applicable_gate_components must be component_not_applicable" in EXPECTED["component_applicability"]["outcome_alignment"]
     assert "does not automatically force not_passed" in EXPECTED["gate_rule_execution_boundary"]["not_satisfied_posture"]
     assert EXPECTED["claim_validation_trust_boundary"]["posture"] == "previously_validated_immutable_evaluation_claim_artifacts"
+    attest = EXPECTED["gate_visible_attestation_contract"]
+    assert "not independently inspected or recalculated" in attest["upstream_trust"]
+    assert "once per observed claim, in observed-ID order" in attest["traceability_mismatch"]
+    assert "emit NO_LOOKAHEAD_INTEGRITY_MISMATCH exactly once" in attest["no_lookahead_mismatch"]
+    assert "INVALID_FIXED_POSTURE alone" in attest["traceability_suppression"]
+    assert "the same malformed posture is never assigned to more than one code" in attest["code_separation"]
     assert "validate_evaluation_claim_record" not in EXPECTED["permitted_imports"]
     claim_tree = ast.parse(CLAIM_MODULE.read_text(encoding="utf-8"))
     claim_validator = next(node for node in claim_tree.body if isinstance(node, ast.FunctionDef) and node.name == "validate_evaluation_claim_record")
@@ -1550,6 +1646,10 @@ def test_table_and_assignment_mutations_are_rejected() -> None:
         (("validation_group_code_matrix",), parsed["validation_group_code_matrix"][1:]),
         (("claim_context_contract", "identity_resolution"), "observed plus missing must concatenate to required"),
         (("component_applicability", "applicable_subset"), "all six components are always applicable"),
+        (("ambiguity_resolutions",), [item.replace("independent of applicable_gate_components length", "aligned one-to-one with applicable_gate_components") for item in parsed["ambiguity_resolutions"]]),
+        (("validation_code_semantics",), [dict(item, condition_and_occurrence="exact six-component canonical roster") if item["code"] == "invalid_component_tuple" else item for item in parsed["validation_code_semantics"]]),
+        (("gate_visible_attestation_contract", "traceability_mismatch"), "use frozen provenance linkage"),
+        (("gate_visible_attestation_contract", "no_lookahead_mismatch"), "inspect publication availability in frozen order"),
         (("gate_rule_execution_boundary", "not_satisfied_posture"), "not_satisfied always forces not_passed"),
         (("claim_validation_trust_boundary", "posture"), "invoke upstream validator without result context"),
         (("fixed_assignments", "non_routing_field"), "escaped legacy identifier"),

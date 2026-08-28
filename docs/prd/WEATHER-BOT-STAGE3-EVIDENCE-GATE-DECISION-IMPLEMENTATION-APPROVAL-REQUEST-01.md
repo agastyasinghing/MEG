@@ -875,7 +875,7 @@ The following JSON is the sole machine-assignment block. Array order is signific
     "fold_scope maps exactly to EvaluationClaimRecord.fold_scope and cutoff_scope maps exactly to EvaluationClaimRecord.cutoff_scope",
     "plural decision policy fields are ordered tuples containing each compatible singular EvaluationClaimRecord policy identity",
     "required_claim_classes and observed_claim_classes use EvaluationClaimClass directly",
-    "component_outcomes is an ordered tuple of exact component/outcome pairs aligned one-to-one with applicable_gate_components",
+    "component_outcomes is an exact six-pair canonical sequence independent of applicable_gate_components length; conditional components absent from the canonical-order applicable subset remain represented by component_not_applicable",
     "required claim IDs are explicitly predeclared; deterministic selection-rule execution is outside this minimal boundary",
     "no semantic conflict requires modification of an existing upstream file",
     "required and observed claim-class tuples are positional, permit repeated classes, and are not ordered-unique derivations",
@@ -1319,8 +1319,8 @@ The following JSON is the sole machine-assignment block. Array order is signific
     },
     {
       "code": "invalid_component_tuple",
-      "condition_and_occurrence": "once when applicable_gate_components is not an exact tuple or not the exact six-component canonical roster",
-      "prerequisite_and_suppression": "applicable_gate_components is present; applicability semantics suppressed until usable canonical ordered subset"
+      "condition_and_occurrence": "once when applicable_gate_components is not an exact tuple, omits any mandatory component, includes a conditional component not predeclared applicable, omits a conditional component predeclared applicable, violates canonical relative order, or contains a duplicate, extra, or substituted component; valid subset lengths are four, five, or six",
+      "prerequisite_and_suppression": "field is present; element enum diagnostics run for readable exact-tuple elements, while applicability and outcome-relationship checks are suppressed until the exact canonical-order applicable subset is usable"
     },
     {
       "code": "invalid_component_outcome_tuple",
@@ -1414,8 +1414,8 @@ The following JSON is the sole machine-assignment block. Array order is signific
     },
     {
       "code": "provenance_traceability_mismatch",
-      "condition_and_occurrence": "once per resolved usable observed claim lacking the frozen provenance/result-chain linkage, in observed-ID order",
-      "prerequisite_and_suppression": "claim resolves exactly once, provenance tuple and fixed traceability posture are usable"
+      "condition_and_occurrence": "once per uniquely resolved observed claim, in observed-ID order, when its evaluation_claim_id is absent from usable decision provenance or its trusted claim provenance is not a multiplicity-preserving ordered subsequence of decision provenance; both failures for one claim produce one occurrence",
+      "prerequisite_and_suppression": "exact fixed result_chain_traceability_posture, usable decision provenance, and unique exact claim resolution; suppress for malformed posture (INVALID_FIXED_POSTURE only), unusable provenance, or unusable claim, while continuing independently usable claims"
     },
     {
       "code": "cross_baseline_incomplete",
@@ -1439,8 +1439,8 @@ The following JSON is the sole machine-assignment block. Array order is signific
     },
     {
       "code": "no_lookahead_integrity_mismatch",
-      "condition_and_occurrence": "once per independently diagnosable fixed no-lookahead, selection-control, complete-scope, or publication-availability violation in frozen check order",
-      "prerequisite_and_suppression": "fixed posture, policy, scope, and traceability prerequisites for the specific check are usable; repeat in frozen check order"
+      "condition_and_occurrence": "exactly once when the exact fixed no-lookahead posture and usable integrity pair claim component_satisfied while an earlier gate-visible split/fold/cutoff, selection-control-policy, or provenance/traceability diagnostic contradicts that satisfied attestation; never emitted solely for trusted upstream publication/finality facts",
+      "prerequisite_and_suppression": "exact fixed no_lookahead_review_posture and usable selection_scope_and_no_lookahead_integrity pair; malformed posture emits INVALID_FIXED_POSTURE only; suppress when pair unusable or outcome is not component_satisfied"
     },
     {
       "code": "component_outcome_mismatch",
@@ -1769,7 +1769,18 @@ The following JSON is the sole machine-assignment block. Array order is signific
         "invalid_supersession_link"
       ]
     ]
-  ]
+  ],
+  "gate_visible_attestation_contract": {
+    "upstream_trust": "result-level source availability, publication timing, finality, and no-lookahead correctness are trusted from previously validated immutable EvaluationClaimRecord artifacts and are not independently inspected or recalculated",
+    "traceability_inputs": "only observed_evaluation_claim_ids, resolved exact EvaluationClaimRecord.evaluation_claim_id, each resolved claim provenance tuple, decision provenance tuple, and the exact fixed result_chain_traceability_posture are gate-visible traceability inputs",
+    "ordered_subsequence_definition": "claim provenance is linked when it is an ordered subsequence of decision provenance using left-to-right equality with multiplicity preserved; every observed claim ID must also occur at least once in decision provenance",
+    "traceability_mismatch": "after exact fixed traceability posture, usable decision provenance, and unique observed resolution, emit PROVENANCE_TRACEABILITY_MISMATCH once per observed claim, in observed-ID order, when its ID is absent from decision provenance or its provenance is not an ordered subsequence of decision provenance; combine both failures for one claim into one occurrence",
+    "traceability_suppression": "INVALID_FIXED_POSTURE alone handles a malformed result_chain_traceability_posture; suppress traceability mismatch for that posture, unusable decision provenance, or an unresolved/duplicate/invalid claim, while continuing other independently usable claims",
+    "no_lookahead_inputs": "only the exact fixed no_lookahead_review_posture, the selection_scope_and_no_lookahead_integrity outcome pair, and already-diagnosed gate-visible split/fold/cutoff, selection-control policy, and provenance/traceability consistency are inspected",
+    "no_lookahead_mismatch": "after exact fixed no-lookahead posture and a usable integrity outcome pair, emit NO_LOOKAHEAD_INTEGRITY_MISMATCH exactly once when that outcome is component_satisfied while any SPLIT_SCOPE_MISMATCH, INHERITED_POLICY_MISMATCH attributable to selection_control_policy_ids, or PROVENANCE_TRACEABILITY_MISMATCH occurred; no code is emitted merely for trusted result-level publication/finality facts",
+    "no_lookahead_suppression": "INVALID_FIXED_POSTURE alone handles malformed no_lookahead_review_posture; suppress NO_LOOKAHEAD_INTEGRITY_MISMATCH when that posture or integrity pair is unusable, and do not emit it when the integrity outcome is not component_satisfied",
+    "code_separation": "INVALID_FIXED_POSTURE validates exact posture text; PROVENANCE_TRACEABILITY_MISMATCH validates observable claim/provenance linkage; NO_LOOKAHEAD_INTEGRITY_MISMATCH validates the satisfied-integrity attestation against already-diagnosed gate-visible contradictions; the same malformed posture is never assigned to more than one code"
+  }
 }
 ```
 
