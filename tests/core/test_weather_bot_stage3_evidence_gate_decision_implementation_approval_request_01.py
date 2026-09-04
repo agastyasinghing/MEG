@@ -208,8 +208,8 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                      'required_claim_classes': 'EvaluationClaimClass elements',
                      'observed_claim_classes': 'EvaluationClaimClass elements',
                      'applicable_gate_components': 'EvidenceGateComponent elements',
-                     'component_outcomes': 'two-item actual list/tuple pairs; EvidenceGateComponent then '
-                                           'EvidenceGateComponentOutcome'},
+                     'component_outcomes': 'outer actual list to tuple; each two-item actual list to exact tuple; then '
+                                           'EvidenceGateComponent and EvidenceGateComponentOutcome element adaptation'},
  'mapping_failure_contract': ['root must be an instance of Mapping; otherwise return no record and exactly 35 repeated '
                               'missing_required_field codes in required-key order',
                               'create the items iterator and snapshot tuple(mapping.items()) exactly once before '
@@ -355,7 +355,23 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                        'full predictive distribution requires distributional_calibration_behavior',
                                        'finite comparable ensemble requires ensemble_calibration_behavior',
                                        'no component may be added, removed, pooled, waived, substituted, or reordered '
-                                       'after claim inspection']},
+                                       'after claim inspection'],
+                             'predeclaration_trust_boundary': 'applicable_gate_components is the caller-supplied '
+                                                              'immutable attestation of the applicability decision '
+                                                              'made before claim-disposition inspection; validator '
+                                                              'checks exact tuple shape, mandatory membership, '
+                                                              'canonical subset order, and six-outcome consistency '
+                                                              'only',
+                             'no_reconstruction': 'validator receives no historical gate-rule state and does not '
+                                                  'reconstruct, infer, add, or remove applicability from current claim '
+                                                  'classes, dispositions, component outcomes, or favorable/unfavorable '
+                                                  'evidence',
+                             'computable_code_boundary': 'INVALID_COMPONENT_TUPLE covers exact input shape, enum, '
+                                                         'mandatory membership, duplicate/extra/substitution, and '
+                                                         'canonical relative order. APPLICABILITY_MISMATCH covers only '
+                                                         'the observable relation between conditional subset '
+                                                         'membership and its six-pair not_applicable outcome, plus '
+                                                         'mandatory/overall presence and non-not-applicable outcome.'},
  'required_claim_set': ['required, observed, and missing IDs are exact built-in-string tuples, ordered, unique, and '
                         'preserve the required partition',
                         'tuple(identity for identity in required if identity in observed) equals observed; '
@@ -734,7 +750,9 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                           'EvidenceGateComponentOutcome], ...]',
                                             'mapping_key': 'required',
                                             'nullable': False,
-                                            'mapping_adaptation': 'exact list to tuple',
+                                            'mapping_adaptation': 'outer exact list to tuple, then each exact nested '
+                                                                  'list to tuple, then exact-string enum adaptation; '
+                                                                  'no other iterable or subclass adaptation',
                                             'direct_record_requirement': 'exact declared annotation; no adaptation or '
                                                                          'normalization',
                                             'validation_dependency': 'exact six canonical component/outcome pairs in '
@@ -1215,17 +1233,20 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                                 'repeat by claim then policy order'},
                                {'code': 'provenance_traceability_mismatch',
                                 'condition_and_occurrence': 'once per uniquely resolved observed claim, in observed-ID '
-                                                            'order, when its evaluation_claim_id is absent from usable '
-                                                            'decision provenance or its trusted claim provenance is '
-                                                            'not a multiplicity-preserving ordered subsequence of '
-                                                            'decision provenance; both failures for one claim produce '
-                                                            'one occurrence',
-                                'prerequisite_and_suppression': 'exact fixed result_chain_traceability_posture, usable '
-                                                                'decision provenance, and unique exact claim '
-                                                                'resolution; suppress for malformed posture '
-                                                                '(INVALID_FIXED_POSTURE only), unusable provenance, or '
-                                                                'unusable claim, while continuing independently usable '
-                                                                'claims'},
+                                                            'order, when its claim ID is absent from decision '
+                                                            'provenance, its claim provenance is not a '
+                                                            'multiplicity-preserving ordered subsequence, any '
+                                                            'observed_evaluation_result_id is absent from decision '
+                                                            'provenance, or a supported/not_supported claim does not '
+                                                            'have observed result IDs exactly equal required IDs with '
+                                                            'empty missing IDs; combine all failures for one claim '
+                                                            'into one occurrence',
+                                'prerequisite_and_suppression': 'exact fixed traceability posture, usable decision '
+                                                                'provenance, and unique exact claim resolution; '
+                                                                'malformed posture emits INVALID_FIXED_POSTURE only; '
+                                                                'suppress the affected claim for unusable '
+                                                                'provenance/resolution and continue independent '
+                                                                'claims; do not resolve or require missing result IDs'},
                                {'code': 'cross_baseline_incomplete',
                                 'condition_and_occurrence': 'once when usable aligned required classes lack the exact '
                                                             'cross-baseline class or its upstream-complete climatology '
@@ -1265,15 +1286,18 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                                 'suppress when pair unusable or outcome is not '
                                                                 'component_satisfied'},
                                {'code': 'component_outcome_mismatch',
-                                'condition_and_occurrence': 'once per structurally decisive '
-                                                            'blocked/unavailable/insufficient incompatibility in '
-                                                            'canonical order, then once if supplied overall outcome '
-                                                            'conflicts with structural precedence; substantive '
-                                                            'satisfied/not_satisfied outcomes are not recalculated',
-                                'prerequisite_and_suppression': 'six-pair outcomes, applicability, and structurally '
-                                                                'decisive claim dispositions are usable; validator '
-                                                                'checks precedence/compatibility, not substantive rule '
-                                                                'satisfaction'},
+                                'condition_and_occurrence': 'once per evidence-bearing component in canonical order '
+                                                            'when claim_blocked/unavailable/insufficient structural '
+                                                            'precedence is contradicted, claim_not_supported coexists '
+                                                            'with component_satisfied, or component_satisfied lacks '
+                                                            'all-supported relevant claims; selection/no-lookahead '
+                                                            'uses its separate integrity diagnostics; append one '
+                                                            'overall-outcome consistency occurrence if applicable',
+                                'prerequisite_and_suppression': 'usable applicable subset, six-pair outcomes, exact '
+                                                                'claim-class/component mapping, aligned relevant '
+                                                                'claims with unique resolution, and exact '
+                                                                'dispositions; suppress only components with unusable '
+                                                                'prerequisites and continue independent components'},
                                {'code': 'disposition_precedence_mismatch',
                                 'condition_and_occurrence': 'once when supplied gate disposition differs from the '
                                                             'fixed overall outcome/precedence mapping',
@@ -1401,17 +1425,21 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                        'traceability_mismatch': 'after exact fixed traceability posture, usable '
                                                                 'decision provenance, and unique observed resolution, '
                                                                 'emit PROVENANCE_TRACEABILITY_MISMATCH once per '
-                                                                'observed claim, in observed-ID order, when its ID is '
-                                                                'absent from decision provenance or its provenance is '
-                                                                'not an ordered subsequence of decision provenance; '
-                                                                'combine both failures for one claim into one '
-                                                                'occurrence',
-                                       'traceability_suppression': 'INVALID_FIXED_POSTURE alone handles a malformed '
+                                                                'observed claim, in observed-ID order, when its claim '
+                                                                'ID is absent, its provenance is not a '
+                                                                'multiplicity-preserving ordered subsequence, any '
+                                                                'actually observed result ID is absent, or '
+                                                                'supported/not_supported result-ID completeness is '
+                                                                'inconsistent; combine all failures for one claim into '
+                                                                'one occurrence',
+                                       'traceability_suppression': 'INVALID_FIXED_POSTURE alone handles malformed '
                                                                    'result_chain_traceability_posture; suppress '
-                                                                   'traceability mismatch for that posture, unusable '
-                                                                   'decision provenance, or an '
-                                                                   'unresolved/duplicate/invalid claim, while '
-                                                                   'continuing other independently usable claims',
+                                                                   'per-claim traceability diagnostics for unusable '
+                                                                   'decision provenance or an '
+                                                                   'unresolved/duplicate/invalid claim; trusted '
+                                                                   'malformed result-ID tuple structure is not '
+                                                                   'revalidated here, while other independently usable '
+                                                                   'claims continue',
                                        'no_lookahead_inputs': 'only the exact fixed no_lookahead_review_posture, the '
                                                               'selection_scope_and_no_lookahead_integrity outcome '
                                                               'pair, and already-diagnosed gate-visible '
@@ -1437,7 +1465,267 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                           'claim/provenance linkage; NO_LOOKAHEAD_INTEGRITY_MISMATCH '
                                                           'validates the satisfied-integrity attestation against '
                                                           'already-diagnosed gate-visible contradictions; the same '
-                                                          'malformed posture is never assigned to more than one code'}}
+                                                          'malformed posture is never assigned to more than one code',
+                                       'result_id_inputs': 'for every uniquely resolved observed claim, '
+                                                           'EvaluationClaimRecord.required_evaluation_result_ids, '
+                                                           'observed_evaluation_result_ids, and '
+                                                           'missing_evaluation_result_ids are gate-visible immutable '
+                                                           'identity tuples; no EvaluationResultRecord payload is '
+                                                           'received or revalidated',
+                                       'result_id_linkage': 'every identity in each consumed claim '
+                                                            'observed_evaluation_result_ids must occur at least once '
+                                                            'in decision provenance, in addition to the claim ID and '
+                                                            'ordered claim-provenance subsequence requirements',
+                                       'result_id_disposition_behavior': 'claim_supported and claim_not_supported '
+                                                                         'require observed result IDs to equal '
+                                                                         'required result IDs in required order and '
+                                                                         'missing result IDs to be empty; '
+                                                                         'claim_insufficient, claim_unavailable, and '
+                                                                         'claim_blocked may retain an upstream-valid '
+                                                                         'ordered observed/missing partition, but '
+                                                                         'every actually observed result ID still '
+                                                                         'requires decision-provenance linkage',
+                                       'missing_result_behavior': 'missing result IDs identify absence only: they are '
+                                                                  'preserved in the trusted claim artifact, are never '
+                                                                  'required to occur in decision provenance, are never '
+                                                                  'resolved or treated as existing records, and '
+                                                                  'prevent no independent result-payload conclusion'},
+ 'claim_class_component_matrix': {'cross_baseline_predictive_skill': {'applicability': 'mandatory',
+                                                                      'claim_classes': ['candidate_predictive_skill_across_required_baselines'],
+                                                                      'cardinality': 'exactly_one_required_claim',
+                                                                      'order': 'the single claim occurs at its '
+                                                                               'predeclared required-ID position',
+                                                                      'substitution': 'baseline-specific climatology '
+                                                                                      'or persistence classes cannot '
+                                                                                      'substitute for the '
+                                                                                      'cross-baseline class',
+                                                                      'prerequisites_and_suppression': 'required/class '
+                                                                                                       'positional '
+                                                                                                       'alignment and '
+                                                                                                       'unique '
+                                                                                                       'observed '
+                                                                                                       'resolution '
+                                                                                                       'must be '
+                                                                                                       'usable; '
+                                                                                                       'suppress '
+                                                                                                       'class/component '
+                                                                                                       'support checks '
+                                                                                                       'when the '
+                                                                                                       'required '
+                                                                                                       'cross-baseline '
+                                                                                                       'claim is '
+                                                                                                       'missing, '
+                                                                                                       'invalid, '
+                                                                                                       'duplicated, or '
+                                                                                                       'unresolved'},
+                                  'representation_appropriate_calibration': {'applicability': 'mandatory',
+                                                                             'claim_classes_by_representation': {'binary_outcome_probability': 'binary_calibration_behavior',
+                                                                                                                 'full_predictive_distribution': 'distributional_calibration_behavior',
+                                                                                                                 'finite_comparable_ensemble': 'ensemble_calibration_behavior'},
+                                                                             'cardinality': 'exactly_one_required_claim_of_the_selected_class',
+                                                                             'order': 'the single selected calibration '
+                                                                                      'claim occurs at its predeclared '
+                                                                                      'required-ID position',
+                                                                             'substitution': 'no other calibration '
+                                                                                             'class or representation '
+                                                                                             'may substitute',
+                                                                             'prerequisites_and_suppression': 'exact '
+                                                                                                              'prediction '
+                                                                                                              'representation, '
+                                                                                                              'required/class '
+                                                                                                              'alignment, '
+                                                                                                              'and '
+                                                                                                              'unique '
+                                                                                                              'resolution '
+                                                                                                              'must be '
+                                                                                                              'usable; '
+                                                                                                              'suppress '
+                                                                                                              'when '
+                                                                                                              'any '
+                                                                                                              'prerequisite '
+                                                                                                              'is '
+                                                                                                              'unusable'},
+                                  'threshold_weighted_skill_when_applicable': {'applicability': 'conditional_member_of_applicable_gate_components',
+                                                                               'claim_classes': ['threshold_weighted_distribution_skill'],
+                                                                               'cardinality': 'one_or_more_predeclared_required_claims_when_applicable_and_zero_when_inapplicable',
+                                                                               'order': 'all matching claims retain '
+                                                                                        'required_evaluation_claim_ids '
+                                                                                        'order',
+                                                                               'substitution': 'no post-hoc threshold '
+                                                                                               'claim selection, '
+                                                                                               'omission, or other '
+                                                                                               'claim class',
+                                                                               'prerequisites_and_suppression': 'applicable '
+                                                                                                                'subset '
+                                                                                                                'and '
+                                                                                                                'required/class '
+                                                                                                                'alignment '
+                                                                                                                'must '
+                                                                                                                'be '
+                                                                                                                'usable; '
+                                                                                                                'suppress '
+                                                                                                                'evidence '
+                                                                                                                'checks '
+                                                                                                                'for '
+                                                                                                                'missing, '
+                                                                                                                'invalid, '
+                                                                                                                'duplicate, '
+                                                                                                                'or '
+                                                                                                                'unresolved '
+                                                                                                                'matching '
+                                                                                                                'claims'},
+                                  'stratum_specific_skill_when_applicable': {'applicability': 'conditional_member_of_applicable_gate_components',
+                                                                             'claim_classes': ['stratum_specific_predictive_skill'],
+                                                                             'cardinality': 'one_or_more_predeclared_required_claims_when_applicable_and_zero_when_inapplicable',
+                                                                             'order': 'all matching claims retain '
+                                                                                      'required_evaluation_claim_ids '
+                                                                                      'and predeclared stratum_scope '
+                                                                                      'order',
+                                                                             'substitution': 'no omitted, pooled, '
+                                                                                             'reordered, or '
+                                                                                             'substituted stratum '
+                                                                                             'claim',
+                                                                             'prerequisites_and_suppression': 'applicable '
+                                                                                                              'subset, '
+                                                                                                              'required/class '
+                                                                                                              'alignment, '
+                                                                                                              'and '
+                                                                                                              'stratum '
+                                                                                                              'alignment '
+                                                                                                              'must be '
+                                                                                                              'usable; '
+                                                                                                              'suppress '
+                                                                                                              'evidence '
+                                                                                                              'checks '
+                                                                                                              'for '
+                                                                                                              'missing, '
+                                                                                                              'invalid, '
+                                                                                                              'duplicate, '
+                                                                                                              'or '
+                                                                                                              'unresolved '
+                                                                                                              'matching '
+                                                                                                              'claims'},
+                                  'selection_scope_and_no_lookahead_integrity': {'applicability': 'mandatory',
+                                                                                 'claim_classes': 'all claim classes '
+                                                                                                  'at every '
+                                                                                                  'required_evaluation_claim_ids '
+                                                                                                  'position',
+                                                                                 'cardinality': 'entire_complete_required_claim_set',
+                                                                                 'order': 'exact '
+                                                                                          'required_evaluation_claim_ids '
+                                                                                          'order without filtering by '
+                                                                                          'outcome',
+                                                                                 'substitution': 'no claim may be '
+                                                                                                 'dropped or replaced; '
+                                                                                                 'this component '
+                                                                                                 'evaluates '
+                                                                                                 'gate-visible '
+                                                                                                 'compatibility and '
+                                                                                                 'attestations, not '
+                                                                                                 'predictive support '
+                                                                                                 'as integrity '
+                                                                                                 'satisfaction',
+                                                                                 'prerequisites_and_suppression': 'run '
+                                                                                                                  'each '
+                                                                                                                  'gate-visible '
+                                                                                                                  'compatibility/traceability '
+                                                                                                                  'check '
+                                                                                                                  'for '
+                                                                                                                  'usable '
+                                                                                                                  'aligned '
+                                                                                                                  'claims; '
+                                                                                                                  'suppress '
+                                                                                                                  'only '
+                                                                                                                  'the '
+                                                                                                                  'dependent '
+                                                                                                                  'check '
+                                                                                                                  'for '
+                                                                                                                  'an '
+                                                                                                                  'unusable '
+                                                                                                                  'claim '
+                                                                                                                  'and '
+                                                                                                                  'continue '
+                                                                                                                  'independent '
+                                                                                                                  'claims/checks'},
+                                  'overall_stage3_evidence_gate': {'applicability': 'mandatory',
+                                                                   'claim_classes': [],
+                                                                   'cardinality': 'no_additional_claim',
+                                                                   'order': 'consumes the six canonical '
+                                                                            'component_outcomes only',
+                                                                   'substitution': 'no claim class, vote, average, '
+                                                                                   'fallback, or generated evidence '
+                                                                                   'substitutes for the predeclared '
+                                                                                   'overall-rule result',
+                                                                   'prerequisites_and_suppression': 'structural '
+                                                                                                    'precedence '
+                                                                                                    'requires usable '
+                                                                                                    'component '
+                                                                                                    'outcomes; '
+                                                                                                    'passed/not_passed '
+                                                                                                    'additionally '
+                                                                                                    'requires the '
+                                                                                                    'complete '
+                                                                                                    'evaluable '
+                                                                                                    'required claim '
+                                                                                                    'set'}},
+ 'structural_support_floor': {'scope': 'applies only to evidence-bearing cross-baseline, calibration, applicable '
+                                       'threshold, and applicable stratum components; selection/no-lookahead uses its '
+                                       'distinct gate-visible integrity contract and overall consumes component '
+                                       'outcomes',
+                              'precedence': ['claim_blocked requires structural component_blocked',
+                                             'absent block, claim_unavailable requires structural '
+                                             'component_unavailable',
+                                             'absent block or unavailable, claim_insufficient requires structural '
+                                             'component_insufficient'],
+                              'not_supported': 'any required relevant claim_not_supported makes component_satisfied '
+                                               'impossible and requires the caller-supplied substantive outcome to be '
+                                               'component_not_satisfied when no stronger structural outcome applies',
+                              'supported': 'all required relevant claims claim_supported is necessary but not '
+                                           'sufficient for component_satisfied; the externally predeclared substantive '
+                                           'component rule may still produce component_satisfied or '
+                                           'component_not_satisfied',
+                              'cross_baseline_example': 'required candidate_predictive_skill_across_required_baselines '
+                                                        'claim_not_supported plus cross_baseline_predictive_skill '
+                                                        'component_satisfied is invalid and emits '
+                                                        'component_outcome_mismatch',
+                              'no_rule_engine': 'validator enforces only this structural floor and impossible '
+                                                'combinations; it does not execute the substantive component rule',
+                              'occurrence_order': 'component_outcome_mismatch occurs once per offending '
+                                                  'evidence-bearing component in canonical component order; the '
+                                                  'overall consistency occurrence, if any, follows non-overall '
+                                                  'occurrences',
+                              'suppression': 'requires usable applicable subset, six-pair outcomes, relevant '
+                                             'claim-class mapping, aligned IDs/classes, unique resolution, and exact '
+                                             'claim dispositions; suppress only the affected component when '
+                                             'prerequisites are unusable'},
+ 'duplicate_mapping_key_consequence': {'comparison': 'compare each existing key to the incoming key as existing_key == '
+                                                     'incoming_key in snapshot order; never reverse the comparison',
+                                       'duplicate_result': 'any truthy duplicate comparison makes the root unreadable; '
+                                                           'return no record and exactly 35 MISSING_REQUIRED_FIELD '
+                                                           'occurrences in required-key order, with no '
+                                                           'duplicate-specific, unexpected, or semantic code',
+                                       'exceptions': 'ordinary Exception from iterator creation, iteration, unpacking, '
+                                                     'equality, hashing, materialization, lookup, nested adaptation, '
+                                                     'or construction produces the same unreadable-root result; '
+                                                     'BaseException propagates unchanged',
+                                       'no_code': 'there is intentionally no dedicated duplicate-mapping-key '
+                                                  'validation code'},
+ 'component_outcomes_mapping_adaptation': {'mapping_outer': 'only type(value) is list converts to an outer tuple; an '
+                                                            'exact tuple remains unchanged; subclasses and other '
+                                                            'iterables are not adapted',
+                                           'mapping_pairs': 'for each outer element, only type(pair) is list converts '
+                                                            'to an exact tuple before enum adaptation and record '
+                                                            'construction; an exact tuple remains unchanged',
+                                           'pair_shape': 'each adapted/direct pair must be type(pair) is tuple of '
+                                                         'length two, with component then outcome',
+                                           'enum_elements': 'each pair element accepts an exact enum member or an '
+                                                            'exact built-in matching value string; string subclasses, '
+                                                            'names, aliases, unrelated enums, and invalid strings fail',
+                                           'immutability': 'no nested list may survive into an accepted record; caller '
+                                                           'input is never mutated',
+                                           'direct_validation': 'requires type(component_outcomes) is tuple and every '
+                                                                'pair type is tuple before validation; no outer or '
+                                                                'nested list adaptation occurs'}}
 EXPECTED_GROUP_CODE_MATRIX = [['missing_keys', ['missing_required_field']],
  ['unexpected_exact_string_keys', ['unexpected_field']],
  ['unexpected_remaining_keys', ['unexpected_field']],
@@ -1600,6 +1888,24 @@ def test_corrected_cross_contract_invariants() -> None:
     claim_validator = next(node for node in claim_tree.body if isinstance(node, ast.FunctionDef) and node.name == "validate_evaluation_claim_record")
     assert [arg.arg for arg in claim_validator.args.args] == ["record", "result_records"]
     assert ast.unparse(claim_validator.args.args[1].annotation) == "tuple[EvaluationResultRecord, ...]"
+    claim_record = next(node for node in claim_tree.body if isinstance(node, ast.ClassDef) and node.name == "EvaluationClaimRecord")
+    claim_fields = [node.target.id for node in claim_record.body if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)]
+    for result_id_field in ("required_evaluation_result_ids", "observed_evaluation_result_ids", "missing_evaluation_result_ids"):
+        assert result_id_field in claim_fields
+        assert result_id_field in EXPECTED["gate_visible_attestation_contract"]["result_id_inputs"]
+    matrix = EXPECTED["claim_class_component_matrix"]
+    assert matrix["cross_baseline_predictive_skill"]["claim_classes"] == ["candidate_predictive_skill_across_required_baselines"]
+    assert matrix["overall_stage3_evidence_gate"]["claim_classes"] == []
+    assert matrix["selection_scope_and_no_lookahead_integrity"]["cardinality"] == "entire_complete_required_claim_set"
+    assert "claim_not_supported plus cross_baseline_predictive_skill component_satisfied is invalid" in EXPECTED["structural_support_floor"]["cross_baseline_example"]
+    assert "necessary but not sufficient" in EXPECTED["structural_support_floor"]["supported"]
+    assert "caller-supplied immutable attestation" in EXPECTED["component_applicability"]["predeclaration_trust_boundary"]
+    assert "does not reconstruct" in EXPECTED["component_applicability"]["no_reconstruction"]
+    assert EXPECTED["duplicate_mapping_key_consequence"]["duplicate_result"].startswith("any truthy duplicate comparison makes the root unreadable")
+    nested = EXPECTED["component_outcomes_mapping_adaptation"]
+    assert "each exact nested list to tuple" in EXPECTED["field_semantics"]["component_outcomes"]["mapping_adaptation"]
+    assert "no nested list may survive" in nested["immutability"]
+    assert "no outer or nested list adaptation" in nested["direct_validation"]
     assert EXPECTED["fixed_assignments"]["non_routing_field"] == "market_id"
     assert EXPECTED["eligibility_posture_matrix"] == {
         "stage3_gate_passed": "eligible_for_later_separate_readiness_or_approval_request_only",
@@ -1655,6 +1961,12 @@ def test_table_and_assignment_mutations_are_rejected() -> None:
         (("fixed_assignments", "non_routing_field"), "escaped legacy identifier"),
         (("eligibility_posture_matrix", "stage3_gate_not_passed"), "eligible_for_later_separate_readiness_or_approval_request_only"),
         (("field_semantics", "component_outcomes", "validation_dependency"), "pairing is implementation-defined"),
+        (("claim_class_component_matrix", "cross_baseline_predictive_skill", "claim_classes"), ["candidate_vs_climatology_predictive_skill"]),
+        (("structural_support_floor", "not_supported"), "claim_not_supported may coexist with component_satisfied"),
+        (("gate_visible_attestation_contract", "result_id_linkage"), "observed result IDs need not be in provenance"),
+        (("component_applicability", "no_reconstruction"), "infer applicability from supported claims"),
+        (("duplicate_mapping_key_consequence", "duplicate_result"), "emit an implementation-selected duplicate code"),
+        (("component_outcomes_mapping_adaptation", "mapping_pairs"), "nested lists survive record construction"),
         (("non_goals",), parsed["non_goals"][:-1]),
     ]:
         changed = copy.deepcopy(parsed)
