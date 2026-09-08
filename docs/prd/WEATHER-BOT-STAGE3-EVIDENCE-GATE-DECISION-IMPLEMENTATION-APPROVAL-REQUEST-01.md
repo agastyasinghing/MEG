@@ -659,7 +659,7 @@ The following JSON is the sole machine-assignment block. Array order is signific
     "unexpected_claims": "context identities outside observed IDs are unexpected and rejected; no extra context claims are consumed",
     "order": "context claim order must equal observed_evaluation_claim_ids; reordered or substituted claims fail closed",
     "class_compatibility": "required_claim_classes length equals required_evaluation_claim_ids and aligns one-for-one. observed_claim_classes length equals observed_evaluation_claim_ids and equals required_claim_classes at the same required-ID positions selected by the ordered observed subsequence. Repeated classes are permitted; no ordered-unique derivation or baseline-specific promotion is allowed.",
-    "disposition_compatibility": "claim_blocked dominates; then claim_unavailable; then claim_insufficient; claim_supported and claim_not_supported are evaluable and component rules determine satisfied/not_satisfied without inventing substantive rules",
+    "disposition_compatibility": "claim_blocked dominates claim_unavailable, which dominates claim_insufficient. For each substantive evidence-bearing component, claim_not_supported is evaluable but structurally forbids component_satisfied and, absent stronger precedence, requires component_not_satisfied. Claim_supported is necessary but not sufficient for component_satisfied: the externally predeclared substantive rule may yield component_satisfied or component_not_satisfied. Selection_scope_and_no_lookahead_integrity instead follows its distinct gate-visible integrity/attestation contract and is not mechanically satisfied by predictive support.",
     "candidate_and_representation": "every usable observed claim exactly matches candidate method ID/version and ScoringPredictionRepresentation",
     "scope": "split_id, split_version, fold_scope to claim fold_scope, cutoff_scope, and paired_test_record_set_id match exactly",
     "aggregation_weighting": "claim aggregation_rule_id and weighting_rule_id must occur in the corresponding ordered decision tuples; no substitution",
@@ -721,7 +721,7 @@ The following JSON is the sole machine-assignment block. Array order is signific
     ],
     "predeclaration_trust_boundary": "applicable_gate_components is the caller-supplied immutable attestation of the applicability decision made before claim-disposition inspection; validator checks exact tuple shape, mandatory membership, canonical subset order, and six-outcome consistency only",
     "no_reconstruction": "validator receives no historical gate-rule state and does not reconstruct, infer, add, or remove applicability from current claim classes, dispositions, component outcomes, or favorable/unfavorable evidence",
-    "computable_code_boundary": "INVALID_COMPONENT_TUPLE covers exact input shape, enum, mandatory membership, duplicate/extra/substitution, and canonical relative order. APPLICABILITY_MISMATCH covers only the observable relation between conditional subset membership and its six-pair not_applicable outcome, plus mandatory/overall presence and non-not-applicable outcome."
+    "computable_code_boundary": "INVALID_COMPONENT_TUPLE checks only exact tuple/type, canonical members, mandatory presence, conditional presence-or-absence as recorded, canonical relative order, and duplicate/extra/substitution/reordering. APPLICABILITY_MISMATCH checks only observable subset-to-six-outcome contradictions. Neither code reconstructs historical applicability."
   },
   "required_claim_set": [
     "required, observed, and missing IDs are exact built-in-string tuples, ordered, unique, and preserve the required partition",
@@ -1322,8 +1322,8 @@ The following JSON is the sole machine-assignment block. Array order is signific
     },
     {
       "code": "invalid_component_tuple",
-      "condition_and_occurrence": "once when applicable_gate_components is not an exact tuple, omits any mandatory component, includes a conditional component not predeclared applicable, omits a conditional component predeclared applicable, violates canonical relative order, or contains a duplicate, extra, or substituted component; valid subset lengths are four, five, or six",
-      "prerequisite_and_suppression": "field is present; element enum diagnostics run for readable exact-tuple elements, while applicability and outcome-relationship checks are suppressed until the exact canonical-order applicable subset is usable"
+      "condition_and_occurrence": "once when applicable_gate_components is not an exact tuple of canonical component members, omits any mandatory component, violates canonical relative order, or contains a duplicate, extra, substituted, or reordered member; either conditional member may be present or absent as the recorded attestation, so valid lengths are four, five, or six",
+      "prerequisite_and_suppression": "field is present; element enum diagnostics run for readable exact-tuple elements; subset-to-outcome applicability checks are suppressed until the exact canonical-order subset is usable; no historical rule state is reconstructed"
     },
     {
       "code": "invalid_component_outcome_tuple",
@@ -1422,8 +1422,8 @@ The following JSON is the sole machine-assignment block. Array order is signific
     },
     {
       "code": "cross_baseline_incomplete",
-      "condition_and_occurrence": "once when usable aligned required classes lack the exact cross-baseline class or its upstream-complete climatology and persistence result chain",
-      "prerequisite_and_suppression": "required/class alignment and relevant resolved claims are usable; suppress when missing/invalid prerequisites prevent coverage determination"
+      "condition_and_occurrence": "once when gate-visible required/class alignment does not contain exactly one candidate_predictive_skill_across_required_baselines claim, a baseline-specific claim is substituted for it, or that claim has an observable required/observed/missing result-ID completeness, provenance-linkage, resolution, or structural-disposition contradiction; baseline-family result payload contents are not inspected",
+      "prerequisite_and_suppression": "usable required/class alignment and gate-visible cross-baseline claim identity, resolution, disposition, result-ID tuples, and provenance; suppress payload/baseline-family conclusions because no EvaluationResultRecord context is received"
     },
     {
       "code": "calibration_requirement_mismatch",
@@ -1432,13 +1432,13 @@ The following JSON is the sole machine-assignment block. Array order is signific
     },
     {
       "code": "threshold_applicability_mismatch",
-      "condition_and_occurrence": "once when threshold applicability, required class coverage, outcome, or post-hoc selection conflicts after usable applicability/class prerequisites",
-      "prerequisite_and_suppression": "applicable subset, outcomes, required/class alignment, and relevant claims are usable"
+      "condition_and_occurrence": "once for an observable contradiction among threshold component membership in the recorded applicable subset, presence/absence of predeclared required threshold_weighted_distribution_skill claims, the six-pair threshold outcome, and ordered required-claim scope; absent subset membership requires no threshold claims and component_not_applicable, while present membership requires one or more claims and a non-not_applicable outcome",
+      "prerequisite_and_suppression": "usable recorded applicable subset, six-pair outcomes, required/class alignment, and ordered relevant claim scope; historical timing is trusted and no post-hoc behavior is independently detected"
     },
     {
       "code": "stratum_applicability_mismatch",
-      "condition_and_occurrence": "once when stratum applicability, exact ordered strata/class coverage, outcome, omission, or pooling conflicts after usable prerequisites",
-      "prerequisite_and_suppression": "applicable subset, outcomes, stratum alignment, and relevant claims are usable"
+      "condition_and_occurrence": "once for an observable contradiction among stratum component membership in the recorded applicable subset, presence/absence and order of required stratum_specific_predictive_skill claims, six-pair stratum outcome, and positional stratum_scope; absent membership requires no stratum claims and component_not_applicable, while present membership requires one or more ordered claims/scopes and a non-not_applicable outcome",
+      "prerequisite_and_suppression": "usable recorded applicable subset, six-pair outcomes, required/class and stratum alignment, and ordered relevant claims; historical timing is trusted and no post-hoc behavior is independently detected"
     },
     {
       "code": "no_lookahead_integrity_mismatch",
@@ -1775,7 +1775,7 @@ The following JSON is the sole machine-assignment block. Array order is signific
   ],
   "gate_visible_attestation_contract": {
     "upstream_trust": "result-level source availability, publication timing, finality, and no-lookahead correctness are trusted from previously validated immutable EvaluationClaimRecord artifacts and are not independently inspected or recalculated",
-    "traceability_inputs": "only observed_evaluation_claim_ids, resolved exact EvaluationClaimRecord.evaluation_claim_id, each resolved claim provenance tuple, decision provenance tuple, and the exact fixed result_chain_traceability_posture are gate-visible traceability inputs",
+    "traceability_inputs": "the complete gate-visible traceability inputs are observed_evaluation_claim_ids; each uniquely resolved exact EvaluationClaimRecord.evaluation_claim_id; each resolved claim provenance tuple; decision provenance tuple; exact fixed result_chain_traceability_posture; and each resolved claim required_evaluation_result_ids, observed_evaluation_result_ids, and missing_evaluation_result_ids; no EvaluationResultRecord payload is available",
     "ordered_subsequence_definition": "claim provenance is linked when it is an ordered subsequence of decision provenance using left-to-right equality with multiplicity preserved; every observed claim ID must also occur at least once in decision provenance",
     "traceability_mismatch": "after exact fixed traceability posture, usable decision provenance, and unique observed resolution, emit PROVENANCE_TRACEABILITY_MISMATCH once per observed claim, in observed-ID order, when its claim ID is absent, its provenance is not a multiplicity-preserving ordered subsequence, any actually observed result ID is absent, or supported/not_supported result-ID completeness is inconsistent; combine all failures for one claim into one occurrence",
     "traceability_suppression": "INVALID_FIXED_POSTURE alone handles malformed result_chain_traceability_posture; suppress per-claim traceability diagnostics for unusable decision provenance or an unresolved/duplicate/invalid claim; trusted malformed result-ID tuple structure is not revalidated here, while other independently usable claims continue",
@@ -1875,6 +1875,18 @@ The following JSON is the sole machine-assignment block. Array order is signific
     "enum_elements": "each pair element accepts an exact enum member or an exact built-in matching value string; string subclasses, names, aliases, unrelated enums, and invalid strings fail",
     "immutability": "no nested list may survive into an accepted record; caller input is never mutated",
     "direct_validation": "requires type(component_outcomes) is tuple and every pair type is tuple before validation; no outer or nested list adaptation occurs"
+  },
+  "baseline_specific_auxiliary_claims": {
+    "decision": "permitted_as_additional_predeclared_required_claims",
+    "classes": [
+      "candidate_vs_climatology_predictive_skill",
+      "candidate_vs_persistence_predictive_skill"
+    ],
+    "completeness": "when present they remain in required_evaluation_claim_ids, required_claim_classes, the observed/missing ordered partition, policy/scope alignment, provenance/result-ID traceability, and selection/no-lookahead integrity checks",
+    "order": "retain their exact predeclared required-ID positions and all ordinary compatibility requirements",
+    "cross_baseline_role": "they are auxiliary only and are not substantive inputs to cross_baseline_predictive_skill",
+    "no_substitution": "neither individually nor together may substitute for the exactly one required candidate_predictive_skill_across_required_baselines claim",
+    "rationale": "the controlling planning contract prohibits promotion of a baseline-specific claim into a cross-baseline claim but does not prohibit additional predeclared baseline-specific claims"
   }
 }
 ```

@@ -278,10 +278,17 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                    'the same required-ID positions selected by the ordered observed '
                                                    'subsequence. Repeated classes are permitted; no ordered-unique '
                                                    'derivation or baseline-specific promotion is allowed.',
-                            'disposition_compatibility': 'claim_blocked dominates; then claim_unavailable; then '
-                                                         'claim_insufficient; claim_supported and claim_not_supported '
-                                                         'are evaluable and component rules determine '
-                                                         'satisfied/not_satisfied without inventing substantive rules',
+                            'disposition_compatibility': 'claim_blocked dominates claim_unavailable, which dominates '
+                                                         'claim_insufficient. For each substantive evidence-bearing '
+                                                         'component, claim_not_supported is evaluable but structurally '
+                                                         'forbids component_satisfied and, absent stronger precedence, '
+                                                         'requires component_not_satisfied. Claim_supported is '
+                                                         'necessary but not sufficient for component_satisfied: the '
+                                                         'externally predeclared substantive rule may yield '
+                                                         'component_satisfied or component_not_satisfied. '
+                                                         'Selection_scope_and_no_lookahead_integrity instead follows '
+                                                         'its distinct gate-visible integrity/attestation contract and '
+                                                         'is not mechanically satisfied by predictive support.',
                             'candidate_and_representation': 'every usable observed claim exactly matches candidate '
                                                             'method ID/version and ScoringPredictionRepresentation',
                             'scope': 'split_id, split_version, fold_scope to claim fold_scope, cutoff_scope, and '
@@ -366,12 +373,13 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                   'reconstruct, infer, add, or remove applicability from current claim '
                                                   'classes, dispositions, component outcomes, or favorable/unfavorable '
                                                   'evidence',
-                             'computable_code_boundary': 'INVALID_COMPONENT_TUPLE covers exact input shape, enum, '
-                                                         'mandatory membership, duplicate/extra/substitution, and '
-                                                         'canonical relative order. APPLICABILITY_MISMATCH covers only '
-                                                         'the observable relation between conditional subset '
-                                                         'membership and its six-pair not_applicable outcome, plus '
-                                                         'mandatory/overall presence and non-not-applicable outcome.'},
+                             'computable_code_boundary': 'INVALID_COMPONENT_TUPLE checks only exact tuple/type, '
+                                                         'canonical members, mandatory presence, conditional '
+                                                         'presence-or-absence as recorded, canonical relative order, '
+                                                         'and duplicate/extra/substitution/reordering. '
+                                                         'APPLICABILITY_MISMATCH checks only observable '
+                                                         'subset-to-six-outcome contradictions. Neither code '
+                                                         'reconstructs historical applicability.'},
  'required_claim_set': ['required, observed, and missing IDs are exact built-in-string tuples, ordered, unique, and '
                         'preserve the required partition',
                         'tuple(identity for identity in required if identity in observed) equals observed; '
@@ -1106,17 +1114,17 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                                 'suppressed for unusable outer tuple'},
                                {'code': 'invalid_component_tuple',
                                 'condition_and_occurrence': 'once when applicable_gate_components is not an exact '
-                                                            'tuple, omits any mandatory component, includes a '
-                                                            'conditional component not predeclared applicable, omits a '
-                                                            'conditional component predeclared applicable, violates '
-                                                            'canonical relative order, or contains a duplicate, extra, '
-                                                            'or substituted component; valid subset lengths are four, '
-                                                            'five, or six',
+                                                            'tuple of canonical component members, omits any mandatory '
+                                                            'component, violates canonical relative order, or contains '
+                                                            'a duplicate, extra, substituted, or reordered member; '
+                                                            'either conditional member may be present or absent as the '
+                                                            'recorded attestation, so valid lengths are four, five, or '
+                                                            'six',
                                 'prerequisite_and_suppression': 'field is present; element enum diagnostics run for '
-                                                                'readable exact-tuple elements, while applicability '
-                                                                'and outcome-relationship checks are suppressed until '
-                                                                'the exact canonical-order applicable subset is '
-                                                                'usable'},
+                                                                'readable exact-tuple elements; subset-to-outcome '
+                                                                'applicability checks are suppressed until the exact '
+                                                                'canonical-order subset is usable; no historical rule '
+                                                                'state is reconstructed'},
                                {'code': 'invalid_component_outcome_tuple',
                                 'condition_and_occurrence': 'once when component_outcomes is not an exact tuple of six '
                                                             'exact two-item tuple pairs in canonical component '
@@ -1248,12 +1256,19 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                                 'provenance/resolution and continue independent '
                                                                 'claims; do not resolve or require missing result IDs'},
                                {'code': 'cross_baseline_incomplete',
-                                'condition_and_occurrence': 'once when usable aligned required classes lack the exact '
-                                                            'cross-baseline class or its upstream-complete climatology '
-                                                            'and persistence result chain',
-                                'prerequisite_and_suppression': 'required/class alignment and relevant resolved claims '
-                                                                'are usable; suppress when missing/invalid '
-                                                                'prerequisites prevent coverage determination'},
+                                'condition_and_occurrence': 'once when gate-visible required/class alignment does not '
+                                                            'contain exactly one '
+                                                            'candidate_predictive_skill_across_required_baselines '
+                                                            'claim, a baseline-specific claim is substituted for it, '
+                                                            'or that claim has an observable required/observed/missing '
+                                                            'result-ID completeness, provenance-linkage, resolution, '
+                                                            'or structural-disposition contradiction; baseline-family '
+                                                            'result payload contents are not inspected',
+                                'prerequisite_and_suppression': 'usable required/class alignment and gate-visible '
+                                                                'cross-baseline claim identity, resolution, '
+                                                                'disposition, result-ID tuples, and provenance; '
+                                                                'suppress payload/baseline-family conclusions because '
+                                                                'no EvaluationResultRecord context is received'},
                                {'code': 'calibration_requirement_mismatch',
                                 'condition_and_occurrence': 'once when usable aligned required classes lack exactly '
                                                             'the representation-selected calibration class or include '
@@ -1261,17 +1276,33 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                 'prerequisite_and_suppression': 'representation, required/class alignment, and '
                                                                 'relevant claims are usable'},
                                {'code': 'threshold_applicability_mismatch',
-                                'condition_and_occurrence': 'once when threshold applicability, required class '
-                                                            'coverage, outcome, or post-hoc selection conflicts after '
-                                                            'usable applicability/class prerequisites',
-                                'prerequisite_and_suppression': 'applicable subset, outcomes, required/class '
-                                                                'alignment, and relevant claims are usable'},
+                                'condition_and_occurrence': 'once for an observable contradiction among threshold '
+                                                            'component membership in the recorded applicable subset, '
+                                                            'presence/absence of predeclared required '
+                                                            'threshold_weighted_distribution_skill claims, the '
+                                                            'six-pair threshold outcome, and ordered required-claim '
+                                                            'scope; absent subset membership requires no threshold '
+                                                            'claims and component_not_applicable, while present '
+                                                            'membership requires one or more claims and a '
+                                                            'non-not_applicable outcome',
+                                'prerequisite_and_suppression': 'usable recorded applicable subset, six-pair outcomes, '
+                                                                'required/class alignment, and ordered relevant claim '
+                                                                'scope; historical timing is trusted and no post-hoc '
+                                                                'behavior is independently detected'},
                                {'code': 'stratum_applicability_mismatch',
-                                'condition_and_occurrence': 'once when stratum applicability, exact ordered '
-                                                            'strata/class coverage, outcome, omission, or pooling '
-                                                            'conflicts after usable prerequisites',
-                                'prerequisite_and_suppression': 'applicable subset, outcomes, stratum alignment, and '
-                                                                'relevant claims are usable'},
+                                'condition_and_occurrence': 'once for an observable contradiction among stratum '
+                                                            'component membership in the recorded applicable subset, '
+                                                            'presence/absence and order of required '
+                                                            'stratum_specific_predictive_skill claims, six-pair '
+                                                            'stratum outcome, and positional stratum_scope; absent '
+                                                            'membership requires no stratum claims and '
+                                                            'component_not_applicable, while present membership '
+                                                            'requires one or more ordered claims/scopes and a '
+                                                            'non-not_applicable outcome',
+                                'prerequisite_and_suppression': 'usable recorded applicable subset, six-pair outcomes, '
+                                                                'required/class and stratum alignment, and ordered '
+                                                                'relevant claims; historical timing is trusted and no '
+                                                                'post-hoc behavior is independently detected'},
                                {'code': 'no_lookahead_integrity_mismatch',
                                 'condition_and_occurrence': 'exactly once when the exact fixed no-lookahead posture '
                                                             'and usable integrity pair claim component_satisfied while '
@@ -1410,12 +1441,15 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                          'previously validated immutable EvaluationClaimRecord '
                                                          'artifacts and are not independently inspected or '
                                                          'recalculated',
-                                       'traceability_inputs': 'only observed_evaluation_claim_ids, resolved exact '
-                                                              'EvaluationClaimRecord.evaluation_claim_id, each '
-                                                              'resolved claim provenance tuple, decision provenance '
-                                                              'tuple, and the exact fixed '
-                                                              'result_chain_traceability_posture are gate-visible '
-                                                              'traceability inputs',
+                                       'traceability_inputs': 'the complete gate-visible traceability inputs are '
+                                                              'observed_evaluation_claim_ids; each uniquely resolved '
+                                                              'exact EvaluationClaimRecord.evaluation_claim_id; each '
+                                                              'resolved claim provenance tuple; decision provenance '
+                                                              'tuple; exact fixed result_chain_traceability_posture; '
+                                                              'and each resolved claim required_evaluation_result_ids, '
+                                                              'observed_evaluation_result_ids, and '
+                                                              'missing_evaluation_result_ids; no '
+                                                              'EvaluationResultRecord payload is available',
                                        'ordered_subsequence_definition': 'claim provenance is linked when it is an '
                                                                          'ordered subsequence of decision provenance '
                                                                          'using left-to-right equality with '
@@ -1725,7 +1759,24 @@ EXPECTED = {'title': 'WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-A
                                                            'input is never mutated',
                                            'direct_validation': 'requires type(component_outcomes) is tuple and every '
                                                                 'pair type is tuple before validation; no outer or '
-                                                                'nested list adaptation occurs'}}
+                                                                'nested list adaptation occurs'},
+ 'baseline_specific_auxiliary_claims': {'decision': 'permitted_as_additional_predeclared_required_claims',
+                                        'classes': ['candidate_vs_climatology_predictive_skill',
+                                                    'candidate_vs_persistence_predictive_skill'],
+                                        'completeness': 'when present they remain in required_evaluation_claim_ids, '
+                                                        'required_claim_classes, the observed/missing ordered '
+                                                        'partition, policy/scope alignment, provenance/result-ID '
+                                                        'traceability, and selection/no-lookahead integrity checks',
+                                        'order': 'retain their exact predeclared required-ID positions and all '
+                                                 'ordinary compatibility requirements',
+                                        'cross_baseline_role': 'they are auxiliary only and are not substantive inputs '
+                                                               'to cross_baseline_predictive_skill',
+                                        'no_substitution': 'neither individually nor together may substitute for the '
+                                                           'exactly one required '
+                                                           'candidate_predictive_skill_across_required_baselines claim',
+                                        'rationale': 'the controlling planning contract prohibits promotion of a '
+                                                     'baseline-specific claim into a cross-baseline claim but does not '
+                                                     'prohibit additional predeclared baseline-specific claims'}}
 EXPECTED_GROUP_CODE_MATRIX = [['missing_keys', ['missing_required_field']],
  ['unexpected_exact_string_keys', ['unexpected_field']],
  ['unexpected_remaining_keys', ['unexpected_field']],
@@ -1872,7 +1923,12 @@ def test_corrected_cross_contract_invariants() -> None:
     assert not _valid_applicable_subset(tuple(valid_without_conditionals[:-1]), False, False)
     assert not _valid_applicable_subset((canonical[1], canonical[0], canonical[4], canonical[5]), False, False)
     component_tuple_semantic = next(entry for entry in EXPECTED["validation_code_semantics"] if entry["code"] == "invalid_component_tuple")
-    assert "valid subset lengths are four, five, or six" in component_tuple_semantic["condition_and_occurrence"]
+    assert "valid lengths are four, five, or six" in component_tuple_semantic["condition_and_occurrence"]
+    assert "historically" not in component_tuple_semantic["condition_and_occurrence"]
+    for code_name in ("threshold_applicability_mismatch", "stratum_applicability_mismatch"):
+        semantic = next(entry for entry in EXPECTED["validation_code_semantics"] if entry["code"] == code_name)
+        assert "observable contradiction" in semantic["condition_and_occurrence"]
+        assert "no post-hoc behavior is independently detected" in semantic["prerequisite_and_suppression"]
     assert "independent of applicable_gate_components length" in EXPECTED["ambiguity_resolutions"][4]
     assert "absent from applicable_gate_components must be component_not_applicable" in EXPECTED["component_applicability"]["outcome_alignment"]
     assert "does not automatically force not_passed" in EXPECTED["gate_rule_execution_boundary"]["not_satisfied_posture"]
@@ -1893,12 +1949,30 @@ def test_corrected_cross_contract_invariants() -> None:
     for result_id_field in ("required_evaluation_result_ids", "observed_evaluation_result_ids", "missing_evaluation_result_ids"):
         assert result_id_field in claim_fields
         assert result_id_field in EXPECTED["gate_visible_attestation_contract"]["result_id_inputs"]
+        assert result_id_field in EXPECTED["gate_visible_attestation_contract"]["traceability_inputs"]
+    trace = EXPECTED["gate_visible_attestation_contract"]
+    visible_result_fields = ("required_evaluation_result_ids", "observed_evaluation_result_ids", "missing_evaluation_result_ids")
+    assert all(field in trace["traceability_inputs"] and field in trace["result_id_inputs"] for field in visible_result_fields)
+    assert "no EvaluationResultRecord payload" in trace["traceability_inputs"]
     matrix = EXPECTED["claim_class_component_matrix"]
     assert matrix["cross_baseline_predictive_skill"]["claim_classes"] == ["candidate_predictive_skill_across_required_baselines"]
     assert matrix["overall_stage3_evidence_gate"]["claim_classes"] == []
     assert matrix["selection_scope_and_no_lookahead_integrity"]["cardinality"] == "entire_complete_required_claim_set"
     assert "claim_not_supported plus cross_baseline_predictive_skill component_satisfied is invalid" in EXPECTED["structural_support_floor"]["cross_baseline_example"]
     assert "necessary but not sufficient" in EXPECTED["structural_support_floor"]["supported"]
+    disposition = EXPECTED["claim_context_contract"]["disposition_compatibility"]
+    assert "structurally forbids component_satisfied" in disposition
+    assert "necessary but not sufficient" in disposition
+    assert "distinct gate-visible integrity/attestation contract" in disposition
+    cross_semantic = next(entry for entry in EXPECTED["validation_code_semantics"] if entry["code"] == "cross_baseline_incomplete")
+    assert "exactly one candidate_predictive_skill_across_required_baselines claim" in cross_semantic["condition_and_occurrence"]
+    assert "not inspected" in cross_semantic["condition_and_occurrence"]
+    assert "no EvaluationResultRecord context" in cross_semantic["prerequisite_and_suppression"]
+    auxiliary = EXPECTED["baseline_specific_auxiliary_claims"]
+    assert auxiliary["decision"] == "permitted_as_additional_predeclared_required_claims"
+    assert auxiliary["classes"] == ["candidate_vs_climatology_predictive_skill", "candidate_vs_persistence_predictive_skill"]
+    assert "not substantive inputs" in auxiliary["cross_baseline_role"]
+    assert "may substitute" in auxiliary["no_substitution"]
     assert "caller-supplied immutable attestation" in EXPECTED["component_applicability"]["predeclaration_trust_boundary"]
     assert "does not reconstruct" in EXPECTED["component_applicability"]["no_reconstruction"]
     assert EXPECTED["duplicate_mapping_key_consequence"]["duplicate_result"].startswith("any truthy duplicate comparison makes the root unreadable")
@@ -1967,6 +2041,12 @@ def test_table_and_assignment_mutations_are_rejected() -> None:
         (("component_applicability", "no_reconstruction"), "infer applicability from supported claims"),
         (("duplicate_mapping_key_consequence", "duplicate_result"), "emit an implementation-selected duplicate code"),
         (("component_outcomes_mapping_adaptation", "mapping_pairs"), "nested lists survive record construction"),
+        (("gate_visible_attestation_contract", "traceability_inputs"), "claim IDs and provenance only"),
+        (("validation_code_semantics",), [dict(item, condition_and_occurrence="reconstruct historically predeclared applicability") if item["code"] == "invalid_component_tuple" else item for item in parsed["validation_code_semantics"]]),
+        (("validation_code_semantics",), [dict(item, prerequisite_and_suppression="detect historical post-hoc selection") if item["code"] in {"threshold_applicability_mismatch", "stratum_applicability_mismatch"} else item for item in parsed["validation_code_semantics"]]),
+        (("claim_context_contract", "disposition_compatibility"), "claim_not_supported may coexist with component_satisfied"),
+        (("validation_code_semantics",), [dict(item, condition_and_occurrence="inspect EvaluationResultRecord baseline-family payloads") if item["code"] == "cross_baseline_incomplete" else item for item in parsed["validation_code_semantics"]]),
+        (("baseline_specific_auxiliary_claims", "decision"), "forbidden"),
         (("non_goals",), parsed["non_goals"][:-1]),
     ]:
         changed = copy.deepcopy(parsed)
