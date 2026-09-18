@@ -223,6 +223,15 @@ def _ordered_subsequence(needle: tuple[object, ...], haystack: tuple[object, ...
     return all(any(candidate == item for candidate in iterator) for item in needle)
 
 
+def _usable_upstream_result_ids(value: object) -> bool:
+    """Return prerequisite usability without revalidating the trusted artifact."""
+    return (
+        type(value) is tuple
+        and all(_text(item) for item in value)
+        and len(value) == len(set(value))
+    )
+
+
 def evidence_gate_decision_from_mapping(
     mapping: object,
     evaluation_claims: object,
@@ -558,13 +567,13 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
             if claim is None:
                 continue
             bad = identity not in provenance or type(claim.provenance) is not tuple or not _ordered_subsequence(claim.provenance, provenance)
-            if type(claim.observed_evaluation_result_ids) is tuple:
+            if _usable_upstream_result_ids(claim.observed_evaluation_result_ids):
                 bad = bad or any(
                     result_id not in provenance
                     for result_id in claim.observed_evaluation_result_ids
                 )
             result_id_tuples_usable = all(
-                type(value) is tuple
+                _usable_upstream_result_ids(value)
                 for value in (
                     claim.required_evaluation_result_ids,
                     claim.observed_evaluation_result_ids,

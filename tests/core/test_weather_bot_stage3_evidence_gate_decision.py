@@ -611,16 +611,24 @@ def test_observed_result_membership_and_claim_provenance_order_are_distinct() ->
 
 
 @pytest.mark.parametrize(
-    "field",
-    (
-        "required_evaluation_result_ids",
-        "observed_evaluation_result_ids",
-        "missing_evaluation_result_ids",
+    "field,malformed",
+    tuple(
+        (field, malformed)
+        for field in (
+            "required_evaluation_result_ids",
+            "observed_evaluation_result_ids",
+            "missing_evaluation_result_ids",
+        )
+        for malformed in (
+            ["malformed-upstream-container"],
+            ("",),
+            ("duplicate", "duplicate"),
+        )
     ),
 )
-def test_malformed_upstream_result_id_containers_are_not_revalidated(field: str) -> None:
+def test_malformed_upstream_result_id_containers_are_not_revalidated(field: str, malformed: object) -> None:
     record, context = _fixture()
-    malformed_cross = replace(context[0], **{field: ["malformed-upstream-container"]})
+    malformed_cross = replace(context[0], **{field: malformed})
     codes = validate_evidence_gate_decision(record, (malformed_cross, context[1])).codes
     assert EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH not in codes
     assert EvidenceGateValidationCode.CROSS_BASELINE_INCOMPLETE not in codes
