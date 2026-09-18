@@ -563,9 +563,18 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
                     result_id not in provenance
                     for result_id in claim.observed_evaluation_result_ids
                 )
-            else:
-                bad = True
-            if claim.claim_disposition in (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED):
+            result_id_tuples_usable = all(
+                type(value) is tuple
+                for value in (
+                    claim.required_evaluation_result_ids,
+                    claim.observed_evaluation_result_ids,
+                    claim.missing_evaluation_result_ids,
+                )
+            )
+            if result_id_tuples_usable and claim.claim_disposition in (
+                EvaluationClaimDisposition.CLAIM_SUPPORTED,
+                EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED,
+            ):
                 bad = bad or claim.observed_evaluation_result_ids != claim.required_evaluation_result_ids or claim.missing_evaluation_result_ids != ()
             if bad:
                 codes.append(code.PROVENANCE_TRACEABILITY_MISMATCH)
@@ -583,8 +592,6 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
             identity = required[cross_positions[0]]
             claim = resolved.get(identity)
             cross_bad = claim is None or identity in traceability_failures or identity not in usable_disposition
-            if claim is not None:
-                cross_bad = cross_bad or type(claim.required_evaluation_result_ids) is not tuple or type(claim.observed_evaluation_result_ids) is not tuple or type(claim.missing_evaluation_result_ids) is not tuple
         if cross_bad:
             codes.append(code.CROSS_BASELINE_INCOMPLETE)
     calibration_bad = not (required_alignment and representation_ok)

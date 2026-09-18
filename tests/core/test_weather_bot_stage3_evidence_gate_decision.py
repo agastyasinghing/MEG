@@ -610,6 +610,51 @@ def test_observed_result_membership_and_claim_provenance_order_are_distinct() ->
     assert codes.count(EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH) == 1
 
 
+@pytest.mark.parametrize(
+    "field",
+    (
+        "required_evaluation_result_ids",
+        "observed_evaluation_result_ids",
+        "missing_evaluation_result_ids",
+    ),
+)
+def test_malformed_upstream_result_id_containers_are_not_revalidated(field: str) -> None:
+    record, context = _fixture()
+    malformed_cross = replace(context[0], **{field: ["malformed-upstream-container"]})
+    codes = validate_evidence_gate_decision(record, (malformed_cross, context[1])).codes
+    assert EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH not in codes
+    assert EvidenceGateValidationCode.CROSS_BASELINE_INCOMPLETE not in codes
+
+
+def test_malformed_result_ids_do_not_suppress_independent_traceability_checks() -> None:
+    record, context = _fixture()
+    malformed_cross = replace(
+        context[0],
+        observed_evaluation_result_ids=["malformed-upstream-container"],
+        provenance=("result-cross", "source-cross"),
+    )
+    codes = validate_evidence_gate_decision(record, (malformed_cross, context[1])).codes
+    assert codes.count(EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH) == 1
+    assert codes.count(EvidenceGateValidationCode.CROSS_BASELINE_INCOMPLETE) == 1
+
+
+@pytest.mark.parametrize(
+    "changes",
+    (
+        {"observed_evaluation_result_ids": ("different-result",)},
+        {"missing_evaluation_result_ids": ("result-cross",)},
+    ),
+)
+def test_usable_result_id_completeness_contradictions_still_fail(changes: dict[str, object]) -> None:
+    record, context = _fixture()
+    contradictory_cross = replace(context[0], **changes)
+    if "observed_evaluation_result_ids" in changes:
+        record = replace(record, provenance=record.provenance + ("different-result",))
+    codes = validate_evidence_gate_decision(record, (contradictory_cross, context[1])).codes
+    assert codes.count(EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH) == 1
+    assert codes.count(EvidenceGateValidationCode.CROSS_BASELINE_INCOMPLETE) == 1
+
+
 def test_component_prerequisite_failures_suppress_only_their_component() -> None:
     record, context = _fixture()
     bad_calibration = replace(
