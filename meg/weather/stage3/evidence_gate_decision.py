@@ -329,6 +329,8 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
             if type(pair) is tuple and len(pair) == 2:
                 if type(pair[0]) is not EvidenceGateComponent:
                     codes.append(code.INVALID_GATE_COMPONENT)
+        for pair in pairs:
+            if type(pair) is tuple and len(pair) == 2:
                 if type(pair[1]) is not EvidenceGateComponentOutcome:
                     codes.append(code.INVALID_COMPONENT_OUTCOME)
 
@@ -557,7 +559,10 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
                 continue
             bad = identity not in provenance or type(claim.provenance) is not tuple or not _ordered_subsequence(claim.provenance, provenance)
             if type(claim.observed_evaluation_result_ids) is tuple:
-                bad = bad or not _ordered_subsequence(claim.observed_evaluation_result_ids, provenance)
+                bad = bad or any(
+                    result_id not in provenance
+                    for result_id in claim.observed_evaluation_result_ids
+                )
             else:
                 bad = True
             if claim.claim_disposition in (EvaluationClaimDisposition.CLAIM_SUPPORTED, EvaluationClaimDisposition.CLAIM_NOT_SUPPORTED):
@@ -622,8 +627,14 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
     }
     expected_by_rank = {3: EvidenceGateComponentOutcome.COMPONENT_BLOCKED, 2: EvidenceGateComponentOutcome.COMPONENT_UNAVAILABLE, 1: EvidenceGateComponentOutcome.COMPONENT_INSUFFICIENT}
     if applicable_ok and pairs_ok and required_alignment:
+        component_prerequisites = {
+            _COMPONENTS[0]: not cross_bad,
+            _COMPONENTS[1]: not calibration_bad,
+            _COMPONENTS[2]: not threshold_bad,
+            _COMPONENTS[3]: not stratum_bad,
+        }
         for component, classes in component_claim_classes.items():
-            if component not in applicable:
+            if component not in applicable or not component_prerequisites[component]:
                 continue
             relevant = [required[i] for i, item in enumerate(class_list) if item in classes]
             if not relevant or any(identity not in usable_disposition for identity in relevant):

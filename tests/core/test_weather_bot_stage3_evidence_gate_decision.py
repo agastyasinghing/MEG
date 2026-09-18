@@ -103,6 +103,54 @@ COVERAGE_MANIFEST = {
     "provenance_timestamp_supersession": "test_supersession_timestamp_and_provenance_rules",
     "purity_and_safety": "test_source_has_no_forbidden_trust_or_execution_dependencies",
 }
+VALIDATION_GROUP_COVERAGE = {
+    "missing_keys": "test_each_required_key_and_unexpected_key_order",
+    "unexpected_exact_string_keys": "test_each_required_key_and_unexpected_key_order",
+    "unexpected_remaining_keys": "test_each_required_key_and_unexpected_key_order",
+    "required_and_nullable_text": "test_text_enum_and_tuple_structure_groups",
+    "gate_component_enum": "test_component_enum_groups_are_globally_ordered",
+    "component_outcome_enum": "test_component_enum_groups_are_globally_ordered",
+    "gate_disposition_enum": "test_text_enum_and_tuple_structure_groups",
+    "prediction_representation_enum": "test_text_enum_and_tuple_structure_groups",
+    "claim_class_enum": "test_text_enum_and_tuple_structure_groups",
+    "fixed_postures": "test_traceability_and_no_lookahead_codes_are_separate_and_ordered",
+    "text_tuple_structure": "test_repeated_validation_codes_keep_group_and_occurrence_order",
+    "claim_identity_tuple_structure": "test_text_enum_and_tuple_structure_groups",
+    "claim_class_tuple_structure": "test_text_enum_and_tuple_structure_groups",
+    "component_tuple_structure": "test_component_structure_and_applicability_groups",
+    "component_outcome_tuple_structure": "test_component_structure_and_applicability_groups",
+    "claim_set_partition": "test_partition_and_class_sequence_failures",
+    "claim_class_sequence": "test_partition_and_class_sequence_failures",
+    "component_applicability": "test_component_structure_and_applicability_groups",
+    "claim_context_container": "test_context_exact_type_order_duplicates_and_unexpected_claims",
+    "individual_claim_validity": "test_invalid_context_item_and_unusable_claim_disposition",
+    "context_identity_uniqueness": "test_context_exact_type_order_duplicates_and_unexpected_claims",
+    "observed_claim_resolution": "test_context_exact_type_order_duplicates_and_unexpected_claims",
+    "unexpected_context_claims": "test_context_exact_type_order_duplicates_and_unexpected_claims",
+    "claim_disposition_compatibility": "test_invalid_context_item_and_unusable_claim_disposition",
+    "claim_class_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "candidate_identity_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "representation_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "split_fold_cutoff_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "paired_record_set_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "aggregation_weighting_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "stratum_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "inherited_policy_compatibility": "test_claim_compatibility_groups_and_occurrences",
+    "provenance_result_chain_traceability": "test_observed_result_membership_and_claim_provenance_order_are_distinct",
+    "cross_baseline_completeness": "test_component_prerequisite_failures_suppress_only_their_component",
+    "calibration_requirement": "test_component_prerequisite_failures_suppress_only_their_component",
+    "threshold_applicability": "test_threshold_and_stratum_applicability_diagnostics",
+    "stratum_applicability": "test_threshold_and_stratum_applicability_diagnostics",
+    "no_lookahead_integrity": "test_traceability_and_no_lookahead_codes_are_separate_and_ordered",
+    "component_outcome_consistency": "test_not_supported_floor_but_supported_does_not_force_satisfaction",
+    "disposition_precedence": "test_disposition_and_complete_rule_groups",
+    "complete_rule_requirement": "test_disposition_and_complete_rule_groups",
+    "provenance": "test_provenance_empty_and_repeated_invalid_occurrences",
+    "decision_created_timestamp": "test_repeated_validation_codes_keep_group_and_occurrence_order",
+    "self_supersession": "test_supersession_timestamp_and_provenance_rules",
+    "supersession_link": "test_supersession_timestamp_and_provenance_rules",
+}
+assert len(VALIDATION_GROUP_COVERAGE) == 45
 
 
 def _claim(identity: str, claim_class: EvaluationClaimClass, *, stratum: str | None = None) -> EvaluationClaimRecord:
@@ -210,6 +258,30 @@ def test_public_contract_is_literal_and_frozen() -> None:
     assert "__post_init__" not in EvidenceGateDecisionRecord.__dict__
     assert tuple(inspect.signature(evidence_gate_decision_from_mapping).parameters) == ("mapping", "evaluation_claims")
     assert tuple(inspect.signature(validate_evidence_gate_decision).parameters) == ("record", "evaluation_claims")
+
+
+def test_every_validation_group_maps_to_an_exercising_test() -> None:
+    assert tuple(VALIDATION_GROUP_COVERAGE) == (
+        "missing_keys", "unexpected_exact_string_keys", "unexpected_remaining_keys",
+        "required_and_nullable_text", "gate_component_enum", "component_outcome_enum",
+        "gate_disposition_enum", "prediction_representation_enum", "claim_class_enum",
+        "fixed_postures", "text_tuple_structure", "claim_identity_tuple_structure",
+        "claim_class_tuple_structure", "component_tuple_structure",
+        "component_outcome_tuple_structure", "claim_set_partition", "claim_class_sequence",
+        "component_applicability", "claim_context_container", "individual_claim_validity",
+        "context_identity_uniqueness", "observed_claim_resolution",
+        "unexpected_context_claims", "claim_disposition_compatibility",
+        "claim_class_compatibility", "candidate_identity_compatibility",
+        "representation_compatibility", "split_fold_cutoff_compatibility",
+        "paired_record_set_compatibility", "aggregation_weighting_compatibility",
+        "stratum_compatibility", "inherited_policy_compatibility",
+        "provenance_result_chain_traceability", "cross_baseline_completeness",
+        "calibration_requirement", "threshold_applicability", "stratum_applicability",
+        "no_lookahead_integrity", "component_outcome_consistency",
+        "disposition_precedence", "complete_rule_requirement", "provenance",
+        "decision_created_timestamp", "self_supersession", "supersession_link",
+    )
+    assert all(callable(globals()[test_name]) for test_name in VALIDATION_GROUP_COVERAGE.values())
 
 
 def test_validation_result_invariant_preserves_repetition() -> None:
@@ -321,6 +393,66 @@ def test_direct_validation_does_not_adapt_lists() -> None:
     assert validate_evidence_gate_decision(malformed, context).codes[0] is EvidenceGateValidationCode.INVALID_CLAIM_ID_TUPLE
 
 
+def test_text_enum_and_tuple_structure_groups() -> None:
+    record, context = _fixture()
+    malformed = replace(
+        record,
+        gate_disposition="bad",
+        prediction_representation="bad",
+        required_claim_classes=("bad",),
+        observed_claim_classes=["bad"],
+        required_evaluation_claim_ids=("cross", "cross"),
+        evidence_gate_id=" ",
+        supersedes_decision_id_when_applicable=3,
+    )
+    codes = validate_evidence_gate_decision(malformed, context).codes
+    assert codes[:8] == (
+        EvidenceGateValidationCode.BLANK_REQUIRED_TEXT,
+        EvidenceGateValidationCode.BLANK_REQUIRED_TEXT,
+        EvidenceGateValidationCode.INVALID_GATE_DISPOSITION,
+        EvidenceGateValidationCode.INVALID_PREDICTION_REPRESENTATION,
+        EvidenceGateValidationCode.INVALID_CLAIM_CLASS,
+        EvidenceGateValidationCode.INVALID_CLAIM_ID_TUPLE,
+        EvidenceGateValidationCode.INVALID_CLAIM_CLASS_TUPLE,
+        EvidenceGateValidationCode.INVALID_CLAIM_CLASS_TUPLE,
+    )
+
+
+def test_component_enum_groups_are_globally_ordered() -> None:
+    record, context = _fixture()
+    pairs = list(record.component_outcomes)
+    pairs[0] = ("invalid-component-1", "invalid-outcome-1")
+    pairs[1] = ("invalid-component-2", "invalid-outcome-2")
+    codes = validate_evidence_gate_decision(replace(record, component_outcomes=tuple(pairs)), context).codes
+    assert codes[:5] == (
+        EvidenceGateValidationCode.INVALID_GATE_COMPONENT,
+        EvidenceGateValidationCode.INVALID_GATE_COMPONENT,
+        EvidenceGateValidationCode.INVALID_COMPONENT_OUTCOME,
+        EvidenceGateValidationCode.INVALID_COMPONENT_OUTCOME,
+        EvidenceGateValidationCode.INVALID_COMPONENT_OUTCOME_TUPLE,
+    )
+
+
+def test_component_structure_and_applicability_groups() -> None:
+    record, context = _fixture()
+    malformed_components = replace(record, applicable_gate_components=tuple(reversed(record.applicable_gate_components)))
+    assert validate_evidence_gate_decision(malformed_components, context).codes[0] is EvidenceGateValidationCode.INVALID_COMPONENT_TUPLE
+    malformed_pairs = replace(record, component_outcomes=record.component_outcomes[:-1])
+    assert validate_evidence_gate_decision(malformed_pairs, context).codes[0] is EvidenceGateValidationCode.INVALID_COMPONENT_OUTCOME_TUPLE
+    outcomes = _outcomes(record, CROSS_BASELINE_PREDICTIVE_SKILL=EvidenceGateComponentOutcome.COMPONENT_NOT_APPLICABLE)
+    codes = validate_evidence_gate_decision(replace(record, component_outcomes=outcomes), context).codes
+    assert codes.count(EvidenceGateValidationCode.APPLICABILITY_MISMATCH) == 1
+
+
+def test_partition_and_class_sequence_failures() -> None:
+    record, context = _fixture()
+    partition = replace(record, observed_evaluation_claim_ids=("calibration", "cross"))
+    assert EvidenceGateValidationCode.CLAIM_SET_PARTITION_MISMATCH in validate_evidence_gate_decision(partition, tuple(reversed(context))).codes
+    sequences = replace(record, required_claim_classes=record.required_claim_classes[:1], observed_claim_classes=record.observed_claim_classes[:1])
+    codes = validate_evidence_gate_decision(sequences, context).codes
+    assert codes.count(EvidenceGateValidationCode.CLAIM_CLASS_SEQUENCE_MISMATCH) == 2
+
+
 def test_context_exact_type_order_duplicates_and_unexpected_claims() -> None:
     record, context = _fixture()
     assert validate_evidence_gate_decision(record, list(context)).codes[0] is EvidenceGateValidationCode.INVALID_CLAIM_RECORD_CONTAINER
@@ -331,6 +463,44 @@ def test_context_exact_type_order_duplicates_and_unexpected_claims() -> None:
     extra = replace(context[0], evaluation_claim_id="extra")
     unexpected = validate_evidence_gate_decision(record, context + (extra,)).codes
     assert EvidenceGateValidationCode.UNEXPECTED_CONTEXT_CLAIM in unexpected
+
+
+def test_invalid_context_item_and_unusable_claim_disposition() -> None:
+    record, context = _fixture()
+    invalid_item = validate_evidence_gate_decision(record, (object(), context[1])).codes
+    assert invalid_item.count(EvidenceGateValidationCode.INVALID_CLAIM_RECORD) == 1
+    unusable = (replace(context[0], claim_disposition="bad"), context[1])
+    codes = validate_evidence_gate_decision(record, unusable).codes
+    assert codes.count(EvidenceGateValidationCode.CLAIM_DISPOSITION_UNUSABLE) == 1
+    assert EvidenceGateValidationCode.COMPONENT_OUTCOME_MISMATCH not in codes
+
+
+def test_claim_compatibility_groups_and_occurrences() -> None:
+    record, context = _fixture()
+    bad = replace(
+        context[0],
+        claim_class=EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR,
+        candidate_method_id="other", prediction_representation=ScoringPredictionRepresentation.BINARY_OUTCOME_PROBABILITY,
+        split_id="other", paired_test_record_set_id="other", aggregation_rule_id="other",
+        stratum_id_when_applicable="other", uncertainty_policy_id="other",
+        sample_support_rule_id="other", selection_control_policy_id="other",
+        multiple_comparison_policy_id_when_applicable="other",
+    )
+    codes = validate_evidence_gate_decision(record, (bad, context[1])).codes
+    expected_prefix = (
+        EvidenceGateValidationCode.CLAIM_CLASS_MISMATCH,
+        EvidenceGateValidationCode.CANDIDATE_IDENTITY_MISMATCH,
+        EvidenceGateValidationCode.REPRESENTATION_MISMATCH,
+        EvidenceGateValidationCode.SPLIT_SCOPE_MISMATCH,
+        EvidenceGateValidationCode.PAIRED_RECORD_SET_MISMATCH,
+        EvidenceGateValidationCode.AGGREGATION_WEIGHTING_MISMATCH,
+        EvidenceGateValidationCode.STRATUM_SCOPE_MISMATCH,
+        EvidenceGateValidationCode.INHERITED_POLICY_MISMATCH,
+        EvidenceGateValidationCode.INHERITED_POLICY_MISMATCH,
+        EvidenceGateValidationCode.INHERITED_POLICY_MISMATCH,
+        EvidenceGateValidationCode.INHERITED_POLICY_MISMATCH,
+    )
+    assert codes[:len(expected_prefix)] == expected_prefix
 
 
 def test_partition_interleaving_and_repeated_classes_are_valid() -> None:
@@ -414,6 +584,109 @@ def test_traceability_and_no_lookahead_codes_are_separate_and_ordered() -> None:
     assert EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH not in codes
 
 
+def test_observed_result_membership_and_claim_provenance_order_are_distinct() -> None:
+    record, context = _fixture()
+    cross = replace(
+        context[0],
+        required_evaluation_result_ids=("result-a", "result-b"),
+        observed_evaluation_result_ids=("result-a", "result-b"),
+        provenance=("source-cross",),
+    )
+    reordered_results = replace(
+        record,
+        provenance=(
+            "cross", "source-cross", "result-b", "result-a",
+            "calibration", "source-calibration", "result-calibration",
+        ),
+    )
+    assert validate_evidence_gate_decision(reordered_results, (cross, context[1])).codes == ()
+
+    reversed_claim_provenance = replace(cross, provenance=("result-a", "source-cross"))
+    codes = validate_evidence_gate_decision(reordered_results, (reversed_claim_provenance, context[1])).codes
+    assert codes.count(EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH) == 1
+
+    missing_result = replace(reordered_results, provenance=tuple(item for item in reordered_results.provenance if item != "result-a"))
+    codes = validate_evidence_gate_decision(missing_result, (cross, context[1])).codes
+    assert codes.count(EvidenceGateValidationCode.PROVENANCE_TRACEABILITY_MISMATCH) == 1
+
+
+def test_component_prerequisite_failures_suppress_only_their_component() -> None:
+    record, context = _fixture()
+    bad_calibration = replace(
+        context[1], claim_class=EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR,
+        claim_disposition=EvaluationClaimDisposition.CLAIM_BLOCKED,
+    )
+    calibration_record = replace(
+        record,
+        required_claim_classes=(record.required_claim_classes[0], EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR),
+        observed_claim_classes=(record.observed_claim_classes[0], EvaluationClaimClass.BINARY_CALIBRATION_BEHAVIOR),
+        gate_disposition=EvidenceGateDisposition.STAGE3_GATE_BLOCKED,
+        subsequent_approval_request_eligibility_posture="not_eligible_for_implementation_handoff",
+        component_outcomes=_outcomes(record, OVERALL_STAGE3_EVIDENCE_GATE=EvidenceGateComponentOutcome.COMPONENT_BLOCKED),
+    )
+    assert validate_evidence_gate_decision(calibration_record, (context[0], bad_calibration)).codes == (
+        EvidenceGateValidationCode.CALIBRATION_REQUIREMENT_MISMATCH,
+    )
+
+    bad_cross = replace(
+        context[0], claim_class=EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL,
+        claim_disposition=EvaluationClaimDisposition.CLAIM_BLOCKED,
+    )
+    cross_record = replace(
+        record,
+        required_claim_classes=(EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, record.required_claim_classes[1]),
+        observed_claim_classes=(EvaluationClaimClass.CANDIDATE_VS_CLIMATOLOGY_PREDICTIVE_SKILL, record.observed_claim_classes[1]),
+        gate_disposition=EvidenceGateDisposition.STAGE3_GATE_BLOCKED,
+        subsequent_approval_request_eligibility_posture="not_eligible_for_implementation_handoff",
+        component_outcomes=_outcomes(record, OVERALL_STAGE3_EVIDENCE_GATE=EvidenceGateComponentOutcome.COMPONENT_BLOCKED),
+    )
+    assert validate_evidence_gate_decision(cross_record, (bad_cross, context[1])).codes == (
+        EvidenceGateValidationCode.CROSS_BASELINE_INCOMPLETE,
+    )
+
+
+def test_threshold_and_stratum_applicability_diagnostics() -> None:
+    record, context = _fixture(threshold=True, stratum=True)
+    no_threshold_class = replace(
+        record,
+        required_claim_classes=tuple(
+            EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR if item is EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL else item
+            for item in record.required_claim_classes
+        ),
+        observed_claim_classes=tuple(
+            EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR if item is EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL else item
+            for item in record.observed_claim_classes
+        ),
+    )
+    changed_context = tuple(
+        replace(claim, claim_class=EvaluationClaimClass.ENSEMBLE_CALIBRATION_BEHAVIOR)
+        if claim.claim_class is EvaluationClaimClass.THRESHOLD_WEIGHTED_DISTRIBUTION_SKILL else claim
+        for claim in context
+    )
+    assert EvidenceGateValidationCode.THRESHOLD_APPLICABILITY_MISMATCH in validate_evidence_gate_decision(no_threshold_class, changed_context).codes
+    bad_stratum = replace(record, stratum_scope=record.stratum_scope[:-1] + (None,))
+    assert EvidenceGateValidationCode.STRATUM_APPLICABILITY_MISMATCH in validate_evidence_gate_decision(bad_stratum, context).codes
+
+
+def test_disposition_and_complete_rule_groups() -> None:
+    record, context = _fixture()
+    wrong_disposition = replace(
+        record,
+        gate_disposition=EvidenceGateDisposition.STAGE3_GATE_NOT_PASSED,
+        subsequent_approval_request_eligibility_posture="not_eligible_for_implementation_handoff",
+    )
+    assert validate_evidence_gate_decision(wrong_disposition, context).codes == (
+        EvidenceGateValidationCode.DISPOSITION_PRECEDENCE_MISMATCH,
+    )
+    incomplete = replace(
+        record,
+        observed_evaluation_claim_ids=("cross",), missing_evaluation_claim_ids=("calibration",),
+        observed_claim_classes=(record.observed_claim_classes[0],),
+    )
+    codes = validate_evidence_gate_decision(incomplete, (context[0],)).codes
+    assert EvidenceGateValidationCode.COMPLETE_RULE_REQUIRED in codes
+
+
 def test_repeated_validation_codes_keep_group_and_occurrence_order() -> None:
     record, context = _fixture()
     malformed = replace(record, provenance=("", "valid", ""), decision_created_at="no-offset")
@@ -435,6 +708,13 @@ def test_supersession_timestamp_and_provenance_rules() -> None:
     linked = replace(absent_link, provenance=record.provenance + ("prior",))
     assert validate_evidence_gate_decision(linked, context).codes == ()
     assert EvidenceGateValidationCode.INVALID_DECISION_CREATED_AT in validate_evidence_gate_decision(replace(record, decision_created_at="2025-01-01T00:00:00"), context).codes
+
+
+def test_provenance_empty_and_repeated_invalid_occurrences() -> None:
+    record, context = _fixture()
+    assert validate_evidence_gate_decision(replace(record, provenance=()), context).codes[-1] is EvidenceGateValidationCode.EMPTY_PROVENANCE
+    codes = validate_evidence_gate_decision(replace(record, provenance=("", 3)), context).codes
+    assert codes.count(EvidenceGateValidationCode.INVALID_PROVENANCE) == 2
 
 
 def test_source_has_no_forbidden_trust_or_execution_dependencies() -> None:
