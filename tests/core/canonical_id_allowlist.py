@@ -170,6 +170,8 @@ _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
     "tests/core/test_weather_bot_stage3_strict_oos_split_implementation_approval_request_01.py",
     "docs/prd/WEATHER-BOT-STAGE3-BASELINE-CONTRACTS-IMPLEMENTATION-APPROVAL-REQUEST-01.md",
     "tests/core/test_weather_bot_stage3_baseline_contracts_implementation_approval_request_01.py",
+    "docs/prd/WEATHER-BOT-STAGE3-EVIDENCE-EXECUTION-READINESS-REVIEW-01.md",
+    "tests/core/test_weather_bot_stage3_evidence_execution_readiness_review_01.py",
 }
 
 
@@ -509,6 +511,9 @@ ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
     # Stage 3 evidence-gate approval request uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-STAGE3-EVIDENCE-GATE-DECISION-IMPLEMENTATION-APPROVAL-REQUEST-01.md": 2,
     "tests/core/test_weather_bot_stage3_evidence_gate_decision_implementation_approval_request_01.py": 3,
+    # Stage 3 evidence/execution readiness review uses market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-STAGE3-EVIDENCE-EXECUTION-READINESS-REVIEW-01.md": 2,
+    "tests/core/test_weather_bot_stage3_evidence_execution_readiness_review_01.py": 2,
     # Runtime approval request packet planning uses market_id only as a non-routing negative boundary.
     "docs/prd/WEATHER-BOT-PHASE0A-RUNTIME-APPROVAL-REQUEST-PACKET-PLANNING-01.md": 2,
     "tests/core/test_weather_bot_phase0a_runtime_approval_request_packet_planning_01.py": 5,
