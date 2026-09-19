@@ -765,7 +765,17 @@ def test_supersession_timestamp_and_provenance_rules() -> None:
 
 def test_provenance_empty_and_repeated_invalid_occurrences() -> None:
     record, context = _fixture()
-    assert validate_evidence_gate_decision(replace(record, provenance=()), context).codes[-1] is EvidenceGateValidationCode.EMPTY_PROVENANCE
+    assert validate_evidence_gate_decision(replace(record, provenance=()), context).codes == (
+        EvidenceGateValidationCode.EMPTY_PROVENANCE,
+    )
+    empty_with_supersession = replace(
+        record,
+        provenance=(),
+        supersedes_decision_id_when_applicable="prior-decision",
+    )
+    assert validate_evidence_gate_decision(empty_with_supersession, context).codes == (
+        EvidenceGateValidationCode.EMPTY_PROVENANCE,
+    )
     codes = validate_evidence_gate_decision(replace(record, provenance=("", 3)), context).codes
     assert codes.count(EvidenceGateValidationCode.INVALID_PROVENANCE) == 2
 

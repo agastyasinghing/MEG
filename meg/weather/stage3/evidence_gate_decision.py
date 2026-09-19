@@ -558,7 +558,11 @@ def _validate_values(values: Mapping[str, object], present: set[str], context: o
                 if decision_field == "selection_control_policy_ids":
                     earlier_integrity_failure = True
 
-    provenance_ok = type(values.get("provenance")) is tuple and all(_text(item) for item in values.get("provenance", ()))
+    provenance_ok = (
+        type(values.get("provenance")) is tuple
+        and bool(values.get("provenance"))
+        and all(_text(item) for item in values["provenance"])
+    )
     traceability_failures: set[str] = set()
     if values.get("result_chain_traceability_posture") == _FIXED[2][1] and provenance_ok and id_valid[_ID_TUPLES[1]]:
         provenance = values["provenance"]
