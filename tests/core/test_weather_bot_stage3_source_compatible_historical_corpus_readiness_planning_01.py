@@ -113,6 +113,11 @@ def test_sufficiency_oos_baselines_and_accounting_fail_closed() -> None:
     assert "No universal numeric minimum is selected here" in sufficiency
     assert "Before test outcomes are inspected" in sufficiency
     assert "sample-support/sufficiency policy" in sufficiency
+    assert "thresholds or decision rules" in sufficiency
+    for support_axis in ("metric", "diagnostic", "split", "baseline", "claim", "fold", "role", "stratum"):
+        assert support_axis in sufficiency
+    assert "sparse-bucket handling" in sufficiency
+    assert "pooling rules" in sufficiency
     assert "may not be changed after seeing test outcomes" in sufficiency
     assert "uncertainty method" in sufficiency
     assert "uncertainty interval level" in sufficiency
@@ -125,6 +130,9 @@ def test_sufficiency_oos_baselines_and_accounting_fail_closed() -> None:
     dimensions = sections["Corpus-readiness dimensions"]
     assert "train/calibration/test roles" in dimensions
     assert "train/validation/test roles" not in dimensions
+    assert "leave-station-out feasibility where applicable" in dimensions
+    assert "leave-year-out feasibility where applicable" in dimensions
+    assert "The predeclared persisted quantity and conversion rule have a compatible prior state legitimately available before `prediction_as_of` and the applicable cutoff" in dimensions
     baseline = sections["Baseline-feasibility requirements"]
     assert "held-out data" in baseline
     assert "already-predeclared persisted quantity identity, conversion-rule identity, compatible prior state, and point-in-time availability" in baseline

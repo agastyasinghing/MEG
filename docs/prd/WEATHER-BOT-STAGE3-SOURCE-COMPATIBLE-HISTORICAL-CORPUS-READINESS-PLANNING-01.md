@@ -60,7 +60,7 @@ A future example is usable only when supplied evidence establishes every applica
 | leave-station-out feasibility where applicable | Held-out stations have usable support and no station leakage. |
 | leave-year-out feasibility where applicable | Held-out years have usable support and no future-year leakage. |
 | climatology baseline feasibility | Only history available before each cutoff supports the declared family/station/season strata. |
-| persistence baseline feasibility | A valid prior observation/forecast exists and was available before each cutoff. |
+| persistence baseline feasibility | The predeclared persisted quantity and conversion rule have a compatible prior state legitimately available before `prediction_as_of` and the applicable cutoff. |
 | calibration/threshold-bucket feasibility | Reproducible buckets retain visible support without unsafe pooling. |
 | sample-size and uncertainty reporting | Every aggregate and diagnostic exposes usable sample support, exclusions, sparsity, and uncertainty. |
 
