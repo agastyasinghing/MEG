@@ -56,7 +56,7 @@ A future example is usable only when supplied evidence establishes every applica
 | forecast-horizon coverage where applicable | Counts and gaps by decision-time horizon/product are reported. |
 | trap-category coverage | Counts and adjudication outcomes by controlling trap category are reported. |
 | blocked/excluded-example accounting | Every non-usable example and reason remains visible in denominators and audit totals. |
-| strict temporal OOS feasibility | Chronological cutoffs and non-overlapping leakage groups yield supportable train/validation/test roles. |
+| strict temporal OOS feasibility | Chronological cutoffs and non-overlapping leakage groups yield supportable train/calibration/test roles. |
 | leave-station-out feasibility where applicable | Held-out stations have usable support and no station leakage. |
 | leave-year-out feasibility where applicable | Held-out years have usable support and no future-year leakage. |
 | climatology baseline feasibility | Only history available before each cutoff supports the declared family/station/season strata. |
@@ -82,6 +82,8 @@ There is no universal numeric minimum sample count in this contract. A future re
 
 The assessment must connect each intended metric, diagnostic, split, baseline, and claim to its actual eligible support. It must report attrition before and after compatibility/provenance/trap review, fold-level support, missingness, concentration, and uncertainty limitations. A readiness finding fails closed when strict-OOS evaluation, required baselines, or required diagnostics cannot be supported without collapsing incompatible strata, leaking future information, or using insufficiently evidenced records.
 
+No universal numeric minimum is selected here. Before test outcomes are inspected, future evaluation work must select and freeze its evaluation-specific sample-support/sufficiency policy; any thresholds or decision rules required for the relevant metric, diagnostic, split, baseline, claim, fold, role, and stratum; sparse-bucket handling; pooling rules; uncertainty method; and uncertainty interval level. Those choices may not be changed after seeing test outcomes. Corpus-readiness diagnostics alone do not authorize a post-hoc declaration that observed sample counts are "good enough." Sparse or insufficient strata remain blocked or insufficient rather than being silently pooled. This ticket selects no numeric threshold, confidence or interval level, bin count, bootstrap design, resampling block length, weighting constant, or other numeric minimum.
+
 The five current examples do not establish sample sufficiency.
 
 ## Strict-OOS feasibility requirements
@@ -92,7 +94,7 @@ No split is assigned or executed by this ticket.
 
 ## Baseline-feasibility requirements
 
-Climatology feasibility requires adequate prior, source-compatible history for the declared family/station/season or other predeclared stratum at every cutoff. Persistence feasibility requires a semantically valid preceding value that was actually available at the cutoff. The future review must count baseline-eligible examples by fold and stratum, document cold starts and missing histories, and prevent held-out data from contributing to baseline construction. If either required baseline cannot be generated fairly, Stage 3 readiness fails closed.
+Climatology feasibility requires adequate prior, source-compatible history for the declared family/station/season or other predeclared stratum at every cutoff. Persistence feasibility must support the already-predeclared persisted quantity identity, conversion-rule identity, compatible prior state, and point-in-time availability before `prediction_as_of` and the applicable cutoff. A previous observation existing somewhere in history is not enough: it must be compatible with that predeclared persistence quantity and conversion rule and legitimately available at prediction time. This plan does not define either policy. The future review must count baseline-eligible examples by fold and stratum, document cold starts and missing histories, and prevent held-out data from contributing to baseline construction. If either required baseline cannot be generated fairly, Stage 3 readiness fails closed.
 
 No baseline value is generated or executed by this ticket.
 

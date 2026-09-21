@@ -110,10 +110,27 @@ def test_sufficiency_oos_baselines_and_accounting_fail_closed() -> None:
     )
     assert all(value in sufficiency for value in required_diagnostics)
     assert "There is no universal numeric minimum sample count" in sufficiency
+    assert "No universal numeric minimum is selected here" in sufficiency
+    assert "Before test outcomes are inspected" in sufficiency
+    assert "sample-support/sufficiency policy" in sufficiency
+    assert "may not be changed after seeing test outcomes" in sufficiency
+    assert "uncertainty method" in sufficiency
+    assert "uncertainty interval level" in sufficiency
+    assert "Sparse or insufficient strata remain blocked or insufficient rather than being silently pooled" in sufficiency
+    assert 'post-hoc declaration that observed sample counts are "good enough."' in sufficiency
     assert "The five current examples do not establish sample sufficiency" in sufficiency
     assert "fails closed" in sufficiency
-    assert "no overlap or leakage" in sections["Strict-OOS feasibility requirements"]
-    assert "held-out data" in sections["Baseline-feasibility requirements"]
+    oos = sections["Strict-OOS feasibility requirements"]
+    assert "no overlap or leakage" in oos
+    dimensions = sections["Corpus-readiness dimensions"]
+    assert "train/calibration/test roles" in dimensions
+    assert "train/validation/test roles" not in dimensions
+    baseline = sections["Baseline-feasibility requirements"]
+    assert "held-out data" in baseline
+    assert "already-predeclared persisted quantity identity, conversion-rule identity, compatible prior state, and point-in-time availability" in baseline
+    assert "before `prediction_as_of` and the applicable cutoff" in baseline
+    assert "A previous observation existing somewhere in history is not enough" in baseline
+    assert "This plan does not define either policy" in baseline
     accounting = sections["Blocked and excluded data accounting"]
     assert "silently dropping failures" in accounting
     assert "cannot inflate usable sample support" in accounting
