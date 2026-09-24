@@ -35,13 +35,56 @@ ACCESS_METHODS = [
     "live_runtime_provider_requires_separate_approval",
 ]
 
-
-def assignments(key: str) -> list[str]:
-    return re.findall(rf"^{re.escape(key)}: (\S+)$", TEXT, re.MULTILINE)
+EXPECTED_ASSIGNMENTS = [
+    "ticket_id: WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-APPROVAL-DECISION-01",
+    "immediate_predecessor_pr: pr_387",
+    "actual_merge_sha: 6901845cfea86670b1b7fed82fa2db976fbfa627",
+    "artifact_scope: docs_static_test_only",
+    "decision_artifact_posture: decision_only",
+    "decision_status: decision_recorded",
+    "decision_option: approve_narrow_historical_corpus_construction_and_acquisition",
+    "decision_option: request_approval_request_revision",
+    "decision_option: hold",
+    "decision_option: block",
+    "selected_decision: approve_narrow_historical_corpus_construction_and_acquisition",
+    "historical_corpus_path: approved_for_narrow_implementation_planning",
+    "historical_acquisition_path: approved_for_narrow_implementation_planning",
+    "execution_authority: not_granted_by_decision_artifact",
+    "access_method_authority: none_individually_approved",
+    "live_provider_runtime_authority: not_approved",
+    "current_corpus: five_static_stage2_examples_only",
+    "synthetic_example_count: 3",
+    "real_source_backed_example_count: 2",
+    "corpus_coverage: not_established",
+    "sample_sufficiency: not_established",
+    "strict_oos_feasibility: not_demonstrated",
+    "stage3_scoring_readiness: not_ready",
+    "storage_path: not_selected",
+    "file_format: not_selected",
+    "database: not_selected",
+    "dataset_size: not_selected",
+    "canonical_routing_field: condition_id",
+    "canonical_routing_field: token_id",
+    "canonical_routing_field: outcome",
+    "non_routing_legacy_identifier: market_id",
+    "derived_identifier: token_outcome_pair",
+    "recommended_next_ticket: WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-IMPLEMENTATION-PLAN-01",
+]
 
 
 def section(heading: str, next_heading: str) -> str:
     return TEXT.split(f"## {heading}\n", 1)[1].split(f"## {next_heading}\n", 1)[0]
+
+
+MACHINE_SECTION = section("Machine-checkable assignments", "Acceptance criteria")
+MACHINE_BLOCK_MATCH = re.fullmatch(r"\n```text\n(?P<body>[^`]*)```\n\n", MACHINE_SECTION)
+assert MACHINE_BLOCK_MATCH is not None
+MACHINE_BLOCK = MACHINE_BLOCK_MATCH.group("body")
+MACHINE_ASSIGNMENTS = MACHINE_BLOCK.splitlines()
+
+
+def assignments(key: str) -> list[str]:
+    return re.findall(rf"^{re.escape(key)}: (\S+)$", MACHINE_BLOCK, re.MULTILINE)
 
 
 def backtick_bullets(body: str) -> list[str]:
@@ -53,6 +96,10 @@ def test_exact_path_predecessor_and_heading_order() -> None:
     assert "PR #387" in TEXT
     assert assignments("actual_merge_sha") == ["6901845cfea86670b1b7fed82fa2db976fbfa627"]
     assert re.findall(r"^## (.+)$", TEXT, re.MULTILINE) == HEADINGS
+
+
+def test_complete_machine_assignment_block_is_exact_and_ordered() -> None:
+    assert MACHINE_ASSIGNMENTS == EXPECTED_ASSIGNMENTS
 
 
 def test_closed_decision_set_and_exact_selection() -> None:
