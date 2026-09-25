@@ -10,6 +10,8 @@ from __future__ import annotations
 
 
 _ARCH_ALIGN_03_DOWNSTREAM_ARTIFACTS = {
+    "docs/prd/WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-IMPLEMENTATION-PLAN-01.md",
+    "tests/core/test_weather_bot_stage3_historical_corpus_construction_and_acquisition_implementation_plan_01.py",
     "docs/prd/WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-APPROVAL-DECISION-01.md",
     "tests/core/test_weather_bot_stage3_historical_corpus_construction_and_acquisition_approval_decision_01.py",
     "docs/prd/WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-APPROVAL-REQUEST-01.md",
@@ -218,6 +220,9 @@ class _MarketIdAllowlist(dict[str, int]):
 # harness; all remaining legacy occurrences must be listed here explicitly.
 # Counts are line counts containing the literal substring ``market_id``.
 ALLOWED_MARKET_ID_OCCURRENCE_LINES: dict[str, int] = _MarketIdAllowlist({
+    # Stage 3 corpus implementation plan preserves market_id only as a non-routing negative boundary.
+    "docs/prd/WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-IMPLEMENTATION-PLAN-01.md": 2,
+    "tests/core/test_weather_bot_stage3_historical_corpus_construction_and_acquisition_implementation_plan_01.py": 2,
     # Stage 3 corpus approval request preserves the legacy identifier as non-routing only.
     "docs/prd/WEATHER-BOT-STAGE3-HISTORICAL-CORPUS-CONSTRUCTION-AND-ACQUISITION-APPROVAL-REQUEST-01.md": 2,
     "tests/core/test_weather_bot_stage3_historical_corpus_construction_and_acquisition_approval_request_01.py": 2,
