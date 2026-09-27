@@ -190,6 +190,19 @@ def test_venue_settlement_and_archive_roles_are_not_conflated() -> None:
     assert "cannot rewrite venue-defined settlement truth" in archive
 
 
+def test_validation_plan_freezes_role_aware_no_lookahead() -> None:
+    validation = section("Validation/reconciliation plan", "Security/terms posture")
+    for required in (
+        "prediction inputs or future forecasts used before legitimate publication/availability",
+        "train/calibration labels unavailable by the applicable fold cutoff",
+        "test labels exposed by or before the fold cutoff",
+        "projected backward into an earlier prediction, split, or as-of view",
+        "legitimately becoming available later is not itself a violation",
+    ):
+        assert required in validation
+    assert "a source/forecast/label/revision available after cutoff" not in validation
+
+
 def test_sample_separation_canonical_routing_and_one_successor() -> None:
     assert values("sample_sufficiency") == ["not_established"]
     assert values("primary_sample_roles") == ["train_calibration_test"]

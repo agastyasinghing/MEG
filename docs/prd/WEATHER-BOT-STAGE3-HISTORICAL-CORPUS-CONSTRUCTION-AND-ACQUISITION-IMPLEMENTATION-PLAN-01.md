@@ -186,7 +186,7 @@ The future implementation must fail closed on:
 8. absent rule version or station/source-selection provenance;
 9. unknown archive/finality layer or broken correction/supersession graph (including cycles);
 10. candidate totals not equaling usable + blocked + excluded;
-11. no-lookahead, including a source/forecast/label/revision available after cutoff;
+11. role-aware no-lookahead: block prediction inputs or future forecasts used before legitimate publication/availability; train/calibration labels unavailable by the applicable fold cutoff; test labels exposed by or before the fold cutoff; and any later source value, archive revision, finality state, settlement label, or other evidence projected backward into an earlier prediction, split, or as-of view. A test label, archive revision, venue-resolution artifact, or final source artifact legitimately becoming available later is not itself a violation and may enter only its permitted later view;
 12. nondeterministic normalization or output-checksum mismatch.
 
 Tiny fixtures cover first-posted→revised→final lineage, a blocked missing-availability case, an excluded incompatible-source case, duplicate detection, checksum failure, and the existing temperature ambiguity pattern without modifying existing fixtures.
