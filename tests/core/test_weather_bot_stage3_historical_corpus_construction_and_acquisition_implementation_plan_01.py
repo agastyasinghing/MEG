@@ -29,10 +29,12 @@ EXPECTED = [
     "current_corpus: five_static_stage2_examples_only",
     "corpus_coverage: not_established", "sample_sufficiency: not_established",
     "strict_oos_feasibility: not_demonstrated", "stage3_scoring_readiness: not_ready",
-    "selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_naming_noaa_ncei_finalized_monthly_summary",
+    "selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_naming_noaa_finalized_monthly_summary",
     "venue_source_role: polymarket_contemporaneous_contract_rules_and_resolution_evidence",
     "settlement_source_role: polymarket_resolver_proposal_dispute_and_final_outcome_evidence",
-    "archive_source_role: exact_noaa_ncei_monthly_summary_product_and_central_park_station_mapping_unresolved_fail_closed",
+    "venue_settlement_source_role: polymarket_rule_named_noaa_finalized_monthly_summarized_central_park_precipitation_figure_exact_workflow_unresolved",
+    "archive_source_role: official_archive_mapping_unresolved_fail_closed",
+    "archive_equivalence_posture: blocked_until_venue_source_equivalence_proven",
     "forecast_source_role: not_applicable_first_slice",
     "polymarket_access_posture: manual_source_review",
     "polymarket_access_posture: static_public_reference",
@@ -59,6 +61,12 @@ EXPECTED = [
     "git_large_data_posture: prohibited_only_tiny_deterministic_license_cleared_fixtures_allowed",
     "correction_posture: append_new_versions_preserve_as_of_views_link_supersession_no_overwrite",
     "point_in_time_missing_evidence_posture: blocked_missing_point_in_time_evidence",
+    "prediction_input_availability_posture: input_publication_available_by_prediction_as_of",
+    "label_availability_posture: distinct_from_prediction_input_availability",
+    "train_calibration_label_cutoff_posture: label_available_by_applicable_fold_cutoff",
+    "test_label_cutoff_posture: label_not_available_by_fold_cutoff",
+    "post_resolution_scoring_label_posture: later_legitimate_label_available_for_scoring_only",
+    "venue_archive_finality_posture: distinct_no_backward_rewrite",
     "record_dispositions: usable_blocked_excluded_all_reconciled",
     "primary_sample_roles: train_calibration_test",
     "acquisition_execution_authority: not_approved", "scraping_authority: not_approved",
@@ -93,7 +101,7 @@ def test_exact_heading_order_and_complete_machine_block() -> None:
 
 def test_selected_slice_roles_and_access_are_frozen() -> None:
     assert values("selected_first_slice") == [
-        "polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_naming_noaa_ncei_finalized_monthly_summary"
+        "polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_naming_noaa_finalized_monthly_summary"
     ]
     assert values("forecast_source_role") == ["not_applicable_first_slice"]
     assert values("polymarket_access_posture") == ["manual_source_review", "static_public_reference"]
@@ -119,7 +127,7 @@ def test_external_unknowns_are_blocked_and_acquisition_unapproved() -> None:
         "scraping_requires_separate_approval", "live_runtime_provider_requires_separate_approval",
     ]
     blockers = section("Source-specific unresolved blockers", "Corpus storage/data-plane design")
-    for item in ("exact venue-defined NOAA/NCEI product", "first-posted", "historical Polymarket",
+    for item in ("exact venue-defined NOAA/NWS source", "first-posted", "historical Polymarket",
                  "attribution", "redistribution", "source-specific and storage approval"):
         assert item in blockers
     for forbidden in ("actual acquisition", "API calls", "downloads", "scraping", "credentials/secrets",
@@ -140,17 +148,46 @@ def test_storage_corrections_and_disposition_accounting() -> None:
 
 def test_semantic_clocks_and_no_lookahead_are_distinct() -> None:
     clock_section = section("Point-in-time timestamp contract", "Archive/revision/finality contract")
-    clocks = ["market_event_start_at", "market_close_at", "evaluation_cutoff_at", "observation_valid_at",
+    clocks = ["prediction_as_of", "input_publication_available_at", "fold_cutoff",
+              "market_event_start_at", "market_close_at", "observation_valid_at",
               "source_published_at", "source_available_at", "forecast_initialized_at",
               "forecast_published_at", "forecast_available_at", "venue_resolution_proposed_at",
-              "venue_resolution_final_at", "archive_revised_at", "source_final_at", "acquired_at",
+              "venue_resolution_final_at", "archive_revised_at", "source_final_at", "label_available_at", "acquired_at",
               "station_source_selected_at", "reviewed_at"]
     assert all(clock in clock_section for clock in clocks)
     assert "No timestamp substitutes for another" in clock_section
-    assert "source_available_at <= evaluation_cutoff_at" in clock_section
+    assert "`input_publication_available_at <= prediction_as_of` is mandatory" in clock_section
+    assert "`source_available_at` and `label_available_at` are not equivalent" in clock_section
+    assert "There is no universal settlement-label rule" in clock_section
+    assert "later settlement/archive evidence is never prediction input" in clock_section
+    assert "`label_available_at <= fold_cutoff` for test is leakage" in clock_section
+    assert "source_available_at <= evaluation_cutoff_at" not in clock_section
+    assert "label_available_at <= evaluation_cutoff_at" not in clock_section
     assert values("point_in_time_missing_evidence_posture") == ["blocked_missing_point_in_time_evidence"]
+    assert values("prediction_input_availability_posture") == ["input_publication_available_by_prediction_as_of"]
+    assert values("label_availability_posture") == ["distinct_from_prediction_input_availability"]
+    assert values("train_calibration_label_cutoff_posture") == ["label_available_by_applicable_fold_cutoff"]
+    assert values("test_label_cutoff_posture") == ["label_not_available_by_fold_cutoff"]
+    assert values("post_resolution_scoring_label_posture") == ["later_legitimate_label_available_for_scoring_only"]
     archive = section("Archive/revision/finality contract", "Corpus record/disposition design")
     assert all(layer in archive for layer in ("first_posted", "preliminary", "revised", "final", "superseded"))
+    assert values("venue_archive_finality_posture") == ["distinct_no_backward_rewrite"]
+
+
+def test_venue_settlement_and_archive_roles_are_not_conflated() -> None:
+    assert values("venue_settlement_source_role") == [
+        "polymarket_rule_named_noaa_finalized_monthly_summarized_central_park_precipitation_figure_exact_workflow_unresolved"
+    ]
+    assert values("archive_source_role") == ["official_archive_mapping_unresolved_fail_closed"]
+    assert values("archive_equivalence_posture") == ["blocked_until_venue_source_equivalence_proven"]
+    roles = section("Source-role matrix", "Access-method matrix")
+    assert "Venue-defined settlement source" in roles
+    assert "Observation/archive source" in roles
+    assert "no station identifier is frozen" in roles
+    assert "not automatically the settlement authority" in roles
+    archive = section("Archive/revision/finality contract", "Corpus record/disposition design")
+    assert "venue settlement finality separately" in archive
+    assert "cannot rewrite venue-defined settlement truth" in archive
 
 
 def test_sample_separation_canonical_routing_and_one_successor() -> None:

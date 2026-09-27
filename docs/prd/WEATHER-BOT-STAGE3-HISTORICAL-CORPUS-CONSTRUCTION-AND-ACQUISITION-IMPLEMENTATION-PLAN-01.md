@@ -20,13 +20,15 @@ PR #388 selected `approve_narrow_historical_corpus_construction_and_acquisition`
 
 The repository still contains only five static Stage 2 examples: three synthetic and two real source-backed examples. They are examples, not a corpus; coverage and sample sufficiency are not established, strict OOS feasibility is not demonstrated, and Stage 3 scoring is not ready.
 
-External first-party pages could not be retrieved from the execution environment on 2026-09-25. Consequently the exact NOAA product/locator, historical publication-time reconstruction, Polymarket historical rule retrieval mechanism, and both providers' current terms/redistribution posture are unresolved implementation blockers. The selected slice is a plan target, not permission to move bytes.
+External first-party pages could not be retrieved from the execution environment on 2026-09-26. Consequently the exact official archive product/mapping, historical publication-time reconstruction, Polymarket historical rule retrieval mechanism, and both providers' current terms/redistribution posture are unresolved implementation blockers. The selected slice is a plan target, not permission to move bytes.
 
 ## Research findings
 
 Targeted research considered the repository's controlling PRDs/research and inspected all five existing JSON fixtures without modifying them. The precipitation fixture records a Polymarket monthly NYC precipitation rule naming NOAA's finalized monthly summarized Central Park figure. The temperature fixture records mixed Wunderground KLGA, Central Park/LaGuardia, and NWS language and is deliberately blocked.
 
-Current first-party verification was attempted for NCEI Daily Summaries search, Local Climatological Data, Access Data Service documentation, the GHCN-Daily README, NWS climate pages, and Polymarket market API documentation. Network access returned no retrievable source content. No mutable external fact is therefore promoted as verified. Repository evidence supports candidate selection, while the next gate must establish current authoritative source facts.
+Current first-party verification was attempted for the [actual Polymarket contract page](https://polymarket.com/event/precipitation-in-nyc-in-may), [NWS NOWData/climate workflow](https://www.weather.gov/wrh/Climate?wfo=okx), [NCEI Daily Summaries search](https://www.ncei.noaa.gov/access/search/data-search/daily-summaries), [NCEI Local Climatological Data](https://www.ncei.noaa.gov/products/land-based-station/local-climatological-data), and [NCEI Access Data Service documentation](https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation). The network boundary returned HTTP tunnel failures before source content was retrieved. No mutable endpoint, access, publication, revision, station-ID, equivalence, or terms fact is therefore promoted as verified.
+
+The contemporaneous source-backed fixture preserves the venue-rule claim that settlement uses NOAA's finalized monthly summarized Central Park precipitation figure and preserves the venue rule/finality wording and contract locator. That reviewed capture supports retaining the family, but it does **not** establish that any NCEI dataset, API, file, backend product, or station identifier is the venue-defined source or is historically equivalent to it. Current first-party verification of the venue page and official archive mapping remains mandatory at the next gate.
 
 Planning hypotheses requiring verification are: Central Park's station identity is likely represented by an NCEI identifier; NOAA/NCEI may expose public files and/or an offline API; final archives can differ from first-posted values; and venue pages may not provide durable historical availability timestamps. None is treated as approved fact here.
 
@@ -42,7 +44,7 @@ Selection is not based merely on the suggested fixture. The monthly precipitatio
 
 ## Selected first acquisition slice
 
-The exact slice is **Polymarket Central Park NYC calendar-month total-precipitation range contracts whose contemporaneous venue rule explicitly names NOAA/NCEI's finalized monthly summarized Central Park precipitation figure**. Include only contracts with recoverable canonical identifiers, versioned rule evidence, an unambiguous calendar-month ET window, inches, explicit range comparator semantics, venue outcome evidence, and an approved exact NOAA/NCEI source mapping.
+The exact slice is **Polymarket Central Park NYC calendar-month total-precipitation range contracts whose contemporaneous venue rule names NOAA's finalized monthly summarized Central Park precipitation figure**. Include only contracts with recoverable canonical identifiers, versioned rule evidence, an unambiguous calendar-month ET window, inches, explicit range comparator semantics, venue outcome evidence, and an approved archive-to-venue-source equivalence mapping.
 
 This is one family, not every NYC precipitation market and not daily temperature. No arbitrary record count is promised. A candidate lacking any required evidence is represented with `blocked` or `excluded` disposition and remains in manifest totals; it is never silently dropped or made usable.
 
@@ -52,14 +54,15 @@ This is one family, not every NYC precipitation market and not daily temperature
 |---|---|---|---|---|
 | Venue market/rule source | Contemporaneous Polymarket public contract/rules artifact; defines family, brackets, window, source, and label | `manual_source_review` plus `static_public_reference`; no credential proposed; source-specific approval still required | Historical rule version and first availability are not yet verified | locator, contract reference, content checksum/snapshot reference, retrieved/acquired time, rule version, reviewer; durable historical mechanism and terms blocked |
 | Settlement/resolver source | Polymarket proposal/dispute/final-resolution evidence for the same contract | `manual_source_review` plus `static_public_reference`; no credential proposed; approval required | Proposal, dispute, and finality clocks must be independently captured; history availability unresolved | resolver identity, proposal/finality times, outcome, evidence locator/checksum, reviewer; historical availability blocked |
-| Observation/archive source | Exact NOAA/NCEI monthly summarized Central Park precipitation product named/matched by the rule | `manual_source_review` only now; a later gate may choose exactly one of `offline_public_file_acquisition`, `offline_public_api_acquisition`, or `source_specific_credentials_required`; approval required | Must retain first-posted/preliminary/revised/final layers and actual availability evidence; capability unresolved | agency, dataset/product/version, station identifier, locator, access posture, bytes checksum, valid/publication/availability/revision/finality/acquisition times; exact product blocked |
-| Station/observation authority | NOAA/NCEI station metadata for the exact Central Park observing identity and effective dates | `static_public_reference` proposed only after verification; no credential assumed; approval required | Effective-dated station identity/source selection required | station IDs/names, authority, effective interval, metadata locator/version/checksum, selected_at, reviewer; ID and history unresolved |
+| Venue-defined settlement source | The contemporaneous Polymarket rule's NOAA finalized monthly summarized Central Park precipitation figure; exact NOAA/NWS page/product/workflow is not currently verified | `manual_source_review` plus `static_public_reference` only after current first-party verification; approval required | Venue-defined finalization and its revision boundary must be captured from the rule; current details remain unresolved | exact rule text/version, venue source name/locator/workflow, finalization instruction, availability evidence, reviewer; no archive substitution allowed |
+| Observation/archive source | An official NOAA/NWS/NCEI archive candidate that might preserve or reproduce the venue-defined figure; no candidate is yet proven equivalent | `manual_source_review` only now; a later gate may choose exactly one of `offline_public_file_acquisition`, `offline_public_api_acquisition`, or `source_specific_credentials_required`; approval required | Must retain first-posted/preliminary/revised/final layers and actual availability evidence; capability and equivalence unresolved | agency, dataset/product/version, station identifier, locator, access posture, bytes checksum, valid/publication/availability/revision/finality/acquisition times; mapping blocked |
+| Station/observation authority | Effective-dated official station metadata mapped to the venue-defined Central Park observation source; no station identifier is frozen | `static_public_reference` proposed only after verification; no credential assumed; approval required | Effective-dated station identity/source selection required | station IDs/names/networks, authority, effective interval, rename/change history, metadata locator/version/checksum, selected_at, reviewer; any ambiguity blocks |
 | Historical forecast/model source | None for label-corpus construction in this first slice | `not_applicable_first_slice`; no access | Forecast clocks nullable only because no forecast is ingested | Any later Stage 3 probability input is a separate approval; never backfill forecasts into this acquisition |
 | Publication/availability evidence source | Source-native NOAA/NCEI metadata/headers/catalog plus preserved HTTP/file metadata, exact mechanism unresolved | `manual_source_review` only now; approval required before selecting an acquisition method | A nominal observation or update schedule is insufficient; actual historical availability must be evidenced | publication/availability timestamp, evidence type, locator, capture time/checksum, confidence; reconstructability blocked |
 | Revision/finality evidence source | NOAA/NCEI source-native status/revision metadata plus venue rule's finality instruction | `manual_source_review` only now; approval required before selecting an acquisition method | Must distinguish first-posted, preliminary, revised, final, superseded | revision ID/time, finality time/status, predecessor, evidence; exact semantics blocked |
 | Reviewer/adjudication evidence | MEG human review record, using preserved source evidence only | `manual_source_review`; no external credential; future implementation approval required | Reviewer time never substitutes for source availability/finality | reviewer identity/ref, reviewed_at, decision, rationale, evidence refs; disagreement blocks usability |
 
-A convenient weather API is not the settlement authority. It cannot substitute for the exact NOAA/NCEI product required by the contemporaneous venue rule.
+A convenient weather API or official archive is not automatically the settlement authority. The venue-defined source and an archive/historical acquisition source remain distinct until equivalence is proven across station identity, element, window, unit/trace, aggregation, venue-relevant finality, controlling value reconstruction, and historical availability timing.
 
 ## Access-method matrix
 
@@ -81,8 +84,8 @@ Unknown posture fails closed. The plan makes no API call, file download, or stat
 
 ## Source-specific unresolved blockers
 
-1. Identify and cite the exact venue-defined NOAA/NCEI product, Central Park station identifier(s), element, unit/trace semantics, and effective station history.
-2. Verify whether official public files or an offline public API reproduce the finalized monthly summary; select exactly one acquisition mechanism and document authentication/rate constraints.
+1. Identify and cite the exact venue-defined NOAA/NWS source page, product, or workflow and its finalization/revision instruction; do not infer it from an archive candidate.
+2. Verify whether an official NOAA/NWS/NCEI dataset, public file, or offline public API reproduces the venue-defined figure; select exactly one acquisition mechanism and document authentication/rate constraints.
 3. Establish whether first-posted, preliminary, revised, and final values and their historical publication/availability times can be reconstructed. If not, affected as-of uses remain blocked.
 4. Verify stable historical Polymarket rule/resolution locators or an approved immutable capture method, including amendments and actual availability times.
 5. Review current attribution, license/terms, retention, derived-use, and redistribution constraints for each external source. Unclear terms block acquisition/storage.
@@ -108,26 +111,33 @@ Large/raw/normalized source data, manifests containing redistributed source cont
 
 Every semantic clock has its own nullable UTC-normalized field plus original timestamp/text/timezone and evidence reference:
 
-- `market_event_start_at` / `market_event_end_at` describe the contract window;
-- `market_close_at` and `evaluation_cutoff_at` describe venue close and the particular as-of decision cutoff;
+- `prediction_as_of` is the time at which the probability prediction is represented as made;
+- `input_publication_available_at` is the evidenced availability time for information actually used to generate that prediction; `input_publication_available_at <= prediction_as_of` is mandatory;
+- `fold_cutoff` is the applicable evaluation/split cutoff and is not a synonym for prediction, source, or label availability;
+- `market_event_start_at` / `market_event_end_at` describe the contract window, while `market_close_at` describes venue close;
 - `observation_valid_at` describes what period an observation measures;
-- `source_published_at` describes asserted source publication;
-- `source_available_at` describes evidenced retrievability;
-- `forecast_initialized_at`, `forecast_published_at`, and `forecast_available_at` are not applicable for this first label slice, never silently synthesized;
-- `venue_resolution_proposed_at` and `venue_resolution_final_at` describe venue resolution/finality;
-- `archive_revised_at` describes a source revision;
-- `source_final_at` describes source finality and is distinct from venue finality;
+- `source_published_at` describes asserted publication of a settlement-source artifact;
+- `source_available_at` describes evidenced retrievability of that artifact;
+- `forecast_initialized_at`, `forecast_published_at`, and `forecast_available_at` are not applicable for this first label slice and are never silently synthesized;
+- `venue_resolution_proposed_at` and `venue_resolution_final_at` describe venue proposal and settlement finality;
+- `archive_revised_at` describes an archive revision;
+- `source_final_at` describes archive/source finality and is distinct from venue finality;
+- `label_available_at` is the earliest timestamp at which the source-compatible settlement label could legitimately be known from the controlling rule, source, and venue-relevant finality evidence;
 - `acquired_at` describes MEG acquisition only;
 - `station_source_selected_at` describes selection/adjudication of authority;
 - `reviewed_at` describes reviewer action.
 
-No timestamp substitutes for another. A record is `usable` for an as-of evaluation only if all clocks required for that use have direct evidence and `source_available_at <= evaluation_cutoff_at`; later revisions/finality/labels cannot enter earlier views. Missing or merely inferred required publication/availability evidence yields `blocked_missing_point_in_time_evidence`, not a guessed time.
+`source_available_at` and `label_available_at` are not equivalent unless a later source-specific implementation proves identity for the particular artifact. No timestamp substitutes for another. Missing or merely inferred required publication, availability, or label evidence yields `blocked_missing_point_in_time_evidence`, not a guessed time.
+
+Four separate as-of views apply. The **prediction as-of view** contains only inputs legitimately available by `prediction_as_of`; later settlement/archive evidence is never prediction input merely because it later supports scoring. The **train/calibration eligibility view** admits a fitting/calibration label only when `label_available_at <= fold_cutoff`. The **test split view** requires the target strictly after the cutoff and must not expose the test label by `fold_cutoff`; `label_available_at <= fold_cutoff` for test is leakage. The **post-resolution scoring view** may use a later legitimately available source-compatible test label strictly for retrospective scoring.
+
+There is no universal settlement-label rule requiring `source_available_at <= fold_cutoff` or `label_available_at <= fold_cutoff`: the latter is role-specific, required for train/calibration and prohibited for test. Later final/revised evidence must never be projected backward into a prediction or split view.
 
 ## Archive/revision/finality contract
 
-`archive_layer` is one of `first_posted`, `preliminary`, `revised`, `final`, or `superseded`. Each distinct acquired representation gets an immutable artifact/version identity, checksum, asserted valid time, evidenced publication/availability time, optional revision/finality time, and `supersedes_record_id` / `corrected_by_record_id` links.
+`archive_layer` is one of `first_posted`, `preliminary`, `revised`, `final`, or `superseded`. Each distinct acquired representation gets an immutable artifact/version identity, checksum, asserted valid time, evidenced publication/availability time, optional revision/finality time, and `supersedes_record_id` / `corrected_by_record_id` links. `venue_resolution_final_at` freezes venue settlement finality separately from `source_final_at` and `archive_revised_at`.
 
-A correction appends raw evidence, manifest event, and normalized version. It never overwrites bytes or rewrites an earlier as-of view. Final is a source-evidenced state, not “latest acquired.” First-posted is permitted only with direct evidence of first availability. Unknown layers are blocked. Venue corrections and NOAA/NCEI revisions are separately represented and linked.
+A correction appends raw evidence, manifest event, and normalized version. It never overwrites bytes or rewrites an earlier as-of view. Final is a source-evidenced state, not “latest acquired.” First-posted is permitted only with direct evidence of first availability. Unknown layers are blocked. Venue corrections and archive revisions are separately represented and linked. A later archive correction may remain useful evidence but cannot rewrite venue-defined settlement truth when the contemporaneous rule freezes settlement at an earlier venue finalization state.
 
 ## Corpus record/disposition design
 
@@ -229,10 +239,12 @@ corpus_coverage: not_established
 sample_sufficiency: not_established
 strict_oos_feasibility: not_demonstrated
 stage3_scoring_readiness: not_ready
-selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_naming_noaa_ncei_finalized_monthly_summary
+selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_naming_noaa_finalized_monthly_summary
 venue_source_role: polymarket_contemporaneous_contract_rules_and_resolution_evidence
 settlement_source_role: polymarket_resolver_proposal_dispute_and_final_outcome_evidence
-archive_source_role: exact_noaa_ncei_monthly_summary_product_and_central_park_station_mapping_unresolved_fail_closed
+venue_settlement_source_role: polymarket_rule_named_noaa_finalized_monthly_summarized_central_park_precipitation_figure_exact_workflow_unresolved
+archive_source_role: official_archive_mapping_unresolved_fail_closed
+archive_equivalence_posture: blocked_until_venue_source_equivalence_proven
 forecast_source_role: not_applicable_first_slice
 polymarket_access_posture: manual_source_review
 polymarket_access_posture: static_public_reference
@@ -259,6 +271,12 @@ research_gold_posture: not_created_without_separate_approval
 git_large_data_posture: prohibited_only_tiny_deterministic_license_cleared_fixtures_allowed
 correction_posture: append_new_versions_preserve_as_of_views_link_supersession_no_overwrite
 point_in_time_missing_evidence_posture: blocked_missing_point_in_time_evidence
+prediction_input_availability_posture: input_publication_available_by_prediction_as_of
+label_availability_posture: distinct_from_prediction_input_availability
+train_calibration_label_cutoff_posture: label_available_by_applicable_fold_cutoff
+test_label_cutoff_posture: label_not_available_by_fold_cutoff
+post_resolution_scoring_label_posture: later_legitimate_label_available_for_scoring_only
+venue_archive_finality_posture: distinct_no_backward_rewrite
 record_dispositions: usable_blocked_excluded_all_reconciled
 primary_sample_roles: train_calibration_test
 acquisition_execution_authority: not_approved
