@@ -2,7 +2,7 @@
 
 ## Status and scope
 
-**Status: BLOCKED; not decision-ready.** This is a source/access/storage approval-request-only docs/static-test artifact. It records current research, an exact proposed storage boundary, and the facts that prevent a coherent source approval. It performs no acquisition and grants no authority. Research depth is **deep current first-party research attempted; core external verification unavailable and failed closed**. Markdown and a stdlib/pytest static oracle are suitable for this contract; production code is not.
+**Status: BLOCKED; not decision-ready.** This source/access/storage approval-request-only docs/static-test artifact now separates verified current facts, verified archive/station candidates, and genuine blockers. It performs no acquisition and grants no authority. Research depth is **fresh current first-party source review dated 2026-09-28**. Markdown and an independent stdlib/pytest oracle are suitable; production code is not.
 
 ## Immediate predecessor and actual merge verification
 
@@ -10,43 +10,45 @@ PR #389's real post-merge commit is `9073a25cbdce9ba7c67508ee234cfa4d969d9edf`, 
 
 ## Current first-slice state
 
-The target remains exactly Polymarket Central Park NYC calendar-month total-precipitation range contracts whose contemporaneous rules use NOAA's finalized monthly summarized Central Park precipitation figure. The repository has one reviewed Stage 2 page-derived example, not a corpus. It does not independently establish an exact NOAA product, archive equivalence, station ID, historical publication clock, or durable rule history.
+The slice remains Polymarket Central Park NYC calendar-month total-precipitation range contracts whose contemporaneous rules use the NOAA/NWS New York climate page's monthly summarized Central Park precipitation value. The venue workflow and finalization instruction are now verified current facts. NCEI station and archive facts are verified candidates in their own domain, but their equivalence to the venue workflow and its historical state is not established. The repository's single Stage 2 example is not a corpus.
 
 ## Research method and source-quality standard
 
-On 2026-09-27, research began from the venue evidence, then considered only first-party product, station, access, and terms evidence. The inspected repo sources were the controlling Stage 3 documents, WX research packets, and both real-source-backed fixtures; neither fixture was modified. Attempts to retrieve current GitHub, Polymarket, NWS, and NCEI public material from this execution environment were blocked by its external network/authentication boundary. No URL pattern or older Stage 2 assertion was promoted to a current verified fact.
+Research accessed or re-reviewed current first-party materials on 2026-09-28, starting with the venue rule rather than an archive candidate:
 
-The first-party references requiring successful human re-review are:
+- [Polymarket May 2026 NYC precipitation market](https://polymarket.com/event/precipitation-in-nyc-in-may): controlling workflow, precision, finalization, revision, brackets, and displayed resolution evidence.
+- [Polymarket Gamma API overview](https://docs.polymarket.com/developers/gamma-markets-api/overview), [markets overview](https://docs.polymarket.com/developers/gamma-markets-api/get-markets), and [market-by-slug reference](https://docs.polymarket.com/api-reference/markets/get-market-by-slug): public market metadata retrieval and lookup behavior.
+- [NWS New York climate page](https://www.weather.gov/wrh/climate?wfo=okx) and [NOWData FAQ](https://www.weather.gov/wrh/ClimateFAQ): the venue-named interactive workflow and NWS warning that NOWData can contain preliminary and archived observations while official final records are at NCEI.
+- [NCEI station search](https://www.ncei.noaa.gov/access/search/data-search/daily-summaries), [Daily Summaries](https://www.ncei.noaa.gov/products/land-based-station/daily-summaries), [Global Summary of the Month](https://www.ncei.noaa.gov/products/land-based-station/global-summary-of-the-month), and [Local Climatological Data](https://www.ncei.noaa.gov/products/land-based-station/local-climatological-data): authoritative station/product candidates, kept distinct.
+- [NCEI Access Data Service documentation](https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation): documented public GET retrieval parameters for dataset, station, and dates.
+- [NOAA copyright notice](https://www.noaa.gov/disclaimer) and [NCEI data citation guidance](https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation): general federal-data reuse and attribution posture, subject to identified third-party/product exceptions.
+- [Polymarket Terms of Use](https://polymarket.com/tos): reviewed separately; it does not establish the durable local archival/redistribution permission required here.
 
-- [Polymarket contract page](https://polymarket.com/event/precipitation-in-nyc-in-may) — contemporaneous rule, brackets, amendments, proposal/dispute/final outcome;
-- [Polymarket Gamma API introduction](https://docs.polymarket.com/developers/gamma-markets-api/overview) — only if it documents retrieval of the required historical market/rule fields;
-- [NWS New York climate/NOWData entry](https://www.weather.gov/wrh/Climate?wfo=okx) — exact displayed workflow and preliminary/final disclaimer;
-- [NCEI Daily Summaries](https://www.ncei.noaa.gov/products/land-based-station/daily-summaries) and [search](https://www.ncei.noaa.gov/access/search/data-search/daily-summaries) — candidate archive documentation, not an approved mapping;
-- [NCEI LCD](https://www.ncei.noaa.gov/products/land-based-station/local-climatological-data) — a distinct candidate product, not interchangeable with Daily Summaries;
-- [NCEI Access Data Service documentation](https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation) — candidate access documentation only;
-- [NOAA information-quality guidance](https://www.noaa.gov/organization/information-technology/policy-oversight/information-quality) and [Department of Commerce data policy](https://www.commerce.gov/data-and-reports) — terms/public-data context requiring product-specific confirmation.
-
-Reading these descriptions or an individual rule page would be planning research. Batch download, enumeration, scraping, credentials, clients, and corpus writes are prohibited.
+No corpus enumeration, source-byte download, credential use, scraping, client construction, or artifact write occurred. Mutable claims carry the research date above; exact page/version evidence must still be preserved by a later approved process.
 
 ## Verified venue rule/source
 
-The 2026-06-02 static fixture preserves page-review evidence that the May 2026 market measured total precipitation in inches in Central Park, New York City, from May 1 through May 31 at 11:59 PM ET; used ranges; and named NOAA's finalized monthly summarized Central Park precipitation figure with venue-stated revision handling. That evidence is sufficient to retain the candidate family, but not to claim a currently verified exact NOAA/NWS page, product, endpoint, timezone implementation, trace/missing convention, or archive mapping.
+The live Polymarket rule identifies `https://www.weather.gov/wrh/climate?wfo=okx` and directs the user to select **Monthly summarized data**, **Central Park NY**, and **Precipitation**. It resolves the calendar-month range using the precipitation figure displayed by that workflow and specifies use of the source's full displayed precision. This exact NWS/NOAA workflow—not an NCEI dataset—is the venue-defined meteorological settlement source.
 
-Accordingly, `venue_source_verification_status` is blocked. The venue market/rule evidence, Polymarket resolution evidence, and meteorological settlement source are three separate roles. Exact contemporaneous wording and all comparator endpoints must be preserved verbatim by a later approved evidence process; they are not reconstructed here.
+The market window is total precipitation in Central Park, New York City, from May 1 through May 31, 2026 at 11:59 PM ET. Exact bracket endpoints belong to each market/token rule artifact. Trace and missing-data behavior are not independently defined by the venue text reviewed, so they must be preserved from the controlling displayed value rather than re-aggregated by assumption.
 
 ## Venue resolution/finality evidence
 
-The fixture reports page-displayed “Outcome proposed: No,” no dispute, and final outcome No for one token, with review on 2026-06-02. It is a static reviewed example, not a verified durable historical API. The venue-defined rule reportedly freezes once NOAA finalizes the monthly figure and disregards subsequent changes, but current first-party rule text and its exact finalization instruction could not be reverified. Proposal, dispute, venue final resolution, and meteorological finality remain distinct clocks and evidence objects.
+The live rule says settlement waits for the NOAA/NWS monthly summarized figure to be finalized and that revisions after that venue-defined finalization point do not change resolution. That rule establishes venue finality; it does not prove how an archive labels preliminary versus final records.
+
+Market/rule evidence, proposal/dispute/final-resolution evidence, and meteorological finality remain distinct. The resolved page displays proposal/no-dispute/final-outcome evidence for the reviewed token, but current public retrieval is not proof of immutable historical versions or amendment history.
 
 ## Archive-equivalence analysis
 
-Daily Summaries, LCD, and any NWS climate display are candidates only. No authoritative evidence retrieved in this work proves that one reproduces the venue-controlling value across station identity/history, element, calendar window, ET/local-day semantics, units, trace/missing handling, aggregation, finality, corrections, and the value actually used by the venue. Being NOAA products is insufficient.
+NCEI Daily Summaries, GSOM, and LCD are official candidate archive products, but none is approved as equivalent to the venue's NWS monthly-summary display. NWS documents that NOWData can include preliminary and archived values and directs users to NCEI for official final records. Processing, quality control, synchronization, and later corrections can therefore make a present NCEI value different from the value displayed when the venue finalized.
 
-Therefore no archive is proposed for approval, observation acquisition remains unresolved, and equivalence fails closed. An intentionally narrower metadata/scaffold request would still falsely imply a usable first slice without the controlling source mapping, so this artifact does not request it.
+Equivalence remains blocked until one exact product is matched across station/effective history, precipitation element, local calendar window and timezone, inches and precision, trace/missing handling, monthly aggregation, venue-relevant final state, revisions, controlling numerical value, and actual availability. “Official NOAA” is not synonymous with “venue-equivalent.” No observation acquisition method is selected.
 
 ## Station identity analysis
 
-The only source-visible location supported by the reviewed fixture is “Central Park, New York City” / “Central Park NY.” No current authoritative station metadata was retrieved. No WBAN, GHCN, COOP, LCD, ICAO, or other identifier is frozen. Different official identifiers may describe distinct networks/products and cannot be collapsed. Effective dates, moves, renames, instrumentation, and relation to the venue workflow are unresolved; this ambiguity blocks approval.
+Current NCEI station metadata verifies the candidate **NY CITY CENTRAL PARK, NY US**, identifier `GHCND:USW00094728`, at approximately `40.77898, -73.96925`, with Daily Summaries/GSOM coverage exposed for that NCEI station family. This is authoritative NCEI candidate identity metadata.
+
+It does not prove that the NWS interactive workflow used exactly that identifier, product, effective station lineage, processing state, or numerical value at venue finalization. Moves, instrumentation/network history, effective-date mapping, and workflow equivalence remain to be reconciled. The identifier is provenance metadata only, never routing.
 
 ## Revision/finality analysis
 
@@ -60,42 +62,52 @@ Prediction inputs require `input_publication_available_at <= prediction_as_of`. 
 
 ## Polymarket historical-evidence mechanism
 
-The only supported posture now is `manual_source_review` of the named individual public page. `static_public_reference` is not proposed as sufficient because a mutable current page is not a durable historical version. No verified public file or API mechanism was established for historical wording, amendments, source instruction, `condition_id`/`token_id`/`outcome`, proposals, disputes, final outcomes, and timestamps. Scraping would require separate approval. Missing contemporaneous rule/version evidence makes a candidate unusable and retained as blocked/excluded in the manifest.
+Polymarket documents public Gamma market-data retrieval without authentication, including lookup/filtering by slug and identifiers and access to closed-market metadata. The documented response can expose current market/event metadata such as question/description/rules-related text, condition identifiers, close/resolution state, and timestamps available in the current record. The exact future posture for that current metadata is `offline_public_api_acquisition`; individual page/rule adjudication remains `manual_source_review`.
+
+Neither the developer documentation nor a current mutable market record establishes an immutable ledger of every contemporaneous rule version or amendment. Proposal, dispute, and finality fields must be verified for the exact response/page, and durable historical rule/version evidence remains blocked. Public API availability does not authorize scraping or establish archival/redistribution rights.
 
 ## NOAA/NWS/NCEI access-method analysis
 
-No observation method is selected. `offline_public_file_acquisition` and `offline_public_api_acquisition` were considered, but current authoritative documentation and exact product equivalence could not be verified; selecting either would be speculative. Station metadata is limited to `manual_source_review` until an exact first-party product page is verified. Generic NOAA, API, or file permission is not requested.
+NCEI documents Access Data Service GET requests parameterized by dataset, station, start date, end date, and output format. The documented service is a public, unauthenticated candidate for bounded offline retrieval; no API key is documented for that service. Daily Summaries, GSOM, and LCD remain separate candidate products, not interchangeable methods or settlement-equivalent sources.
+
+Thus `offline_public_api_acquisition` is a verified technical capability for a later selected NCEI product, but the actual corpus observation method remains unresolved until equivalence selects exactly one product. Station metadata may be preserved by `static_public_reference`. No generic NOAA permission, bulk download, file fallback, client, or runtime provider is requested.
 
 ## Authentication/rate/access posture
 
-For the proposed manual reviews, no credential is proposed and no numeric quota is asserted. For every possible file/API method, authentication, key requirement, quota, user-agent/header requirements, coverage, bulk/API distinction, and reproducible failure behavior remain undocumented by evidence retrieved in this ticket. “Undocumented” is not treated as “unlimited.” Credentials remain unapproved; inability to verify exact access blocks selection.
+Polymarket Gamma market-data endpoints are documented as public and do not require authentication for the relevant reads. NCEI Access Data Service documentation likewise does not document a credential/API key for its public GET service. Documented numeric rate limits relevant to this bounded research use were not found; “undocumented” is not “unlimited,” and later work must use bounded requests and preserve failure/response metadata. No credential, special header, scraping, or live-provider authority is implied.
 
 ## Terms/attribution/retention posture
 
-No legal conclusion is made. Product-specific first-party terms covering retention, local storage, redistribution, repository inclusion, attribution, derived normalized records, and evidence receipts were not successfully retrieved. Public-agency origin alone is not a redistribution determination, and Polymarket page availability alone is not archive permission. Raw retention and redistribution therefore remain unapproved. Checksums, locators, access dates, and attribution would be mandatory if later approved; large or source-derived artifacts may never enter Git.
+No legal conclusion is made. NOAA states that material it produces is generally not copyrighted/public domain unless otherwise noted; NCEI provides citation guidance. This supports a general candidate posture for local retention, derived records, and redistribution of identified NOAA/NCEI-produced data with attribution, while product-level notices, embedded third-party material, and selected-product exceptions still require review.
+
+Polymarket is separate. Its current Terms and developer documentation do not clearly establish the retention, immutable local archival, redistribution, or republication rights needed for copied page/API rule evidence. Polymarket raw archival/redistribution therefore remains blocked. Checksums and locator-only receipts do not cure missing permission. Large artifacts remain prohibited from Git.
 
 ## Proposed exact source-role matrix
 
-| Role | Exact proposed source | Posture |
-|---|---|---|
-| Venue market/rule | Named individual Polymarket market page, contemporaneous version | manual review only; durable history unresolved |
-| Venue resolution | Same contract's proposal/dispute/final-resolution record | manual review only; durable mechanism unresolved |
-| Meteorological settlement | Exact NOAA finalized monthly summarized Central Park figure named by the rule | exact product/workflow unresolved; blocked |
-| Historical archive | None selected among Daily Summaries/LCD/other official products | equivalence unproven; blocked |
-| Station authority | Exact product-specific NCEI/NWS station metadata | identity/effective history unresolved; blocked |
-| Availability/revision | Source-native publication/version/finality evidence | reconstructability unresolved; blocked |
+| Category | Role | Exact source/fact | Posture |
+|---|---|---|---|
+| VERIFIED | Venue meteorological source | NWS New York climate workflow: Monthly summarized data → Central Park NY → Precipitation | controlling venue source |
+| VERIFIED | Venue finality | Full displayed precision; post-finalization revisions do not change resolution | controlling rule behavior |
+| VERIFIED | Current venue metadata | Polymarket public page/Gamma current closed-market record | public current retrieval; not version history |
+| VERIFIED CANDIDATE | Station authority | NCEI `NY CITY CENTRAL PARK, NY US`, `GHCND:USW00094728`, `40.77898,-73.96925` | authoritative NCEI candidate only |
+| VERIFIED CANDIDATE | Archive products | NCEI Daily Summaries, GSOM, and LCD | official products; none selected/equivalent |
+| STILL BLOCKED | Historical archive | No exact product proven to reproduce venue-finalized display | fail closed |
+| STILL BLOCKED | Historical venue evidence | Contemporaneous rules/amendments and resolution timeline | durable mechanism unresolved |
+| STILL BLOCKED | Availability/revision | First-posted/preliminary/final/revised values and actual availability | reconstruction unresolved |
 
 ## Proposed exact access-method matrix
 
-| Source role | One proposed method |
+| Source role | One exact posture |
 |---|---|
-| Polymarket rule evidence | `manual_source_review` |
-| Polymarket resolution evidence | `manual_source_review` |
-| NOAA observation bytes | unresolved |
-| NOAA station metadata | `manual_source_review` |
-| Publication/revision evidence | unresolved |
+| Polymarket individual rule adjudication | `manual_source_review` |
+| Polymarket current public market metadata | `offline_public_api_acquisition` |
+| Polymarket durable historical rule/version evidence | unresolved |
+| NWS venue workflow documentation | `static_public_reference` |
+| NCEI candidate station metadata | `static_public_reference` |
+| NCEI candidate technical data access | `offline_public_api_acquisition` |
+| Actual corpus observation bytes | unresolved pending exact-product equivalence |
 
-Only `manual_source_review`, `static_public_reference`, `offline_public_file_acquisition`, `offline_public_api_acquisition`, `source_specific_credentials_required`, `scraping_requires_separate_approval`, and `live_runtime_provider_requires_separate_approval` were considered. No interchangeable fallback method is requested.
+The complete allowed vocabulary remains `manual_source_review`, `static_public_reference`, `offline_public_file_acquisition`, `offline_public_api_acquisition`, `source_specific_credentials_required`, `scraping_requires_separate_approval`, and `live_runtime_provider_requires_separate_approval`. Consideration does not grant authority; there is no interchangeable fallback.
 
 ## Proposed storage posture
 
@@ -118,14 +130,18 @@ This artifact presents the intended approval question but is not a concrete appr
 
 ## Remaining blockers
 
-1. Reverify exact contemporaneous venue rule wording, named NOAA/NWS workflow, brackets, trace/missing/revision/finality semantics, and amendments.
-2. Establish effective-dated Central Park station identity in that workflow.
-3. Prove one official archive's semantic and historical-state equivalence or narrow the family honestly.
-4. Verify durable Polymarket rule and resolution history with timestamps.
-5. Verify one exact acquisition mechanism, authentication, rates/headers, coverage, and failure behavior.
-6. Verify product-specific retention, attribution, redistribution, and derived-use terms.
+Former blockers are classified as follows:
 
-These are core blockers, not implementation details.
+- **VERIFIED:** exact venue NWS/NOAA selection workflow; venue full-precision and post-finalization-revision rule; current public Polymarket metadata access without authentication; NCEI public unauthenticated GET capability; general NOAA-produced-data public-domain/attribution posture.
+- **PARTIALLY VERIFIED / EQUIVALENCE UNRESOLVED:** authoritative NCEI Central Park candidate identity and official Daily Summaries/GSOM/LCD candidates. Their relation to the venue workflow's product, lineage, processing state, and controlling value is not proven.
+- **STILL BLOCKED:**
+  1. select and prove one archive product equivalent across every required semantic and numerical dimension;
+  2. reconstruct first-posted, preliminary, venue-finalized, and later-revised states with actual publication/availability evidence;
+  3. establish durable authoritative contemporaneous Polymarket rule/amendment and proposal/dispute/final-resolution history;
+  4. establish Polymarket retention, local archival, redistribution, and derived-metadata permission adequate for preserved evidence;
+  5. reconcile effective station history and the NWS workflow's station/product mapping.
+
+These remaining issues prevent selection of actual observation acquisition and prevent a concrete source/access approval. The next evidence action is a manual product-level reconciliation of a known settled month between the venue-preserved NWS display state and each exact NCEI candidate, plus a source-specific Polymarket archival-rights determination; it is research, not corpus acquisition.
 
 ## Human decision options
 
@@ -164,20 +180,25 @@ artifact_scope: docs_static_test_only
 request_posture: request_only
 approval_decision_posture: approval_decision_not_recorded
 selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_using_noaa_finalized_monthly_summarized_central_park_figure
-venue_source_verification_status: blocked_current_first_party_exact_workflow_not_reverified
-venue_settlement_source_role: exact_rule_named_noaa_finalized_monthly_summarized_central_park_precipitation_figure
-venue_finality_posture: blocked_exact_source_finalization_and_revision_rule_not_reverified
-archive_source_role: none_selected_official_candidates_not_proven_equivalent
+venue_source_verification_status: verified_nws_okx_monthly_summarized_data_central_park_ny_precipitation
+venue_settlement_source_role: nws_okx_monthly_summarized_data_central_park_ny_precipitation_display
+venue_finality_posture: verified_full_displayed_precision_post_finalization_revisions_do_not_change_resolution
+archive_source_role: ncei_daily_summaries_gsom_lcd_official_candidates_none_selected
 archive_equivalence_posture: blocked_fail_closed
-station_identity_posture: blocked_no_authoritative_product_specific_identifier_frozen
+station_identity_posture: authoritative_ncei_station_candidate_ghcnd_usw00094728_verified_venue_equivalence_unresolved
 polymarket_rule_evidence_posture: manual_source_review
-polymarket_resolution_evidence_posture: manual_source_review
+polymarket_resolution_evidence_posture: offline_public_api_acquisition
 observation_access_method: unresolved
-station_metadata_access_method: manual_source_review
+station_metadata_access_method: static_public_reference
 publication_availability_posture: blocked_historical_reconstructability_not_verified
 revision_finality_posture: blocked_historical_venue_relevant_state_not_verified
-authentication_posture: no_credentials_proposed_exact_external_method_requirements_undocumented
-terms_storage_posture: blocked_product_specific_retention_redistribution_attribution_not_verified
+authentication_posture: source_specific_public_reads_unauthenticated_numeric_rates_undocumented
+polymarket_authentication_posture: public_gamma_market_reads_no_authentication_documented
+ncei_authentication_posture: public_access_data_service_get_no_api_key_documented
+ncei_candidate_access_method: offline_public_api_acquisition
+noaa_ncei_terms_posture: general_noaa_produced_data_public_domain_with_attribution_and_exception_review
+polymarket_terms_storage_posture: blocked_local_archival_redistribution_rights_not_established
+terms_storage_posture: source_specific_split_noaa_general_open_attribution_verified_polymarket_archival_rights_blocked
 raw_storage_posture: requested_future_external_artifact_root_immutable_sha256_content_addressed_no_overwrite
 normalized_storage_posture: requested_future_external_artifact_root_versioned_parquet_schema_and_parser_versioned
 manifest_storage_posture: requested_future_external_artifact_root_append_only_all_dispositions_and_lineage

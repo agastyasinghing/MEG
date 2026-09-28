@@ -29,19 +29,24 @@ EXPECTED = [
     "artifact_scope: docs_static_test_only", "request_posture: request_only",
     "approval_decision_posture: approval_decision_not_recorded",
     "selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_using_noaa_finalized_monthly_summarized_central_park_figure",
-    "venue_source_verification_status: blocked_current_first_party_exact_workflow_not_reverified",
-    "venue_settlement_source_role: exact_rule_named_noaa_finalized_monthly_summarized_central_park_precipitation_figure",
-    "venue_finality_posture: blocked_exact_source_finalization_and_revision_rule_not_reverified",
-    "archive_source_role: none_selected_official_candidates_not_proven_equivalent",
+    "venue_source_verification_status: verified_nws_okx_monthly_summarized_data_central_park_ny_precipitation",
+    "venue_settlement_source_role: nws_okx_monthly_summarized_data_central_park_ny_precipitation_display",
+    "venue_finality_posture: verified_full_displayed_precision_post_finalization_revisions_do_not_change_resolution",
+    "archive_source_role: ncei_daily_summaries_gsom_lcd_official_candidates_none_selected",
     "archive_equivalence_posture: blocked_fail_closed",
-    "station_identity_posture: blocked_no_authoritative_product_specific_identifier_frozen",
+    "station_identity_posture: authoritative_ncei_station_candidate_ghcnd_usw00094728_verified_venue_equivalence_unresolved",
     "polymarket_rule_evidence_posture: manual_source_review",
-    "polymarket_resolution_evidence_posture: manual_source_review",
-    "observation_access_method: unresolved", "station_metadata_access_method: manual_source_review",
+    "polymarket_resolution_evidence_posture: offline_public_api_acquisition",
+    "observation_access_method: unresolved", "station_metadata_access_method: static_public_reference",
     "publication_availability_posture: blocked_historical_reconstructability_not_verified",
     "revision_finality_posture: blocked_historical_venue_relevant_state_not_verified",
-    "authentication_posture: no_credentials_proposed_exact_external_method_requirements_undocumented",
-    "terms_storage_posture: blocked_product_specific_retention_redistribution_attribution_not_verified",
+    "authentication_posture: source_specific_public_reads_unauthenticated_numeric_rates_undocumented",
+    "polymarket_authentication_posture: public_gamma_market_reads_no_authentication_documented",
+    "ncei_authentication_posture: public_access_data_service_get_no_api_key_documented",
+    "ncei_candidate_access_method: offline_public_api_acquisition",
+    "noaa_ncei_terms_posture: general_noaa_produced_data_public_domain_with_attribution_and_exception_review",
+    "polymarket_terms_storage_posture: blocked_local_archival_redistribution_rights_not_established",
+    "terms_storage_posture: source_specific_split_noaa_general_open_attribution_verified_polymarket_archival_rights_blocked",
     "raw_storage_posture: requested_future_external_artifact_root_immutable_sha256_content_addressed_no_overwrite",
     "normalized_storage_posture: requested_future_external_artifact_root_versioned_parquet_schema_and_parser_versioned",
     "manifest_storage_posture: requested_future_external_artifact_root_append_only_all_dispositions_and_lineage",
@@ -92,17 +97,36 @@ def test_family_roles_equivalence_station_and_access_fail_closed() -> None:
     assert values("selected_first_slice") == ["polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_using_noaa_finalized_monthly_summarized_central_park_figure"]
     assert values("venue_settlement_source_role") != values("archive_source_role")
     assert values("archive_equivalence_posture") == ["blocked_fail_closed"]
-    assert values("station_identity_posture")[0].startswith("blocked_")
+    assert values("venue_source_verification_status") == [
+        "verified_nws_okx_monthly_summarized_data_central_park_ny_precipitation"
+    ]
+    assert values("venue_finality_posture") == [
+        "verified_full_displayed_precision_post_finalization_revisions_do_not_change_resolution"
+    ]
+    assert values("station_identity_posture") == [
+        "authoritative_ncei_station_candidate_ghcnd_usw00094728_verified_venue_equivalence_unresolved"
+    ]
     assert values("observation_access_method") == ["unresolved"]
-    assert values("station_metadata_access_method") == ["manual_source_review"]
+    assert values("station_metadata_access_method") == ["static_public_reference"]
     assert values("polymarket_rule_evidence_posture") == ["manual_source_review"]
-    assert values("polymarket_resolution_evidence_posture") == ["manual_source_review"]
+    assert values("polymarket_resolution_evidence_posture") == [
+        "offline_public_api_acquisition"
+    ]
     roles = section("Proposed exact source-role matrix", "Proposed exact access-method matrix")
-    assert all(role in roles for role in ("Venue market/rule", "Venue resolution", "Meteorological settlement", "Historical archive"))
+    assert all(role in roles for role in ("Venue meteorological source", "Venue finality", "Station authority", "Historical archive"))
+    venue = section("Verified venue rule/source", "Venue resolution/finality evidence")
+    assert "weather.gov/wrh/climate?wfo=okx" in venue
+    assert all(item in venue for item in ("Monthly summarized data", "Central Park NY", "Precipitation"))
+    station = section("Station identity analysis", "Revision/finality analysis")
+    assert all(item in station for item in ("NY CITY CENTRAL PARK, NY US", "GHCND:USW00094728", "40.77898", "-73.96925"))
+    assert "does not prove" in station
 
 
 def test_terms_storage_authority_and_no_decision() -> None:
-    assert values("terms_storage_posture")[0].startswith("blocked_")
+    assert values("noaa_ncei_terms_posture") == [
+        "general_noaa_produced_data_public_domain_with_attribution_and_exception_review"
+    ]
+    assert values("polymarket_terms_storage_posture")[0].startswith("blocked_")
     assert values("git_large_data_posture") == ["prohibited"]
     assert "separately configured external artifact root" in section("Proposed storage posture", "Reproducibility/checksum posture")
     for key in ("source_use_authority", "data_acquisition_authority", "storage_write_authority",
@@ -155,8 +179,15 @@ def test_access_vocabulary_is_closed_and_exact_methods_are_fail_closed() -> None
     observed = set(re.findall(r"`([a-z_]+)`", access))
     assert observed == allowed
     assert values("observation_access_method") == ["unresolved"]
-    assert values("station_metadata_access_method") == ["manual_source_review"]
-    assert "Generic NOAA, API, or file permission is not requested" in section(
+    assert values("station_metadata_access_method") == ["static_public_reference"]
+    assert values("ncei_candidate_access_method") == ["offline_public_api_acquisition"]
+    assert values("polymarket_authentication_posture") == [
+        "public_gamma_market_reads_no_authentication_documented"
+    ]
+    assert values("ncei_authentication_posture") == [
+        "public_access_data_service_get_no_api_key_documented"
+    ]
+    assert "No generic NOAA permission" in section(
         "NOAA/NWS/NCEI access-method analysis", "Authentication/rate/access posture"
     )
 
