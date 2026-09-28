@@ -21,7 +21,7 @@ Research accessed or re-reviewed current first-party materials on 2026-09-28, st
 - [NWS New York climate page](https://www.weather.gov/wrh/climate?wfo=okx) and [NOWData FAQ](https://www.weather.gov/wrh/ClimateFAQ): the venue-named interactive workflow and NWS warning that NOWData can contain preliminary and archived observations while official final records are at NCEI.
 - [NCEI station search](https://www.ncei.noaa.gov/access/search/data-search/daily-summaries), [Daily Summaries](https://www.ncei.noaa.gov/products/land-based-station/daily-summaries), [Global Summary of the Month](https://www.ncei.noaa.gov/products/land-based-station/global-summary-of-the-month), and [Local Climatological Data](https://www.ncei.noaa.gov/products/land-based-station/local-climatological-data): authoritative station/product candidates, kept distinct.
 - [NCEI Access Data Service documentation](https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation): documented public GET retrieval parameters for dataset, station, and dates.
-- [NOAA copyright notice](https://www.noaa.gov/disclaimer) and [NCEI data citation guidance](https://www.ncei.noaa.gov/support/access-data-service-api-user-documentation): general federal-data reuse and attribution posture, subject to identified third-party/product exceptions.
+- [NOAA copyright notice](https://www.noaa.gov/disclaimer) and [NCEI citation guidance](https://www.ncei.noaa.gov/citation): general federal-data reuse and attribution posture, subject to identified third-party/product exceptions.
 - [Polymarket Terms of Use](https://polymarket.com/tos): reviewed separately; it does not establish the durable local archival/redistribution permission required here.
 
 No corpus enumeration, source-byte download, credential use, scraping, client construction, or artifact write occurred. Mutable claims carry the research date above; exact page/version evidence must still be preserved by a later approved process.
@@ -62,7 +62,7 @@ Prediction inputs require `input_publication_available_at <= prediction_as_of`. 
 
 ## Polymarket historical-evidence mechanism
 
-Polymarket documents public Gamma market-data retrieval without authentication, including lookup/filtering by slug and identifiers and access to closed-market metadata. The documented response can expose current market/event metadata such as question/description/rules-related text, condition identifiers, close/resolution state, and timestamps available in the current record. The exact future posture for that current metadata is `offline_public_api_acquisition`; individual page/rule adjudication remains `manual_source_review`.
+Polymarket documents public Gamma market-data retrieval without authentication, including lookup/filtering by slug and documented market filters such as closed state. The documented response exposes the fields present in the current market/event record, including identifiers and current descriptive/status metadata. The exact future posture for that current metadata is `offline_public_api_acquisition`; individual rule and proposal/dispute/final-resolution adjudication remains `manual_source_review`.
 
 Neither the developer documentation nor a current mutable market record establishes an immutable ledger of every contemporaneous rule version or amendment. Proposal, dispute, and finality fields must be verified for the exact response/page, and durable historical rule/version evidence remains blocked. Public API availability does not authorize scraping or establish archival/redistribution rights.
 
@@ -139,7 +139,8 @@ Former blockers are classified as follows:
   2. reconstruct first-posted, preliminary, venue-finalized, and later-revised states with actual publication/availability evidence;
   3. establish durable authoritative contemporaneous Polymarket rule/amendment and proposal/dispute/final-resolution history;
   4. establish Polymarket retention, local archival, redistribution, and derived-metadata permission adequate for preserved evidence;
-  5. reconcile effective station history and the NWS workflow's station/product mapping.
+  5. reconcile effective station history and the NWS workflow's station/product mapping;
+  6. review the selected NCEI product's own notices/exceptions once equivalence selects a product, before approving retention or redistribution of its bytes.
 
 These remaining issues prevent selection of actual observation acquisition and prevent a concrete source/access approval. The next evidence action is a manual product-level reconciliation of a known settled month between the venue-preserved NWS display state and each exact NCEI candidate, plus a source-specific Polymarket archival-rights determination; it is research, not corpus acquisition.
 
@@ -187,7 +188,8 @@ archive_source_role: ncei_daily_summaries_gsom_lcd_official_candidates_none_sele
 archive_equivalence_posture: blocked_fail_closed
 station_identity_posture: authoritative_ncei_station_candidate_ghcnd_usw00094728_verified_venue_equivalence_unresolved
 polymarket_rule_evidence_posture: manual_source_review
-polymarket_resolution_evidence_posture: offline_public_api_acquisition
+polymarket_resolution_evidence_posture: manual_source_review
+polymarket_current_metadata_access_method: offline_public_api_acquisition
 observation_access_method: unresolved
 station_metadata_access_method: static_public_reference
 publication_availability_posture: blocked_historical_reconstructability_not_verified

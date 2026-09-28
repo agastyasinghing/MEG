@@ -36,7 +36,8 @@ EXPECTED = [
     "archive_equivalence_posture: blocked_fail_closed",
     "station_identity_posture: authoritative_ncei_station_candidate_ghcnd_usw00094728_verified_venue_equivalence_unresolved",
     "polymarket_rule_evidence_posture: manual_source_review",
-    "polymarket_resolution_evidence_posture: offline_public_api_acquisition",
+    "polymarket_resolution_evidence_posture: manual_source_review",
+    "polymarket_current_metadata_access_method: offline_public_api_acquisition",
     "observation_access_method: unresolved", "station_metadata_access_method: static_public_reference",
     "publication_availability_posture: blocked_historical_reconstructability_not_verified",
     "revision_finality_posture: blocked_historical_venue_relevant_state_not_verified",
@@ -109,9 +110,8 @@ def test_family_roles_equivalence_station_and_access_fail_closed() -> None:
     assert values("observation_access_method") == ["unresolved"]
     assert values("station_metadata_access_method") == ["static_public_reference"]
     assert values("polymarket_rule_evidence_posture") == ["manual_source_review"]
-    assert values("polymarket_resolution_evidence_posture") == [
-        "offline_public_api_acquisition"
-    ]
+    assert values("polymarket_resolution_evidence_posture") == ["manual_source_review"]
+    assert values("polymarket_current_metadata_access_method") == ["offline_public_api_acquisition"]
     roles = section("Proposed exact source-role matrix", "Proposed exact access-method matrix")
     assert all(role in roles for role in ("Venue meteorological source", "Venue finality", "Station authority", "Historical archive"))
     venue = section("Verified venue rule/source", "Venue resolution/finality evidence")
@@ -167,6 +167,21 @@ def test_blocked_request_has_exactly_no_successor() -> None:
     decision_ticket = "WEATHER-BOT-STAGE3-CENTRAL-PARK-MONTHLY-PRECIPITATION-SOURCE-ACCESS-STORAGE-APPROVAL-DECISION-01"
     assert decision_ticket not in successor
     assert "None." in successor and "BLOCKED" in successor
+
+
+def test_only_genuine_evidence_gaps_remain_blocked() -> None:
+    blockers = section("Remaining blockers", "Human decision options")
+    for required in (
+        "select and prove one archive product equivalent",
+        "actual publication/availability evidence",
+        "durable authoritative contemporaneous Polymarket rule/amendment",
+        "Polymarket retention, local archival, redistribution",
+        "effective station history",
+        "selected NCEI product's own notices/exceptions",
+    ):
+        assert required in blockers
+    assert "exact venue NWS/NOAA selection workflow" in blockers
+    assert "**VERIFIED:**" in blockers
 
 
 def test_access_vocabulary_is_closed_and_exact_methods_are_fail_closed() -> None:
