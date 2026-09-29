@@ -13,6 +13,7 @@ HEADINGS = [
     "Current first-slice state", "Research method and source-quality standard",
     "Verified venue rule/source", "Venue resolution/finality evidence",
     "Archive-equivalence analysis", "Station identity analysis",
+    "May 2026 known-month reconciliation", "Historical source-path assessment",
     "Revision/finality analysis", "Point-in-time and label-availability analysis",
     "Polymarket historical-evidence mechanism", "NOAA/NWS/NCEI access-method analysis",
     "Authentication/rate/access posture", "Terms/attribution/retention posture",
@@ -29,6 +30,18 @@ EXPECTED = [
     "artifact_scope: docs_static_test_only", "request_posture: request_only",
     "approval_decision_posture: approval_decision_not_recorded",
     "selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_using_noaa_finalized_monthly_summarized_central_park_figure",
+    "known_month_reconciliation_case: may_2026_central_park_less_than_2_inches_outcome_no",
+    "known_month_venue_value: unresolved_exact_historical_nowdata_display_not_preserved",
+    "known_month_nws_partial_cf6_value: 1.77_inches_partial_month_preliminary",
+    "known_month_nws_completed_cf6_value: 3.05_inches_complete_month_preliminary",
+    "known_month_nws_clm_value: 3.05_inches_monthly_report_issued_2026_06_01",
+    "known_month_ncei_gsom_value: 3.05_inches_current_direct_monthly_prcp",
+    "known_month_polymarket_outcome: less_than_2_inches_no_proposed_no_dispute_final_no_timestamps_unresolved",
+    "known_month_value_agreement_posture: numerical_match_only_completed_cf6_clm_current_gsom",
+    "nws_historical_evidence_posture: archived_partial_and_complete_products_verified_exact_nowdata_mapping_unproven",
+    "ncei_historical_evidence_posture: current_gsom_monthly_value_verified_historical_revision_and_availability_unproven",
+    "venue_archive_mapping_posture: official_nws_value_numerically_matching_but_exact_workflow_mapping_unproven",
+    "historical_availability_evidence_posture: nws_product_issue_evidence_only_nowdata_first_available_and_venue_finalization_unresolved",
     "venue_source_verification_status: verified_nws_okx_monthly_summarized_data_central_park_ny_precipitation",
     "venue_settlement_source_role: nws_okx_monthly_summarized_data_central_park_ny_precipitation_display",
     "venue_finality_posture: verified_full_displayed_precision_post_finalization_revisions_do_not_change_resolution",
@@ -46,7 +59,7 @@ EXPECTED = [
     "ncei_authentication_posture: public_access_data_service_get_no_api_key_documented",
     "ncei_candidate_access_method: offline_public_api_acquisition",
     "noaa_ncei_terms_posture: general_noaa_produced_data_public_domain_with_attribution_and_exception_review",
-    "polymarket_terms_storage_posture: blocked_local_archival_redistribution_rights_not_established",
+    "polymarket_terms_storage_posture: blocking_for_required_evidence",
     "terms_storage_posture: source_specific_split_noaa_general_open_attribution_verified_polymarket_archival_rights_blocked",
     "raw_storage_posture: requested_future_external_artifact_root_immutable_sha256_content_addressed_no_overwrite",
     "normalized_storage_posture: requested_future_external_artifact_root_versioned_parquet_schema_and_parser_versioned",
@@ -126,7 +139,7 @@ def test_terms_storage_authority_and_no_decision() -> None:
     assert values("noaa_ncei_terms_posture") == [
         "general_noaa_produced_data_public_domain_with_attribution_and_exception_review"
     ]
-    assert values("polymarket_terms_storage_posture")[0].startswith("blocked_")
+    assert values("polymarket_terms_storage_posture") == ["blocking_for_required_evidence"]
     assert values("git_large_data_posture") == ["prohibited"]
     assert "separately configured external artifact root" in section("Proposed storage posture", "Reproducibility/checksum posture")
     for key in ("source_use_authority", "data_acquisition_authority", "storage_write_authority",
@@ -172,16 +185,48 @@ def test_blocked_request_has_exactly_no_successor() -> None:
 def test_only_genuine_evidence_gaps_remain_blocked() -> None:
     blockers = section("Remaining blockers", "Human decision options")
     for required in (
-        "select and prove one archive product equivalent",
-        "actual publication/availability evidence",
-        "durable authoritative contemporaneous Polymarket rule/amendment",
-        "Polymarket retention, local archival, redistribution",
+        "authoritative NOWData-to-CF6/CLM mapping",
+        "venue finalization/proposal/final timestamps",
+        "historical NOWData first-availability",
+        "metadata-receipt-only Polymarket posture",
         "effective station history",
-        "selected NCEI product's own notices/exceptions",
+        "selected NCEI product's notices/exceptions",
     ):
         assert required in blockers
-    assert "exact venue NWS/NOAA selection workflow" in blockers
-    assert "**VERIFIED:**" in blockers
+    assert "`3.05 in` agreement is not general equivalence" in blockers
+
+
+def test_known_month_reconciliation_is_numerical_only() -> None:
+    assert values("known_month_reconciliation_case") == [
+        "may_2026_central_park_less_than_2_inches_outcome_no"
+    ]
+    assert values("known_month_venue_value") == [
+        "unresolved_exact_historical_nowdata_display_not_preserved"
+    ]
+    assert values("known_month_nws_partial_cf6_value") == [
+        "1.77_inches_partial_month_preliminary"
+    ]
+    assert values("known_month_nws_completed_cf6_value") == [
+        "3.05_inches_complete_month_preliminary"
+    ]
+    assert values("known_month_nws_clm_value") == [
+        "3.05_inches_monthly_report_issued_2026_06_01"
+    ]
+    assert values("known_month_ncei_gsom_value") == [
+        "3.05_inches_current_direct_monthly_prcp"
+    ]
+    assert values("known_month_value_agreement_posture") == [
+        "numerical_match_only_completed_cf6_clm_current_gsom"
+    ]
+    assert values("venue_archive_mapping_posture") == [
+        "official_nws_value_numerically_matching_but_exact_workflow_mapping_unproven"
+    ]
+    reconciliation = section("May 2026 known-month reconciliation", "Historical source-path assessment")
+    assert "normal accumulation" in reconciliation
+    assert "not evidence of an archive correction" in reconciliation
+    assert "not a historical-state match" in reconciliation
+    assert "not proven identical to NOWData display" in reconciliation
+    assert "no silent daily summation" in reconciliation
 
 
 def test_access_vocabulary_is_closed_and_exact_methods_are_fail_closed() -> None:

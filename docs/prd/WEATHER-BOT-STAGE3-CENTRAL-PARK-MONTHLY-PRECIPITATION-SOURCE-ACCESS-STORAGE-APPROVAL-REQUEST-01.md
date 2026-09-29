@@ -50,6 +50,33 @@ Current NCEI station metadata verifies the candidate **NY CITY CENTRAL PARK, NY 
 
 It does not prove that the NWS interactive workflow used exactly that identifier, product, effective station lineage, processing state, or numerical value at venue finalization. Moves, instrumentation/network history, effective-date mapping, and workflow equivalence remain to be reconciled. The identifier is provenance metadata only, never routing.
 
+## May 2026 known-month reconciliation
+
+The bounded reconciliation case is the already-reviewed Polymarket event `precipitation-in-nyc-in-may`, specifically the **less than 2 inches** candidate represented by fixture identifiers `real_fixture_condition_stage2_polymarket_nyc_precip_may_2026_001`, `real_fixture_token_stage2_polymarket_nyc_precip_less_than_2_no_001`, and outcome `No`. These fixture identifiers preserve the canonical relationship for the reviewed example; the slug is provenance only. The window is Central Park, May 1–31, 2026 through 11:59 PM ET, in inches, using the NWS workflow and finalization rule above. The current venue evidence supports proposed `No`, no dispute, and final `No`; it does not supply trustworthy proposal/final timestamps, and the fixture's June 2 review time is not substituted for them.
+
+Focused inspection of first-party NWS records for this one month supports the following bounded facts. A May CF6 Preliminary Local Climatological Data state shows `1.77 in` while the month is incomplete. A completed-month CF6 issued after month-end shows `3.05 in`; CF6 remains labeled preliminary. The NWS Monthly Climate Report (CLM) issued June 1, 2026 also reports `3.05 in` for Central Park. The CLM product header is issuance evidence, but this document does not invent an unpreserved clock value. The `1.77 → 3.05` change is normal accumulation across different row coverage before and after later May precipitation, not evidence of an archive correction.
+
+Current NCEI GSOM for `GHCND:USW00094728` directly stores monthly `PRCP` for May 2026 as `3.05 in`. That is a current official monthly value retrieved/reviewed on 2026-09-28. Daily Summaries was inspected as a distinct daily product but no independently stored monthly total is asserted and no silent daily summation is performed. LCD is not retained in this reconciliation because semantic applicability to the venue workflow was not established.
+
+| Source / product | Role | State / issue evidence | Value | Status | Venue compatibility |
+|---|---|---|---:|---|---|
+| NWS NOWData monthly summarized display | Venue-defined source | Historical first-availability/display state not preserved | unresolved | Venue waits for finalized display | Controlling workflow; exact historical value state unresolved |
+| NWS CF6, in-month state | Archived NWS climate evidence | May 2026 issue; incomplete row coverage | 1.77 in | Preliminary, partial month | Useful state evidence; not a revision and not proven identical to NOWData display |
+| NWS CF6, completed-month state | Archived NWS climate evidence | Post-month-end issue; complete May row coverage | 3.05 in | Preliminary product, complete month | Numerical match; exact NOWData mapping unproven |
+| NWS CLM monthly report | Archived NWS climate evidence | Source header issued 2026-06-01; exact clock not frozen here | 3.05 in | Completed monthly report | Numerical match; exact NOWData mapping unproven |
+| NCEI GSOM | Current archive cross-check | Current record reviewed 2026-09-28; historical availability/revision chain unavailable | 3.05 in | Direct monthly PRCP | Numerical match only; general equivalence unproven |
+| Polymarket reviewed token | Venue result | Proposal/final timestamps not established; reviewed 2026-06-02 | less-than-2: No | Proposed No, no dispute, final No displayed | Outcome consistent with 3.05; not proof of source-state identity |
+
+The strongest supported classification is **known-month numerical agreement only** among completed CF6, CLM, and current GSOM. It is not a historical-state match: the exact NOWData value and first availability at venue finalization were not preserved, the CF6/CLM-to-NOWData backend relationship is unproven, and current GSOM does not expose its May 2026 revision history.
+
+## Historical source-path assessment
+
+- **Option A — NCEI primary:** rejected for now. GSOM provides a direct current monthly value and numerical cross-check, but not the historical venue-finalized NOWData state or its availability/revision chain.
+- **Option B — NWS archived CF6/CLM primary, NCEI cross-check:** the strongest candidate path. Timestamped NWS products are closer to the venue-named workflow and preserve partial/completed states, but authoritative documentation reviewed does not establish that CF6 or CLM is the same `Monthly summarized data` display/backend.
+- **Option C — additional preserved NOWData/ACIS state required:** remains necessary before asserting historical-state equivalence. Accordingly, no historical evidence path is selected for corpus acquisition.
+
+`observation_valid_at` is the measured May interval. A product header's `source_product_issued_at` establishes that that product existed no later than issuance, but it is not automatically NOWData `source_available_at`. Venue finalization and `label_available_at` also remain unknown absent legitimate venue timestamps and the controlling display state. The smallest unresolved question is whether archived CF6/CLM states are authoritatively mapped to the venue's NOWData monthly summarized display, or whether a separately preserved NOWData/ACIS state is required. The next evidence action is a source-owner/documentation determination of that mapping for May 2026—not another month and not corpus acquisition.
+
 ## Revision/finality analysis
 
 The required states are source first-posted, preliminary, revised, final, venue proposal, venue final resolution, and venue-defined source-finalization point. A current corrected archive value cannot rewrite settlement if the contemporaneous rule froze an earlier finalized state. Later archive, revision, or finality evidence must never be projected backward into an earlier prediction, fold, label-availability view, or venue-resolution state. No verified archive/version mechanism was established that reconstructs the exact venue-relevant historical state and its availability time. Latest-only archive data would be inadequate; revision/finality reconstruction is blocked.
@@ -130,19 +157,16 @@ This artifact presents the intended approval question but is not a concrete appr
 
 ## Remaining blockers
 
-Former blockers are classified as follows:
+The known-month experiment resolves the values but not the provenance chain. Remaining blockers are now:
 
-- **VERIFIED:** exact venue NWS/NOAA selection workflow; venue full-precision and post-finalization-revision rule; current public Polymarket metadata access without authentication; NCEI public unauthenticated GET capability; general NOAA-produced-data public-domain/attribution posture.
-- **PARTIALLY VERIFIED / EQUIVALENCE UNRESOLVED:** authoritative NCEI Central Park candidate identity and official Daily Summaries/GSOM/LCD candidates. Their relation to the venue workflow's product, lineage, processing state, and controlling value is not proven.
-- **STILL BLOCKED:**
-  1. select and prove one archive product equivalent across every required semantic and numerical dimension;
-  2. reconstruct first-posted, preliminary, venue-finalized, and later-revised states with actual publication/availability evidence;
-  3. establish durable authoritative contemporaneous Polymarket rule/amendment and proposal/dispute/final-resolution history;
-  4. establish Polymarket retention, local archival, redistribution, and derived-metadata permission adequate for preserved evidence;
-  5. reconcile effective station history and the NWS workflow's station/product mapping;
-  6. review the selected NCEI product's own notices/exceptions once equivalence selects a product, before approving retention or redistribution of its bytes.
+1. **Smallest blocker:** establish an authoritative NOWData-to-CF6/CLM mapping for the May 2026 monthly summarized display, or establish that a separately preserved NOWData/ACIS state is required.
+2. Recover legitimate venue finalization/proposal/final timestamps and durable contemporaneous rule/version evidence; the fixture review time is not a substitute.
+3. Establish historical NOWData first-availability and NCEI GSOM revision-state evidence; current GSOM proves only a current value.
+4. Reconcile effective station history with the NWS workflow's station/product mapping.
+5. Determine whether a metadata-receipt-only Polymarket posture—locator, retrieval time, normalized fields, permitted checksum, manual provenance, and canonical identifiers—is sufficient under first-party terms. Until justified, terms remain `blocking_for_required_evidence`.
+6. Review the ultimately selected NCEI product's notices/exceptions before any retention or redistribution approval.
 
-These remaining issues prevent selection of actual observation acquisition and prevent a concrete source/access approval. The next evidence action is a manual product-level reconciliation of a known settled month between the venue-preserved NWS display state and each exact NCEI candidate, plus a source-specific Polymarket archival-rights determination; it is research, not corpus acquisition.
+Thus `3.05 in` agreement is not general equivalence and does not select observation acquisition. The next action is the single mapping determination in item 1, using the already known May 2026 case.
 
 ## Human decision options
 
@@ -181,6 +205,18 @@ artifact_scope: docs_static_test_only
 request_posture: request_only
 approval_decision_posture: approval_decision_not_recorded
 selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_using_noaa_finalized_monthly_summarized_central_park_figure
+known_month_reconciliation_case: may_2026_central_park_less_than_2_inches_outcome_no
+known_month_venue_value: unresolved_exact_historical_nowdata_display_not_preserved
+known_month_nws_partial_cf6_value: 1.77_inches_partial_month_preliminary
+known_month_nws_completed_cf6_value: 3.05_inches_complete_month_preliminary
+known_month_nws_clm_value: 3.05_inches_monthly_report_issued_2026_06_01
+known_month_ncei_gsom_value: 3.05_inches_current_direct_monthly_prcp
+known_month_polymarket_outcome: less_than_2_inches_no_proposed_no_dispute_final_no_timestamps_unresolved
+known_month_value_agreement_posture: numerical_match_only_completed_cf6_clm_current_gsom
+nws_historical_evidence_posture: archived_partial_and_complete_products_verified_exact_nowdata_mapping_unproven
+ncei_historical_evidence_posture: current_gsom_monthly_value_verified_historical_revision_and_availability_unproven
+venue_archive_mapping_posture: official_nws_value_numerically_matching_but_exact_workflow_mapping_unproven
+historical_availability_evidence_posture: nws_product_issue_evidence_only_nowdata_first_available_and_venue_finalization_unresolved
 venue_source_verification_status: verified_nws_okx_monthly_summarized_data_central_park_ny_precipitation
 venue_settlement_source_role: nws_okx_monthly_summarized_data_central_park_ny_precipitation_display
 venue_finality_posture: verified_full_displayed_precision_post_finalization_revisions_do_not_change_resolution
@@ -199,7 +235,7 @@ polymarket_authentication_posture: public_gamma_market_reads_no_authentication_d
 ncei_authentication_posture: public_access_data_service_get_no_api_key_documented
 ncei_candidate_access_method: offline_public_api_acquisition
 noaa_ncei_terms_posture: general_noaa_produced_data_public_domain_with_attribution_and_exception_review
-polymarket_terms_storage_posture: blocked_local_archival_redistribution_rights_not_established
+polymarket_terms_storage_posture: blocking_for_required_evidence
 terms_storage_posture: source_specific_split_noaa_general_open_attribution_verified_polymarket_archival_rights_blocked
 raw_storage_posture: requested_future_external_artifact_root_immutable_sha256_content_addressed_no_overwrite
 normalized_storage_posture: requested_future_external_artifact_root_versioned_parquet_schema_and_parser_versioned
