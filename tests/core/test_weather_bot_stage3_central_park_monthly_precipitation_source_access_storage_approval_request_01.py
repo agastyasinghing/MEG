@@ -32,16 +32,16 @@ EXPECTED = [
     "selected_first_slice: polymarket_central_park_nyc_calendar_month_total_precipitation_range_contracts_using_noaa_finalized_monthly_summarized_central_park_figure",
     "known_month_reconciliation_case: may_2026_central_park_less_than_2_inches_outcome_no",
     "known_month_venue_value: unresolved_exact_historical_nowdata_display_not_preserved",
-    "known_month_nws_partial_cf6_value: 1.77_inches_partial_month_preliminary",
-    "known_month_nws_completed_cf6_value: 3.05_inches_complete_month_preliminary",
-    "known_month_nws_clm_value: 3.05_inches_monthly_report_issued_2026_06_01",
-    "known_month_ncei_gsom_value: 3.05_inches_current_direct_monthly_prcp",
+    "known_month_nws_partial_cf6_value: reported_1.77_inches_artifact_locator_header_and_row_coverage_unverified",
+    "known_month_nws_completed_cf6_value: reported_3.05_inches_artifact_locator_header_and_row_coverage_unverified",
+    "known_month_nws_clm_value: reported_3.05_inches_2026_06_01_issue_exact_product_header_unverified",
+    "known_month_ncei_gsom_value: reported_3.05_inches_exact_record_locator_and_response_unverified",
     "known_month_polymarket_outcome: less_than_2_inches_no_proposed_no_dispute_final_no_timestamps_unresolved",
-    "known_month_value_agreement_posture: numerical_match_only_completed_cf6_clm_current_gsom",
-    "nws_historical_evidence_posture: archived_partial_and_complete_products_verified_exact_nowdata_mapping_unproven",
-    "ncei_historical_evidence_posture: current_gsom_monthly_value_verified_historical_revision_and_availability_unproven",
-    "venue_archive_mapping_posture: official_nws_value_numerically_matching_but_exact_workflow_mapping_unproven",
-    "historical_availability_evidence_posture: nws_product_issue_evidence_only_nowdata_first_available_and_venue_finalization_unresolved",
+    "known_month_value_agreement_posture: reported_numerical_alignment_not_independently_reproducible",
+    "nws_historical_evidence_posture: reported_products_require_exact_locator_header_and_row_coverage_verification",
+    "ncei_historical_evidence_posture: reported_current_gsom_value_requires_exact_record_verification",
+    "venue_archive_mapping_posture: unresolved_values_not_reproducibly_verified_and_exact_workflow_mapping_unproven",
+    "historical_availability_evidence_posture: blocked_exact_product_headers_nowdata_first_available_and_venue_finalization_unresolved",
     "venue_source_verification_status: verified_nws_okx_monthly_summarized_data_central_park_ny_precipitation",
     "venue_settlement_source_role: nws_okx_monthly_summarized_data_central_park_ny_precipitation_display",
     "venue_finality_posture: verified_full_displayed_precision_post_finalization_revisions_do_not_change_resolution",
@@ -185,7 +185,7 @@ def test_blocked_request_has_exactly_no_successor() -> None:
 def test_only_genuine_evidence_gaps_remain_blocked() -> None:
     blockers = section("Remaining blockers", "Human decision options")
     for required in (
-        "authoritative NOWData-to-CF6/CLM mapping",
+        "reproducibly cite and verify the exact May 2026 NWS CF6/CLM product artifacts",
         "venue finalization/proposal/final timestamps",
         "historical NOWData first-availability",
         "metadata-receipt-only Polymarket posture",
@@ -193,7 +193,7 @@ def test_only_genuine_evidence_gaps_remain_blocked() -> None:
         "selected NCEI product's notices/exceptions",
     ):
         assert required in blockers
-    assert "`3.05 in` agreement is not general equivalence" in blockers
+    assert "reported `3.05 in` alignment is not yet independently verified numerical agreement" in blockers
 
 
 def test_known_month_reconciliation_is_numerical_only() -> None:
@@ -204,29 +204,29 @@ def test_known_month_reconciliation_is_numerical_only() -> None:
         "unresolved_exact_historical_nowdata_display_not_preserved"
     ]
     assert values("known_month_nws_partial_cf6_value") == [
-        "1.77_inches_partial_month_preliminary"
+        "reported_1.77_inches_artifact_locator_header_and_row_coverage_unverified"
     ]
     assert values("known_month_nws_completed_cf6_value") == [
-        "3.05_inches_complete_month_preliminary"
+        "reported_3.05_inches_artifact_locator_header_and_row_coverage_unverified"
     ]
     assert values("known_month_nws_clm_value") == [
-        "3.05_inches_monthly_report_issued_2026_06_01"
+        "reported_3.05_inches_2026_06_01_issue_exact_product_header_unverified"
     ]
     assert values("known_month_ncei_gsom_value") == [
-        "3.05_inches_current_direct_monthly_prcp"
+        "reported_3.05_inches_exact_record_locator_and_response_unverified"
     ]
     assert values("known_month_value_agreement_posture") == [
-        "numerical_match_only_completed_cf6_clm_current_gsom"
+        "reported_numerical_alignment_not_independently_reproducible"
     ]
     assert values("venue_archive_mapping_posture") == [
-        "official_nws_value_numerically_matching_but_exact_workflow_mapping_unproven"
+        "unresolved_values_not_reproducibly_verified_and_exact_workflow_mapping_unproven"
     ]
     reconciliation = section("May 2026 known-month reconciliation", "Historical source-path assessment")
-    assert "normal accumulation" in reconciliation
-    assert "not evidence of an archive correction" in reconciliation
-    assert "not a historical-state match" in reconciliation
-    assert "not proven identical to NOWData display" in reconciliation
-    assert "no silent daily summation" in reconciliation
+    assert "would be normal accumulation" in reconciliation
+    assert "classification itself remains provisional" in reconciliation
+    assert "not yet verified numerical agreement" in reconciliation
+    assert "cannot establish revision classification or NOWData identity" in reconciliation
+    assert "No Daily Summaries sum is performed" in reconciliation
 
 
 def test_access_vocabulary_is_closed_and_exact_methods_are_fail_closed() -> None:
